@@ -156,6 +156,7 @@ Stopped
 없음
 Destroyed
 
+ onPause()는 단지 포커스를 상실하였을 뿐 백그라운드로 이동하지 않은 상태입니다. 그렇기에 종료될 가능성도 낮은 편이죠. 이런 이유로 중요하거나 영구적인 데이터의 경우 onStop()이 아니라 onPause()에 저장하는 것이 더 안전합니다. 물론 너무 큰 데이터는 안되겠죠.
 
  시스템은 메모리 공간을 확보하기 위해 절대 activity를 직접 종료하지 않습니다. 그 대신, activity를 실행하는 프로세스를 종료하여 activity뿐만 아니라 프로세스에서 실행되는 다른 모든 작업을 함께 소멸시킵니다. 사용자가 직접 설정의 애플리케이션 관리자를 사용하여 해당 앱을 종료하는 방법으로 프로세스를 종료할 수도 있습니다.
 
@@ -198,6 +199,27 @@ onCreate()->onStart() ->onResume() 콜백 호출
 -포그라운드에서 사용자가 뒤로 버튼을 탭
   onPause()->onStop()->onDestroy()
  -activity뿐만 아니라 백 스택에서도 삭제
+
+
+-홈버튼 클릭/원래 어플로
+(onPause->onStop/onRestart->onStart-onResume)
+
+
+-화면 꺼짐/켜짐(버전에 따라 다른 듯..)
+(onPause->onStop/onRestart->onStart-onResume)
+
+
+-상태바 내림(NOTHING)
+  notification bar는 NotificationCompat는 AndroidX라이브러리의 api를 사용
+   이 클래스는 android.app.Notification 를 액세스하는데 이는 object를 extends함 
+   activity가 아니기에 아무 상태 변화 없는 듯
+
+
+-dialog(NOTHING)
+ 상태바와 같이 activity가 아니기 때문이죠. 하지만 허용 권한 다이어로그는 onPause()를 호출합니다. 이는 공식 문서를 보면 이해할 수 있습니다.
+   이 method를  사용하면 사용자가 허용할 권한과 거부할 권한을 선택할 수 있는 activity가 시작될 수 있습니다. 
+  따라서 activity가 일시 중지되고 다시 시작될 수 있습니다. 또한 일부 권한을 허용하려면 앱을 다시 시작해야
+   할 수도 있습니다.
 
 
 출처 : https://developer.android.com/
