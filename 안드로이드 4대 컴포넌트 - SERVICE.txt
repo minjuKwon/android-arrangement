@@ -33,81 +33,7 @@ onDestroy()
 
 어느 component가 startService()를 호출하여 service를 시작하면 onStartCommand()에 대한 호출 발생하고 해당 service는 알아서 stopSelf()로 스스로 중단할 때까지 또는 다른 component가 stopService()를 호출하여 service를 중단시킬 때까지 실행 중인 상태로 유지됩니다. service를 생성하고 onStartCommand()를 호출하지 않고 bindService()를 호출한다면 service는 해당 component가 바인딩된 경우에만 실행됩니다. service가 모든 클라이언트로부터 바인딩이 해제되면 시스템이 이를 소멸시킵니다.
 =====
-service 시작
- activity 또는 다른 component에서 service를 시작하려면 Intent로 시작할 service를 지정하여 startService() 또는 startForegroundService()에 전달하면 됩니다. Android 시스템이 service의 onStartCommand() 메서드를 호출하고 여기에 시작할 service를 지정하는 Intent를 전달합니다. HelloService란 service를 activity가 시작하려면 startService()로 명시적 인텐트를 사용하면 됩니다.
-
-Intent intent = new Intent(this, HelloService.class);
-startService(intent);
-
- startService() 메서드가 즉시 반환되며 Android 시스템이 service의 onStartCommand() 메서드를 호출합니다. service가 아직 실행되지 않고 있다면 먼저 onCreate()를 호출한 다음, onStartCommand()를 호출해야 합니다.
- service가 바인딩을 제공하지 않는 경우, startService()와 함께 전달된 인텐트가 애플리케이션 component와 service 사이의 유일한 통신 수단입니다. 그러나 service가 결과를 돌려받기를 원하는 경우 service를 시작한 클라이언트가 PendingIngetBroadcast() 메소드를 사용하여 브로드캐스트으로 Intent를 만들고 이를 service를 시작한 Intent의 service에 전달할 수 있습니다. 그러면 service가 이 브로드캐스트으로 전달된 결과를 사용할 수 있게 됩니다.
- service를 시작하기 위한 요청을 여러 개 보내면 그에 대응하여 service의 onStartCommand()에 대해 여러 번 호출이 발생합니다. 반면 중단할 때는 stopSelf() 또는 stopService()으로 한 번만 중단을 요청하면 됩니다.
- 만약 앱이 API 레벨 26 이상을 대상으로 한다면 앱이 포그라운드에 있지 않을 때 시스템에서 백그라운드 service 사용하거나 생성하는 것에 제한을 적용합니다. 앱이 포그라운드 service를 생성해야 하는 경우, 해당 앱은 startForegroundService()를 호출해야 합니다. 이 메서드는 백그라운드 service를 생성하지만, 메서드가 시스템에 신호를 보내 service가 자체적으로 포그라운드로 승격될 것이라고 알립니다. service가 생성되면 5초 이내에 startForeground() 메서드를 호출해야 합니다.
-=====
-service 중단
-started service는 자신의 수명 주기를 직접 관리해야 합니다. 즉 시스템이 service를 중단하거나 소멸시키지 않는다는 뜻입니다. 다만 시스템 메모리를 회복해야 하고 service가 onStartCommand() 반환 후에도 계속 실행되는 경우는 예외입니다. service는 stopSelf()를 호출하여 스스로 중지하고 하고, 아니면 다른 component가 stopService()를 호출하여 이를 중지시킬 수 있습니다. 일단 stopSelf() 또는 stopService()로 중단 요청을 보내면 시스템은 가능한 한 빨리 service를 소멸시킵니다. service가 onStartCommand()에 대한 여러 요청을 동시에 처리하는 경우에는, 시작 요청의 처리를 끝낸 뒤에도 service를 중단하면 안 됩니다. 그 이후 새 시작 요청을 받았을 수 있기 때문입니다. 첫 요청이 끝날 때 중단하면 두 번째 요청이 종료될 수 있습니다. 이 문제를 피하려면, stopSelf(int)를 사용하여 service 중단 요청이 항상 가장 최근 시작 요청을 기준으로 하도록 해야 합니다. 다시 말해, stopSelf(int)를 호출할 경우 onStartCommand()에 전달된 startId를 전달하며, 여기에 중단 요청이 대응됩니다. 그런 다음 stopSelf(int)를 호출할 수 있게 되기 전에 service가 새 시작 요청을 수신하면 ID가 일치하지 않으므로 servcie는 중단되지 않습니다.
- 단, 시스템 리소스 낭비를 피하고 배터리 전력 소모를 줄이기 위해서는 service의 작업이 완료되면 애플리케이션에서 service를 중단해야 합니다. 필요한 경우 stopService()를 호출하여 다른 component가 service를 중단할 수 있습니다. service에 대해 바인딩을 활성화하더라도, service가 onStartCommand()에 대한 호출을 한 번이라도 받았으면 항상 직접 service를 중단해야 합니다.
-=====
-Android 시스템이 service를 강제 중단하는 것은 메모리가 부족하여 사용자 포커스를 가진 activity를 위해 시스템 리소스를 회복해야만 하는 경우로만 국한됩니다. service가 사용자 포커스를 가진 activity에 바인딩 되었으면 종료될 가능성이 적고 service가 포그라운드에서 실행되도록 선언된 경우에는 종료될 가능성이 희박합니다. service가 시작되어 장시간 실행 중이라면 시스템은 시간이 지나면서 백그라운드 작업 목록에서 이 service가 차지하는 중요도를 낮추어 service가 종료될 가능성이 높아집니다. service가 시작되었다면 시스템에 의한 재시작을 정상적으로 처리하도록 설계해야 합니다. 시스템이 service를 중단하는 경우, 리소스를 다시 사용할 수 있게 되면 가능한 한 빨리 service가 다시 시작됩니다. 다만 개발자가 onStartCommand()에서 반환하는 값에 따라 달라집니다. 
-=====
-사용자가 애플리케이션과 상호작용할 때 기본 스레드 밖에서 작업을 수행해야 하는 경우, 새 스레드를 생성해야 합니다. 예를 들어 activity가 실행되는 중에만 음악을 재생하고자 하는 경우, onCreate() 안에 스레드를 생성하여 onStart()에서 실행한 다음 onStop()에서 중단하면 됩니다. 또한 기존의 Thread 클래스 대신 AsyncTask 또는 HandlerThread를 사용할 수도 있습니다.
-service는 기본적으로 자신의 호스팅 프로세스의 기본 스레드에서 실행됩니다. service는 자신의 스레드를 직접 생성하지 않으며, 특별히 지정하지 않는 한 별도의 프로세스에서 실행되지도 않습니다. service가  MP3 재생 또는 네트워킹 같이 CPU 집약적인 작업을 수행할 예정이거나 차단 작업을 수행할 예정인 경우 성능을 위해 service 내에 새 스레드를 생성해야 합니다. 별도의 스레드를 사용하면 '애플리케이션이 응답하지 않습니다(ANR)' 오류가 일어날 위험을 줄일 수 있으며, 애플리케이션의 기본 스레드는 액티비티와 사용자 상호작용 전용으로 유지될 수 있습니다.
-=====
-사용자에게 알림 전송
- service가 실행되고 있을 때 사용자에게 토스트 알림 또는 상태 표시줄 알림 등을 사용해 이벤트를 알릴 수 있습니다. 토스트 알림은 현재 창의 표면에 잠깐 나타났다가 사라지는 메시지입니다. 상태 표시줄 알림은 상태 표시줄에 메시지가 담긴 아이콘을 제공하여 사용자가 이를 선택하면 activity 시작 같은 활동을 할 수 있게 합니다. 보통 파일 다운로드 완료 같은 일종의 백그라운드 작업이 완료되었고 이제 사용자가 그에 대해 조치를 취할 수 있는 경우에는 상태 표시줄 알림을 사용하는 것이 가장 좋습니다. 사용자가 확장된 뷰의 알림을 선택하면 해당 알림은 다운로드한 파일 보기 같은 activity를 시작할 수 있습니다.
-=====
-서비스 수명 주기 관리
-service의 수명 주기는 activity의 수명 주기보다 훨씬 간단합니다. 하지만 service를 생성하고 소멸하는 방법에 특히 주의를 기울여야 한다는 면에서 중요도는 더 높습니다. servcie는 사용자가 모르는 채로 백그라운드에서 실행될 수 있기 때문입니다.
-생성부터 소멸되는 시점까지의 service 수명 주기는 두 가지의 다른 경로를 가집니다.
-started service 
-다른 component가 startService()를 호출하면 servcie가 생성됩니다. 그러면 service가 무기한으로 실행될 수 있으며, stopSelf()를 호출해서 자체적으로 중단해야 합니다. 다른 component가 stopService()를 호출하면 service를 중단시킬 수 있습니다. service가 중단되면 시스템이 소멸시킵니다.
-bound service
-다른 component, 클라이언트가 bindService()를 호출하면 service가 생성됩니다. 그러면 클라이언트가 IBinder 인터페이스를 통해 service와 통신을 주고받을 수 있습니다. 클라이언트가 연결을 종료하려면 unbindService()를 호출하면 됩니다. 여러 클라이언트가 같은 servcie에 바인딩될 수 있으며, 모든 클라이언트가 바인딩을 해제하면 시스템이 해당 servcie를 소멸시킵니다. servcie가 스스로 중단하지 않아도 됩니다.
- 두 가지 경로로 나뉘지만 완전히 별개는 아닙니다. 이미 startService()로 시작된 service에 바인딩할 수도 있습니다. 예를 들어 재생할 음악을 식별하는 Intent를 포함해 startService()를 호출하면 백그라운드 음악 서비스를 시작할 수 있습니다. 나중에 사용자가 플레이어에 좀 더 많은 통제력을 발휘하려고 하거나 현재 노래에 대한 정보를 얻고자 할 때, activity가 bindService()를 호출하여 service에 바인딩할 수 있습니다. 이와 같은 경우에는 모든 클라이언트가 바인딩을 해제할 때까지 stopService() 또는 stopSelf()가 service를 중단하지 않습니다.
-=====
-수명 주기 콜백 구현
-activity와 마찬가지로 service에도 수명 주기 콜백 메서드가 있어, 이를 구현하면 service의 상태 변경 내용을 모니터할 수 있고 적절한 시기에 작업을 수행할 수 있습니다. 다음의  service는 각 수명 주기 메서드를 보여줍니다.
-
-public class ExampleService extends Service {
-    int startMode;       // service가 종료되면 어떻게 행동할지 나타냄
-    IBinder binder;      // 클라이언트와 바인드할 인터페이스
-    boolean allowRebind; // onRebind를 사용 여부 나타냄
-
-    @Override
-    public void onCreate() {
-        // service생성하는 곳
-    }
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        //service()에서 mStartMode가 리턴되어 service가 시작하는곳
-    }
-    @Override
-    public IBinder onBind(Intent intent) {
-        // bindService()에서 mBinder가 리턴되어 클라이언트가 service와 바인딩되는 곳
-    }
-    @Override
-    public boolean onUnbind(Intent intent) {
-        unbindService()에서 mAllowRebind가 리턴되어 모든 클라이언트가 해제됨
-    }
-    @Override
-    public void onRebind(Intent intent) {
-        //onUnbind()가 이미 호출된 후 클라이언트가 
-	//bindService()로 service와 바인딩되는 곳
-    }
-    @Override
-    public void onDestroy() {
-        // service가 더 이상 사용되지 않아 소멸되는 곳
-    }
-}
-
-activity 수명 주기 콜백 메서드와는 service는 슈퍼클래스 구현을 호출하지 않아도 됩니다.
-
- 그림 2는 service에 대한 일반적인 콜백 메서드를 나타낸 것입니다. 이 그림에서는 startService()로 생성된 service와 bindService()로 생성된 service를 구분하고 있지만, 어떤 식으로 시작되었든 모든 service는 클라이언트와 바인딩될 수 있습니다. 클라이언트가 startService()호출하여 onStartCommand()로 처음 시작된 service라고 해도 클라이언트가 bindService()를 호출하면 여전히 onBind()에 대한 호출을 받을 수 있습니다. 
- 
-메서드를 구현함으로써, service 수명 주기의 두 가지 중첩된 루프를 모니터링할 수 있습니다.
--service의 전체 수명은 onCreate()가 호출된 시점부터 onDestroy() 반환 시점까지입니다. activity와 마찬가지로 service는 자신의 초기 설정을 onCreate()에서 수행하며, 남은 리소스를 모두 onDestroy()에서 릴리스합니다. 예를 들어 음악 재생 service는 스레드를 생성하고, 이 스레드의 onCreate()에서 음악이 재생됩니다. 그런 다음, onDestroy()에서 스레드를 중단할 수 있습니다. onCreate() 및 onDestroy() 메서드는 모든 service에 호출됩니다. 이는 service가 startService()로 생성되었든 bindService()로 생성되었든 상관없이 적용됩니다.
--service의 활성 수명은 onStartCommand() 또는 onBind()에 대한 호출에서부터 시작됩니다. 각 메서드는 Intent를 받아서 startService() 또는 bindService()에 전달합니다. service가 시작되면 수명 주기 전체가 종료되는 것과 동시에 활성 수명 주기도 종료됩니다. service는 onStartCommand()가 반환된 뒤에도 여전히 활성 상태입니다. service가 바인딩된 경우, onUnbind()가 반환되면 활성 수명 주기가 종료됩니다. 시작된 service를 중단하려면 stopSelf() 또는 stopService()를 호출하면 되지만, service에 대한 개별 콜백은 없습니다. 즉 onStop() 콜백이 없습니다. 그러므로 service가 클라이언트에 바인딩되어 있지 않은 한, 시스템은 service가 중단되면 이를 소멸시킵니다. 수신되는 콜백은 onDestroy()가 유일합니다.
-=====
+started service
 started service는 다른 component가 startService()를 호출하여 시작하고, 그 결과로 service의 onStartCommand() 메서드가 호출됩니다. service가 시작되면 이를 시작한 component와 독립적인 수명 주기를 가지게 됩니다. service는 백그라운드에서 무한히 실행될 수 있으며 이는 해당 service를 시작한 component가 소멸되었더라도 영향을 받지 않습니다. 따라서 service는 작업이 완료되면 stopSelf()를 호출하여 스스로 중단하거나 다른 component가 stopService()를 호출하여 중단시킵니다.
 
 애플리케이션 component가 service를 시작하려면 startService()를 호출하고 Intent를 전달합니다. 이때 이 인텐트에서 시작할 service를 지정하고 필요한 모든 데이터를 보냅니다. service는 onStartCommand() 메서드에서 이 Intent를 받습니다. 예를 들어 어느 activity가 온라인 데이터베이스에서 어떤 데이터를 저장해야 한다고 가정해보겠습니다. activity가 필요한 service를 시작하고, 인텐트를 startService()에 전달하여 service에 저장할 데이터를 전달할 수 있습니다. service는 이 인텐트를 onStartCommand()에서 수신하고, 인터넷에 연결한 다음, 데이터베이스 트랜잭션을 수행합니다. 트랜잭션이 완료되면 service가 스스로 중단되어 소멸됩니다.
@@ -219,6 +145,21 @@ START_STICKY
 START_REDELIVER_INTENT
 시스템이 onStartCommand() 반환 후에 service를 중단하는 경우, service를 다시 생성하고 이 service에 전달된 마지막 인텐트로 onStartCommand()를 호출합니다. 모든 보류 인텐트가 차례로 전달됩니다. 파일 다운로드같이 즉시 재개되어야 하는 작업을 능동적으로 수행 중인 service 등에 적합합니다.
 =====
+service 시작
+ activity 또는 다른 component에서 service를 시작하려면 Intent로 시작할 service를 지정하여 startService() 또는 startForegroundService()에 전달하면 됩니다. Android 시스템이 service의 onStartCommand() 메서드를 호출하고 여기에 시작할 service를 지정하는 Intent를 전달합니다. HelloService란 service를 activity가 시작하려면 startService()로 명시적 인텐트를 사용하면 됩니다.
+
+Intent intent = new Intent(this, HelloService.class);
+startService(intent);
+
+ startService() 메서드가 즉시 반환되며 Android 시스템이 service의 onStartCommand() 메서드를 호출합니다. service가 아직 실행되지 않고 있다면 먼저 onCreate()를 호출한 다음, onStartCommand()를 호출해야 합니다.
+ service가 바인딩을 제공하지 않는 경우, startService()와 함께 전달된 인텐트가 애플리케이션 component와 service 사이의 유일한 통신 수단입니다. 그러나 service가 결과를 돌려받기를 원하는 경우 service를 시작한 클라이언트가 PendingIngetBroadcast() 메소드를 사용하여 브로드캐스트으로 Intent를 만들고 이를 service를 시작한 Intent의 service에 전달할 수 있습니다. 그러면 service가 이 브로드캐스트으로 전달된 결과를 사용할 수 있게 됩니다.
+ service를 시작하기 위한 요청을 여러 개 보내면 그에 대응하여 service의 onStartCommand()에 대해 여러 번 호출이 발생합니다. 반면 중단할 때는 stopSelf() 또는 stopService()으로 한 번만 중단을 요청하면 됩니다.
+ 만약 앱이 API 레벨 26 이상을 대상으로 한다면 앱이 포그라운드에 있지 않을 때 시스템에서 백그라운드 service 사용하거나 생성하는 것에 제한을 적용합니다. 앱이 포그라운드 service를 생성해야 하는 경우, 해당 앱은 startForegroundService()를 호출해야 합니다. 이 메서드는 백그라운드 service를 생성하지만, 메서드가 시스템에 신호를 보내 service가 자체적으로 포그라운드로 승격될 것이라고 알립니다. service가 생성되면 5초 이내에 startForeground() 메서드를 호출해야 합니다.
+=====
+service 중단
+started service는 자신의 수명 주기를 직접 관리해야 합니다. 즉 시스템이 service를 중단하거나 소멸시키지 않는다는 뜻입니다. 다만 시스템 메모리를 회복해야 하고 service가 onStartCommand() 반환 후에도 계속 실행되는 경우는 예외입니다. service는 stopSelf()를 호출하여 스스로 중지하고 하고, 아니면 다른 component가 stopService()를 호출하여 이를 중지시킬 수 있습니다. 일단 stopSelf() 또는 stopService()로 중단 요청을 보내면 시스템은 가능한 한 빨리 service를 소멸시킵니다. service가 onStartCommand()에 대한 여러 요청을 동시에 처리하는 경우에는, 시작 요청의 처리를 끝낸 뒤에도 service를 중단하면 안 됩니다. 그 이후 새 시작 요청을 받았을 수 있기 때문입니다. 첫 요청이 끝날 때 중단하면 두 번째 요청이 종료될 수 있습니다. 이 문제를 피하려면, stopSelf(int)를 사용하여 service 중단 요청이 항상 가장 최근 시작 요청을 기준으로 하도록 해야 합니다. 다시 말해, stopSelf(int)를 호출할 경우 onStartCommand()에 전달된 startId를 전달하며, 여기에 중단 요청이 대응됩니다. 그런 다음 stopSelf(int)를 호출할 수 있게 되기 전에 service가 새 시작 요청을 수신하면 ID가 일치하지 않으므로 servcie는 중단되지 않습니다.
+ 단, 시스템 리소스 낭비를 피하고 배터리 전력 소모를 줄이기 위해서는 service의 작업이 완료되면 애플리케이션에서 service를 중단해야 합니다. 필요한 경우 stopService()를 호출하여 다른 component가 service를 중단할 수 있습니다. service에 대해 바인딩을 활성화하더라도, service가 onStartCommand()에 대한 호출을 한 번이라도 받았으면 항상 직접 service를 중단해야 합니다.
+=====
 포그라운드에서 service 실행
  foreground service는 사용자가 인식하고 있기에 메모리가 부족하더라도 시스템이 중단시킬 후보가 될 수 없습니다. foreground service는 상태 표시줄에 알림을 제공하기 때문에 service를 중단하거나 포그라운드에서 제거하지 않은 이상 알림을 해제할 수 없습니다. 그렇기에 foreground service를 너무 많이 사용하지 않도록 해야 합니다. 사용자의 눈에 잘 띄는 작업을 수행해야 하는 경우에만 사용해야 합니다. 사용자가 앱이 직접 상호작용을 주고받지 않을 때도 해당됩니다. 때문에 우선순위가 PRIORITY_LOW 이상이어야 하며, 이렇게 해야 사용자가 앱이 하는 일을 확실히 인식할 수 있습니다. 작업의 중요도가 낮아서 최소한의 우선순위 알림을 사용하고자 하는 경우에는 service를 사용하는 것보다 그 대신 예약된 작업을 사용하는 것이 낫습니다.
  service를 실행하는 앱은 모두 시스템에 추가적인 부하를 가하여 시스템 리소스를 소모합니다. 앱이 낮은 우선순위 알림을 사용해 service를 숨기려 하면 사용자가 활발히 상호작용을 주고받는 앱의 성능을 저해할 수 있습니다. 때문에 앱이 최소한의 우선순위 알림으로 service를 실행하려 하면 시스템이 앱의 동작에 대해 알림 드로어의 아래쪽 섹션에 호출하여 알립니다. 예를 들어 service에서 음악을 재생하는 음악 플레이어는 포그라운드에서 실행되도록 설정해야 합니다. 사용자가 작동을 분명히 인식하고 있기 때문입니다. 상태 표시줄에 있는 알림은 현재 노래를 나타내고, 사용자는 이 알림을 통해 음악 플레이어와 상호작용할 activity를 시작할 수 있습니다. 마찬가지로 사용자의 달리기 기록을 추적하는 앱은 사용자의 위치를 추적하는 데 foreground service가 필요할 수 있습니다. 
@@ -263,3 +204,62 @@ bound service생성
  bound service를 생성하려면 onBind() 콜백 메서드를 구현하여 service의 통신을 위한 인터페이스를 정의하는 IBinder를 반환하도록 해야 합니다. 그러면 다른 애플리케이션 component가 bindService()를 호출하여 해당 인터페이스를 탐색하고, service에 있는 메서드를 호출할 수 있습니다. service는 자신에게 바인딩된 애플리케이션 component에 도움이 되기 위해서만 존재하기 때문에, service에 바인딩된 component가 없으면 시스템이 이를 소멸시킵니다. bound service는 service를 onStartCommand()를 통해 시작했을 때와 같은 방식으로 중단하지 않아도 됩니다.
  여러 클라이언트가 service에 한꺼번에 바인딩될 수 있습니다. 클라이언트가 service와의 상호작용이 끝나면 unbindService()를 호출하여 바인딩을 해제합니다. service에 바인딩된 클라이언트가 하나도 없으면 시스템이 해당 servcie를 소멸시킵니다.
  bound service를 구현하는 데에는 여러 가지 방법이 있지만 started service다 훨씬 복잡합니다.
+Android 시스템이 service를 강제 중단하는 것은 메모리가 부족하여 사용자 포커스를 가진 activity를 위해 시스템 리소스를 회복해야만 하는 경우로만 국한됩니다. service가 사용자 포커스를 가진 activity에 바인딩 되었으면 종료될 가능성이 적고 service가 포그라운드에서 실행되도록 선언된 경우에는 종료될 가능성이 희박합니다. service가 시작되어 장시간 실행 중이라면 시스템은 시간이 지나면서 백그라운드 작업 목록에서 이 service가 차지하는 중요도를 낮추어 service가 종료될 가능성이 높아집니다. service가 시작되었다면 시스템에 의한 재시작을 정상적으로 처리하도록 설계해야 합니다. 시스템이 service를 중단하는 경우, 리소스를 다시 사용할 수 있게 되면 가능한 한 빨리 service가 다시 시작됩니다. 다만 개발자가 onStartCommand()에서 반환하는 값에 따라 달라집니다. 
+=====
+사용자가 애플리케이션과 상호작용할 때 기본 스레드 밖에서 작업을 수행해야 하는 경우, 새 스레드를 생성해야 합니다. 예를 들어 activity가 실행되는 중에만 음악을 재생하고자 하는 경우, onCreate() 안에 스레드를 생성하여 onStart()에서 실행한 다음 onStop()에서 중단하면 됩니다. 또한 기존의 Thread 클래스 대신 AsyncTask 또는 HandlerThread를 사용할 수도 있습니다.
+service는 기본적으로 자신의 호스팅 프로세스의 기본 스레드에서 실행됩니다. service는 자신의 스레드를 직접 생성하지 않으며, 특별히 지정하지 않는 한 별도의 프로세스에서 실행되지도 않습니다. service가  MP3 재생 또는 네트워킹 같이 CPU 집약적인 작업을 수행할 예정이거나 차단 작업을 수행할 예정인 경우 성능을 위해 service 내에 새 스레드를 생성해야 합니다. 별도의 스레드를 사용하면 '애플리케이션이 응답하지 않습니다(ANR)' 오류가 일어날 위험을 줄일 수 있으며, 애플리케이션의 기본 스레드는 액티비티와 사용자 상호작용 전용으로 유지될 수 있습니다.
+=====
+사용자에게 알림 전송
+ service가 실행되고 있을 때 사용자에게 토스트 알림 또는 상태 표시줄 알림 등을 사용해 이벤트를 알릴 수 있습니다. 토스트 알림은 현재 창의 표면에 잠깐 나타났다가 사라지는 메시지입니다. 상태 표시줄 알림은 상태 표시줄에 메시지가 담긴 아이콘을 제공하여 사용자가 이를 선택하면 activity 시작 같은 활동을 할 수 있게 합니다. 보통 파일 다운로드 완료 같은 일종의 백그라운드 작업이 완료되었고 이제 사용자가 그에 대해 조치를 취할 수 있는 경우에는 상태 표시줄 알림을 사용하는 것이 가장 좋습니다. 사용자가 확장된 뷰의 알림을 선택하면 해당 알림은 다운로드한 파일 보기 같은 activity를 시작할 수 있습니다.
+=====
+서비스 수명 주기 관리
+service의 수명 주기는 activity의 수명 주기보다 훨씬 간단합니다. 하지만 service를 생성하고 소멸하는 방법에 특히 주의를 기울여야 한다는 면에서 중요도는 더 높습니다. servcie는 사용자가 모르는 채로 백그라운드에서 실행될 수 있기 때문입니다.
+생성부터 소멸되는 시점까지의 service 수명 주기는 두 가지의 다른 경로를 가집니다.
+started service 
+다른 component가 startService()를 호출하면 servcie가 생성됩니다. 그러면 service가 무기한으로 실행될 수 있으며, stopSelf()를 호출해서 자체적으로 중단해야 합니다. 다른 component가 stopService()를 호출하면 service를 중단시킬 수 있습니다. service가 중단되면 시스템이 소멸시킵니다.
+bound service
+다른 component, 클라이언트가 bindService()를 호출하면 service가 생성됩니다. 그러면 클라이언트가 IBinder 인터페이스를 통해 service와 통신을 주고받을 수 있습니다. 클라이언트가 연결을 종료하려면 unbindService()를 호출하면 됩니다. 여러 클라이언트가 같은 servcie에 바인딩될 수 있으며, 모든 클라이언트가 바인딩을 해제하면 시스템이 해당 servcie를 소멸시킵니다. servcie가 스스로 중단하지 않아도 됩니다.
+ 두 가지 경로로 나뉘지만 완전히 별개는 아닙니다. 이미 startService()로 시작된 service에 바인딩할 수도 있습니다. 예를 들어 재생할 음악을 식별하는 Intent를 포함해 startService()를 호출하면 백그라운드 음악 서비스를 시작할 수 있습니다. 나중에 사용자가 플레이어에 좀 더 많은 통제력을 발휘하려고 하거나 현재 노래에 대한 정보를 얻고자 할 때, activity가 bindService()를 호출하여 service에 바인딩할 수 있습니다. 이와 같은 경우에는 모든 클라이언트가 바인딩을 해제할 때까지 stopService() 또는 stopSelf()가 service를 중단하지 않습니다.
+=====
+수명 주기 콜백 구현
+activity와 마찬가지로 service에도 수명 주기 콜백 메서드가 있어, 이를 구현하면 service의 상태 변경 내용을 모니터할 수 있고 적절한 시기에 작업을 수행할 수 있습니다. 다음의  service는 각 수명 주기 메서드를 보여줍니다.
+
+public class ExampleService extends Service {
+    int startMode;       // service가 종료되면 어떻게 행동할지 나타냄
+    IBinder binder;      // 클라이언트와 바인드할 인터페이스
+    boolean allowRebind; // onRebind를 사용 여부 나타냄
+
+    @Override
+    public void onCreate() {
+        // service생성하는 곳
+    }
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        //service()에서 mStartMode가 리턴되어 service가 시작하는곳
+    }
+    @Override
+    public IBinder onBind(Intent intent) {
+        // bindService()에서 mBinder가 리턴되어 클라이언트가 service와 바인딩되는 곳
+    }
+    @Override
+    public boolean onUnbind(Intent intent) {
+        unbindService()에서 mAllowRebind가 리턴되어 모든 클라이언트가 해제됨
+    }
+    @Override
+    public void onRebind(Intent intent) {
+        //onUnbind()가 이미 호출된 후 클라이언트가 
+	//bindService()로 service와 바인딩되는 곳
+    }
+    @Override
+    public void onDestroy() {
+        // service가 더 이상 사용되지 않아 소멸되는 곳
+    }
+}
+
+activity 수명 주기 콜백 메서드와는 service는 슈퍼클래스 구현을 호출하지 않아도 됩니다.
+
+ 그림 2는 service에 대한 일반적인 콜백 메서드를 나타낸 것입니다. 이 그림에서는 startService()로 생성된 service와 bindService()로 생성된 service를 구분하고 있지만, 어떤 식으로 시작되었든 모든 service는 클라이언트와 바인딩될 수 있습니다. 클라이언트가 startService()호출하여 onStartCommand()로 처음 시작된 service라고 해도 클라이언트가 bindService()를 호출하면 여전히 onBind()에 대한 호출을 받을 수 있습니다. 
+ 
+메서드를 구현함으로써, service 수명 주기의 두 가지 중첩된 루프를 모니터링할 수 있습니다.
+-service의 전체 수명은 onCreate()가 호출된 시점부터 onDestroy() 반환 시점까지입니다. activity와 마찬가지로 service는 자신의 초기 설정을 onCreate()에서 수행하며, 남은 리소스를 모두 onDestroy()에서 릴리스합니다. 예를 들어 음악 재생 service는 스레드를 생성하고, 이 스레드의 onCreate()에서 음악이 재생됩니다. 그런 다음, onDestroy()에서 스레드를 중단할 수 있습니다. onCreate() 및 onDestroy() 메서드는 모든 service에 호출됩니다. 이는 service가 startService()로 생성되었든 bindService()로 생성되었든 상관없이 적용됩니다.
+-service의 활성 수명은 onStartCommand() 또는 onBind()에 대한 호출에서부터 시작됩니다. 각 메서드는 Intent를 받아서 startService() 또는 bindService()에 전달합니다. service가 시작되면 수명 주기 전체가 종료되는 것과 동시에 활성 수명 주기도 종료됩니다. service는 onStartCommand()가 반환된 뒤에도 여전히 활성 상태입니다. service가 바인딩된 경우, onUnbind()가 반환되면 활성 수명 주기가 종료됩니다. 시작된 service를 중단하려면 stopSelf() 또는 stopService()를 호출하면 되지만, service에 대한 개별 콜백은 없습니다. 즉 onStop() 콜백이 없습니다. 그러므로 service가 클라이언트에 바인딩되어 있지 않은 한, 시스템은 service가 중단되면 이를 소멸시킵니다. 수신되는 콜백은 onDestroy()가 유일합니다.
