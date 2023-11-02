@@ -20,8 +20,6 @@ activity 및 다른 component와 마찬가지로, service는 모두 애플리케
  android:exported 특성을 포함하고 이를 false로 설정하면 service를 본인의 앱에만 사용 가능하게 할 수 있습니다. 이렇게 하면 다른 앱이 여러분의 service를 시작하지 못하도록 효과적으로 방지하며, 이는 명시적 인텐트를 사용하는 경우에도 적용됩니다.
 사용자는 기기에서 어떤 service가 실행되는지 볼 수 있습니다. 정체를 모르거나 신뢰할 수 없는 service를 보면 사용자가 service를 중단할 수 있습니다. 사용자에 의해 우발적으로 service가 중단되는 불상사를 막으려면 앱 매니페스트의 <service> 요소 android:description 특성을 추가해야 합니다. 여기에 service가 하는 일과 service의 장점을 설명하는 간략한 문장을 기재하면 됩니다.
 =====
- Android 5.0(API 레벨 21) 이상을 대상으로 하는 앱의 경우 JobScheduler 클래스를 사용하여 작업을 예약하세요. JobScheduler에는 작업 일정을 최적으로 조정하여 전력 소모량을 줄이고 Doze API와 함께 작동하여 배터리를 절약해준다는 장점이 있습니다.
-=====
 serivce를 생성하려면 Service의 하위 클래스를 생성해야 합니다. 구현에서는 수명 주기의  콜백 메서드를 재정의해야 하며 필요시 service에 바인딩할 구성 요소에 대한 메커니즘을 제공해야 합니다. 다음은 재정의가 필요한 중요한 콜백 메서드입니다.
 
 onStartCommand()
