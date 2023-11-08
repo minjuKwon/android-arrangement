@@ -59,25 +59,16 @@ started service는 다른 component가 startService()를 호출하면, 그 결�
 
 애플리케이션 component가 service를 시작할 때, startService()를 호출하고 Intent를 전달합니다. 이때 Intent에는 시작할 service를 지정하고 필요한 모든 데이터를 보냅니다. 그럼 이 Intent는 onStartCommand() 메서드에서 받습니다. 예를 들어 어느 activity가 온라인 데이터베이스에서 어떤 데이터를 저장해야 한다고 가정해보겠습니다. activity가 필요한 service를 시작하고, 인텐트를 startService()에 전달하여 service에 저장할 데이터를 전달합니다. service는 이 인텐트를 onStartCommand()에서 수신하고, 인터넷에 연결한 다음, 데이터베이스 트랜잭션을 수행합니다. 트랜잭션이 완료되면 service가 스스로 중단되어 소멸됩니다.
 
-Service 클래스는 모든 service의 기본 클래스입니다. 이 클래스를 extend할 때는 새 스레드를 만드는 것이 중요합니다. service는 기본적으로 애플리케이션의 main 스레드를 사용하는데, 애플리케이션에서 실행 중인 작업에 영향을 주어 수행 속도가 느려질 수 있기 때문입니다. 그렇기에 안드로이드 프레임워크에서는 service의 하위 클래스인 IntentService를 제공했습니다. 이 클래스는 모든 시작 요청에 대해 한 번에 하나씩 처리하는 worker 스레드를 제공합니다. 하지만 백그라운드 실행 제한을 도입한 후, android 8부터 사용을 추천하지 않았으며 android 11부터는 deprecated 되었습니다. 그렇기에 지금은 IntentService대신 새로운 버전과 호환되는 JobIntentService를 사용할 수 있습니다.
-다음 내용으로 사용자 정의 service 구현에 대해 다루지만 대부분 WorkManager 사용을 추천합니다.
+Service 클래스는 모든 service의 기본 클래스입니다. 이 클래스를 extend할 때는 새 스레드를 만드는 것이 중요합니다. service는 기본적으로 애플리케이션의 main 스레드를 사용하는데, 애플리케이션에서 실행 중인 작업에 영향을 주어 수행 속도가 느려질 수 있기 때문입니다. 그렇기에 안드로이드 프레임워크에서는 service의 하위 클래스인 IntentService를 제공했습니다. 이 클래스는 모든 시작 요청에 대해 한 번에 하나씩 처리하는 worker 스레드를 제공합니다. 하지만 백그라운드 실행 제한을 도입한 후, android 8부터 사용을 추천하지 않았으며 android 11부터는 deprecated 되었습니다. 그렇기에 지금은 IntentService대신 새로운 버전과 호환되는 JobIntentService를 사용합니다.
 
 백그라운드 실행 제한?
-백그라운드에서 실행 중인 service는 기기의 리소스를 소비하기 때문에 잠재적으로 더 나쁜 사용자 경험을 초래할 수 있습니다. 이러한 문제를 완화하기 위해, 시스템은 service에 여러 가지 제한을 적용합니다.
-
-WorkManager?
+백그라운드에서 실행 중인 service는 기기의 리소스를 소비하기 때문에 잠재적으로 나쁜 사용자 경험을 초래할 수 있습니다. 이러한 문제를 완화하기 위해, 시스템은 service에 여러 가지 제한을 적용합니다.
 
 
-Service
- 모든 service의 기본 클래스입니다. 이 클래스를 확장할 때는 service가 모든 작업을 완료할 수 있는 새 스레드를 생성하는 것이 중요합니다. service는 기본적으로 애플리케이션의 기본 스레드를 사용하기 때문에 애플리케이션이 실행 중인 activity의 성능을 저하를 막기 위해서입니다.
+2)Service 클래스 확장(extends)
+ 모든 service의 기본 클래스입니다. 이 클래스를 확장할 때는 service가 모든 작업을 무사히 완료할 수 있게 새 스레드를 생성하는 것이 중요합니다. service는 기본적으로 애플리케이션의 main 스레드를 사용하기 때문에, 애플리케이션에 실행 중인 activity의 성능을 막기 위해서입니다. 또한 시작 요청을 동시에 처리해야 하는 경우에 적합합니다. 다만 대부분의 사용 사례에서 WorkManager 사용을 추천합니다.
 
-Service 클래스 확장
-
-다음 내용에서는 기본 Service 클래스를 확장할 때 같은 종류의 서비스를 구현하는 방법과 자체 사용자 지정 service를 구현하는 방법을 배우게 됩니다. 이때에는 코드가 더 많이 필요하지만, 동시 시작 요청을 처리해야 하는 경우에 적합할 수 있습니다. 다만 대부분의 사용 사례에서 WorkManager를 사용하는 것을 고려해야 합니다. 
-
-작업 큐를 통해 시작 요청을 처리하는 대신 service가 멀티스레딩을 수행해야 하는 경우 Service 클래스를 확장하여 각 인텐트를 처리하게 할 수 있습니다.
-
-각 시작 요청에 대해 작업자 스레드를 사용하여 작업을 수행하고 한 번에 요청을 하나씩만 처리하는 코드 예시입니다.
+ service가 멀티스레딩을 수행해야 하는 경우 Service 클래스를 확장하여 각각의 수신 인텐트를 처리하게 할 수 있습니다. 다음은 각 시작 요청에 대해 work 스레드로 작업을 수행하여 한 번에 하나씩만 순차적으로 처리하는 코드 예시입니다.
 
 public class HelloService extends Service {
   private Looper serviceLooper;
@@ -91,8 +82,15 @@ public class HelloService extends Service {
       @Override
       public void handleMessage(Message msg) {
        // 보통 여기서 파일 다운같은 작업을 합니다.
-       //다른 작업을 처리하는 동안 서비스를 중지하지 않도록 
-       //시작 Id를 사용하여 서비스를 중지합니다
+       // 본 예시에서는 단순히 5초 sleep 합니다
+       try{
+           Thread.sleep(5000);
+       }catch(InterruptedException e){
+          //인터럽트 상태 복원
+          Thread.currentThread().interrupt();
+       }
+       //다른 작업을 처리하는 동안 service를 중지하지 않도록 
+       //startId를 사용하여 service를 중지합니다
           stopSelf(msg.arg1);
       }
   }
@@ -100,7 +98,8 @@ public class HelloService extends Service {
   @Override
   public void onCreate() {
   //service를 실행하는 스레드를 시작합니다. 
- //service는 일반적으로 프로세스의 기본 스레드에서 실행되므로 방해되지 않게 별도의 스   //레드를 만듭니다.
+ //service는 일반적으로 프로세스의 main 스레드에서 실행되므로 방해되지 않게 별도의  
+ //스레드를 만듭니다.
  //또한 CPU 집약적 작업이 UI를 중단시키지 않도록 백그라운드 우선순위를 설정합니다.
     HandlerThread thread = new HandlerThread("ServiceStartArguments",
             Process.THREAD_PRIORITY_BACKGROUND);
@@ -113,8 +112,8 @@ public class HelloService extends Service {
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
-  // 각 시작 요청에 대해 작업을 시작하라는 메시지와 시작 ID를 전달하면 
-  //작업 완료 시 어느 요청이 중지하고 있는지 알 수 있습니다
+  // 각 시작 요청에 대해 작업을 시작하라는 메시지와 start ID를 전달하면 
+  //작업 완료 시 어떤 요청을 중지해야하는 알 수 있습니다
       Message msg = serviceHandler.obtainMessage();
       msg.arg1 = startId;
       serviceHandler.sendMessage(msg);
@@ -131,22 +130,27 @@ public class HelloService extends Service {
 
   @Override
   public void onDestroy() {
+    Toast.makeText(this, "service done", Tost.LENGTH_SHORT).show()
   }
 }
 
- IntentService 보다 코드량이 많지만 각 호출을 onStartCommand()로 직접 처리할 수 있기 때문에 여러 개의 요청을 동시에 수행할 수 있습니다. 위의 코드는 그런 작업을 하지 않지만 원하는 경우 각 요청에 대해 새 스레드를 하나씩 생성한 다음 이전 요청이 끝날 때까지 기다리는 대신 곧바로 실행하면 됩니다.
- onStartCommand() 메서드는 반드시 정수를 반환해야 합니다. 이 정수는 시스템이 service를 종료할 경우 service를 유지하는 방법을 설명하는 값입니다. onStartCommand()로부터의 반환 값은 반드시 다음 상수 중 하나여야 합니다.
-START_NOT_STICKY
- 시스템이 service를 onStartCommand() 반환 후에 중단시키면 서비스를 재생성하지 않습니다. 다만 전달할 보류 인텐트가 있는 경우는 예외입니다. 이는 service가 불필요하게 실행되는 일을 피할 수 있는 가장 유용한 상수이며, 애플리케이션이 완료되지 않은 모든 작업을 단순히 다시 시작할 수 있을 때 유용합니다.
+ 위 예제코드는 onStartCommand()에 들어오는 모든 호출 처리와 백그라운드 스레드에서 실행되는 Handler 작업을 보여줍니다. 각 호출을 onStartCommand()로 직접 처리하기에 여러 개의 요청을 동시에 수행할 수 있습니다. 물론 위의 코드는 그런 작업을 하지 않지만 원하는 경우, 스레드풀에서 각 요청에 대해 새 스레드를 하나씩 생성한 다음 이전 요청이 끝날 때까지 기다리지 않고 곧바로 실행하면 됩니다.
 
-START_STICKY
-시스템이 onStartCommand() 반환 후에 service를 중단하면 service를 다시 생성하고 onStartCommand()를 호출하되, 마지막 인텐트는 전달하지 않습니다. 그 대신 시스템이 null 인텐트로 onStartCommand()를 호출합니다. 단 service를 시작하기 위한 보류 인텐트가 있는 경우는 예외라서 보류 인텐트가 전달됩니다. 명령을 실행하지는 않지만 무한히 실행 중이며 작업을 기다리고 있는 미디어 플레이어 같은 service에 적합합니다.
+ onStartCommand() 메서드는 반드시 정수를 반환해야 합니다. 이 정수는 시스템이 service를 종료할 경우 service를 어떻게 지속할 지 설명하는 값입니다. onStartCommand()로부터의 반환 값은 반드시 다음 상수 중 하나여야 합니다.
 
-START_REDELIVER_INTENT
-시스템이 onStartCommand() 반환 후에 service를 중단하는 경우, service를 다시 생성하고 이 service에 전달된 마지막 인텐트로 onStartCommand()를 호출합니다. 모든 보류 인텐트가 차례로 전달됩니다. 파일 다운로드같이 즉시 재개되어야 하는 작업을 능동적으로 수행 중인 service 등에 적합합니다.
-===
-IntentService
- Service의 하위 클래스로, 작업자 스레드를 사용하여 모든 시작 요청을 처리하되 한 번에 하나씩 처리합니다. service가 여러 개의 요청을 동시에 처리하지 않아도 되는 경우에 적합합니다. onHandleIntent()를 구현하는데 이는 각 시작 요청에 대해 인텐트를 수신해서 백그라운드 작업을 완료하도록 합니다.
+START_STICKY(1, 0x00000001)
+시스템이 onStartCommand() 반환 후에 service를 중단하면, service를 다시 생성하여 onStartCommand()를 호출하되, 마지막으로 onStartCommand()으로 전달된 인텐트는 처리하지 않습니다. 그 대신 시스템이 인텐트 값을 null로 onStartCommand()를 호출합니다. 즉 service가 강제 종료가 되었을 경우 기존의 인텐트가 null로 초기화 되어 service를 재시작합니다. 단 service를 시작할 때 pending intent를 전달한 경우는 예외로, pending intent가 전달됩니다. 명령을 실행하지는 않지만 무한히 실행 중이며 작업을 기다리고 있는 미디어 플레이어 같은 service에 적합합니다.
+
+START_NOT_STICKY(2, 0x00000002)
+시스템이 service를 onStartCommand() 반환 후에 중단시키면 service를 재생성하지 않습니다. 다만 pending intent가 전달된 경우는 예외입니다. 이는 service가 불필요하게 실행되는 일을 피할 수 있는 가장 유용한 상수이며, 애플리케이션이 완료되지 않은 모든 작업을 단순히 다시 시작할 수 있을 때 유용합니다.
+
+START_REDELIVER_INTENT(3, 0x00000003)
+시스템이 onStartCommand() 반환 후에 service를 중단하는 경우, service를 다시 생성하고 이 service에 전달된 마지막 인텐트로 onStartCommand()를 호출합니다. 모든 pending intent는 차례로 전달됩니다. 파일 다운로드같이 즉시 재개되어야 하는 작업을 능동적으로 수행 중하는 service 에 적합합니다.
+
+
+
+3) IntentService 클래스 확장
+ Service의 하위 클래스로, 작업자 스레드를 사용하여 모든 시작 요청을 처리하되 한 번에 하나씩 처리합니다. service가 여러 개의 요청을 동시에 처리하지 않아도 되는 경우에 적합합니다. onHandleIntent()를 구현하는데 이는 각 시작 요청에 대해 인텐트를 수신해서 백그라운드 작업을 완료하도록 합니다.작업 큐를 통해 시작 요청을 처리
 
 IntentService 클래스 확장
  started service는  여러 개의 요청을 동시에 처리하지 않아도 됩니다. 물론 이는 사실 위험한 다중 스레딩 시나리오일 수 있습니다. 사실 이 클래스는 Android 8 이후로는 사용할 수 없기 때문에 새로운 앱에서는 사용하지 않는 것이 좋습니다. 게다가 안드로이드 11부터는 더 이상 사용하지 않습니다.  IntentService의 대체품으로 최신 Android 버전과 호환되는  JobIntentService를 사용할 수 있습니다. 
