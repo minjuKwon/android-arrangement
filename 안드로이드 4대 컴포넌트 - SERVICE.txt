@@ -50,9 +50,11 @@ service를 더 이상 사용하지 않고 소멸시킬 때 호출됩니다. serv
 
 어느 component가 startService()를 호출하여 service를 시작하면 onStartCommand()에 대한 호출 발생하고, 해당 service는 알아서 stopSelf()로 스스로 중단할 때까지 또는 다른 component가 stopService()를 호출하여 service를 중단시킬 때까지 실행 중인 상태로 유지됩니다. onStartCommand()를 호출하지 않은 채 bindService()만을 호출하여 service를 생성한다면, service는 해당 component에 바인딩되는 동안만 실행됩니다. service가 모든 클라이언트로부터 바인딩이 해제되면 시스템이 이를 소멸시킵니다.
 
+2. Service 변화
 
 
-2. Started Service란
+
+3. Started Service란
 
 1)Started Service?
 started service는 다른 component가 startService()를 호출하면, 그 결과로 service의 onStartCommand() 메서드가 호출됩니다. service가 시작되면 이를 시작한 component와는 다른 독립적인 수명 주기를 가지게 됩니다. 해당 service를 시작한 component가 소멸되었더라도 service는 백그라운드에서 계속 실행될 수 있습니다. 따라서 service는 작업이 완료되면 stopSelf()를 호출하여 스스로 중단하거나 다른 component가 stopService()를 호출하여 중단시킵니다.
@@ -214,7 +216,7 @@ IntentService는 백그라운드에서 비동기 작업 때 자동으로 스레�
 
 
 
-3. Foreground Service 란
+4. Foreground Service 란
  foreground service는 사용자가 인식하고 있기에 메모리가 부족하더라도 시스템이 중단시킬 후보가 될 수 없습니다. 
 
 foreground service는 상태 표시줄에 알림을 제공하기 때문에 service를 중단하거나 포그라운드에서 제거하지 않은 이상 알림을 해제할 수 없습니다. 그렇기에 foreground service를 너무 많이 사용하지 않도록 해야 합니다. 사용자의 눈에 잘 띄는 작업을 수행해야 하는 경우에만 사용해야 합니다. 사용자가 앱이 직접 상호작용을 주고받지 않을 때도 해당됩니다. 때문에 우선순위가 PRIORITY_LOW 이상이어야 하며, 이렇게 해야 사용자가 앱이 하는 일을 확실히 인식할 수 있습니다. 작업의 중요도가 낮아서 최소한의 우선순위 알림을 사용하고자 하는 경우에는 service를 사용하는 것보다 그 대신 예약된 작업을 사용하는 것이 낫습니다.
