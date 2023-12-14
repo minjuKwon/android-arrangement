@@ -213,24 +213,19 @@ IntentService는 백그라운드에서 비동기 작업 때 자동으로 스레�
 이후 대체로 JobIntentService가 나왔습니다. 근데 이것도 deprecated... 젠장 최종적으로 현재는 WorkManager 라이브러리를 사용합니다. JobIntentService와 WorkManager를 여기에 다 다루려면 내용이 너무 많아지기에 다음에 따로 포스팅하도록 하겠습니다. 
 
 
-=====
-포그라운드에서 service 실행
- foreground service는 사용자가 인식하고 있기에 메모리가 부족하더라도 시스템이 중단시킬 후보가 될 수 없습니다. foreground service는 상태 표시줄에 알림을 제공하기 때문에 service를 중단하거나 포그라운드에서 제거하지 않은 이상 알림을 해제할 수 없습니다. 그렇기에 foreground service를 너무 많이 사용하지 않도록 해야 합니다. 사용자의 눈에 잘 띄는 작업을 수행해야 하는 경우에만 사용해야 합니다. 사용자가 앱이 직접 상호작용을 주고받지 않을 때도 해당됩니다. 때문에 우선순위가 PRIORITY_LOW 이상이어야 하며, 이렇게 해야 사용자가 앱이 하는 일을 확실히 인식할 수 있습니다. 작업의 중요도가 낮아서 최소한의 우선순위 알림을 사용하고자 하는 경우에는 service를 사용하는 것보다 그 대신 예약된 작업을 사용하는 것이 낫습니다.
- service를 실행하는 앱은 모두 시스템에 추가적인 부하를 가하여 시스템 리소스를 소모합니다. 앱이 낮은 우선순위 알림을 사용해 service를 숨기려 하면 사용자가 활발히 상호작용을 주고받는 앱의 성능을 저해할 수 있습니다. 때문에 앱이 최소한의 우선순위 알림으로 service를 실행하려 하면 시스템이 앱의 동작에 대해 알림 드로어의 아래쪽 섹션에 호출하여 알립니다. 예를 들어 service에서 음악을 재생하는 음악 플레이어는 포그라운드에서 실행되도록 설정해야 합니다. 사용자가 작동을 분명히 인식하고 있기 때문입니다. 상태 표시줄에 있는 알림은 현재 노래를 나타내고, 사용자는 이 알림을 통해 음악 플레이어와 상호작용할 activity를 시작할 수 있습니다. 마찬가지로 사용자의 달리기 기록을 추적하는 앱은 사용자의 위치를 추적하는 데 foreground service가 필요할 수 있습니다. 
+
+3. Foreground Service 란
+ foreground service는 사용자가 인식하고 있기에 메모리가 부족하더라도 시스템이 중단시킬 후보가 될 수 없습니다. 
+
+foreground service는 상태 표시줄에 알림을 제공하기 때문에 service를 중단하거나 포그라운드에서 제거하지 않은 이상 알림을 해제할 수 없습니다. 그렇기에 foreground service를 너무 많이 사용하지 않도록 해야 합니다. 사용자의 눈에 잘 띄는 작업을 수행해야 하는 경우에만 사용해야 합니다. 사용자가 앱이 직접 상호작용을 주고받지 않을 때도 해당됩니다. 때문에 우선순위가 PRIORITY_LOW 이상이어야 하며, 이렇게 해야 사용자가 앱이 하는 일을 확실히 인식할 수 있습니다. 작업의 중요도가 낮아서 최소한의 우선순위 알림을 사용하고자 하는 경우에는 service를 사용하는 것보다 그 대신 예약된 작업을 사용하는 것이 낫습니다.
+ service를 실행하는 앱은 모두 시스템에 추가적인 부하를 가하여 시스템 리소스를 소모합니다. 앱이 낮은 우선순위 알림을 사용해 service를 숨기려 하면 사용자가 활발히 상호작용을 주고받는 앱의 성능을 저해할 수 있습니다. 때문에 앱이 최소한의 우선순위 알림으로 service를 실행하려 하면 시스템이 앱의 동작에 대해 알림 드로어의 아래쪽 섹션에 호출하여 알립니다. 
+
+예를 들어 service에서 음악을 재생하는 음악 플레이어는 포그라운드에서 실행되도록 설정해야 합니다. 사용자가 작동을 분명히 인식하고 있기 때문입니다. 상태 표시줄에 있는 알림은 현재 노래를 나타내고, 사용자는 이 알림을 통해 음악 플레이어와 상호작용할 activity를 시작할 수 있습니다. 마찬가지로 사용자의 달리기 기록을 추적하는 앱은 사용자의 위치를 추적하는 데 foreground service가 필요할 수 있습니다. 
+
  Android 9(API 레벨 28) 이상을 대상으로 하고 foreground service를 사용하는 앱은 FOREGROUND_SERVICE 권한을 요청해야 합니다. 이 권한은 일반 권한이므로 시스템은 요청 앱에 자동으로 권한을 부여합니다. API 레벨 28을 대상으로 하는 앱이 FOREGROUND_SERVICE 권한 허가 없이 foreground service를 생성하려고 시도하면, 시스템이 SecurityException을 발생시킵니다.
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" ...>
 
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-
-    <application ...>
-        ...
-    </application>
-</manifest>
-
-Context context = getApplicationContext();
-Intent intent = new Intent(...); // service의 인텐트를 빌드합니다
-context.startForegroundService(intent);
 보통 onStartCommand()의 service 내부에서 service를 포그라운드에서 실행되도록 요청할 수 있습니다. 그러려면 startForeground()를 호출하면 됩니다. 이 메서드는 두 개의 매개변수를 취합니다. 그중 하나는 해당 알림을 고유하게 식별하는 정수이고 다른 하나는 상태 표시줄에 해당되는 Notification 객체입니다. 알림의 우선순위는 PRIORITY_LOW 이상이어야 합니다. 앱이 낮은 우선 순위의 알림을 사용하려고 하면 시스템이 알림 드로어에 메시지를 추가하여 사용자에게 앱의 foreground service 사용을 알립니다. 다음은 이에 대한 예입니다.
+
 // 알람에 바로 답장하기 작업을 추가하고 싶으면 
 //PendingIntent.FLAG_MUTABLE를 사용하면 됩니다.
 Intent notificationIntent = new Intent(this, ExampleActivity.class);
@@ -251,6 +246,19 @@ Notification notification =
 startForeground(ONGOING_NOTIFICATION_ID, notification);
 
 service를 포그라운드에서 제거하려면 stopForeground()를 호출하면 됩니다. 이 메서드는 부울 값을 취하며, 상태 표시줄 알림도 제거할지 여부를 나타냅니다. 이 메서드는 service를 중단하지 않지만 service가 포그라운드에서 실행 중일 때 중단되면 알림도 마찬가지로 제거됩니다.
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" ...>
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <application ...>
+        ...
+    </application>
+</manifest>
+
+Context context = getApplicationContext();
+Intent intent = new Intent(...); // service의 인텐트를 빌드합니다
+context.startForegroundService(intent);
 ====
  Android 12(API 레벨 31)이상은 단시간 실행하는 foreground service를 위한 간소화된 환경을 제공합니다. 이 경우에서 시스템은 foreground service와 관련된 알림을 표시하기 전에 10초 동안 기다립니다. 항상 바로 알람을 표시하는 몇 유형의 service가 있기에 여러 예외가 있습니다.
 =====
