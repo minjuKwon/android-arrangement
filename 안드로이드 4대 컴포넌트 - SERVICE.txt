@@ -60,7 +60,122 @@ service를 더 이상 사용하지 않고 소멸시킬 때 호출됩니다. serv
 
 어느 component가 startService()를 호출하여 service를 시작하면 onStartCommand()에 대한 호출 발생하고, 해당 service는 알아서 stopSelf()로 스스로 중단할 때까지 또는 다른 component가 stopService()를 호출하여 service를 중단시킬 때까지 실행 중인 상태로 유지됩니다. onStartCommand()를 호출하지 않은 채 bindService()만을 호출하여 service를 생성한다면, service는 해당 component에 바인딩되는 동안만 실행됩니다. service가 모든 클라이언트로부터 바인딩이 해제되면 시스템이 이를 소멸시킵니다.
 
+
+
 2. Service 변화
+
+ service를 구현하기 위해서는 단지 Service를 extends하고 몇가지 메소드를 재정의하면 됩니다. 위에 언급된 주요 메소드들이 그것들이지요. service가 멀티스레딩을 수행해야 하는 경우 Service 클래스를 확장하여 각각의 수신 인텐트를 처리하게 할 수 있습니다. 다음은 각 시작 요청에 대해 work 스레드로 작업을 수행하여 한 번에 하나씩만 순차적으로 처리하는 코드 예시입니다.
+
+public class HelloService extends Service {
+  private Looper serviceLooper;
+  private ServiceHandler serviceHandler;
+
+  //스레드에서 메시지를 받는 핸들러입니다
+  private final class ServiceHandler extends Handler {
+      public ServiceHandler(Looper looper) {
+          super(looper);
+      }
+      @Override
+      public void handleMessage(Message msg) {
+       // 보통 여기서 파일 다운같은 작업을 합니다.
+       // 본 예시에서는 단순히 5초 sleep 합니다
+       try{
+           Thread.sleep(5000);
+       }catch(InterruptedException e){
+          //인터럽트 상태 복원
+          Thread.currentThread().interrupt();
+       }
+       //다른 작업을 처리하는 동안 service를 중지하지 않도록 
+       //startId를 사용하여 service를 중지합니다
+          stopSelf(msg.arg1);
+      }
+  }
+
+  @Override
+  public void onCreate() {
+  //service를 실행하는 스레드를 시작합니다. 
+ //service는 일반적으로 프로세스의 main 스레드에서 실행되므로 방해되지 않게 별도의  
+ //스레드를 만듭니다.
+ //또한 CPU 집약적 작업이 UI를 중단시키지 않도록 백그라운드 우선순위를 설정합니다.
+    HandlerThread thread = new HandlerThread("ServiceStartArguments",
+            Process.THREAD_PRIORITY_BACKGROUND);
+    thread.start();
+
+    // HandlerThread의 Looper를 얻어 핸들러에 사용합니다
+    serviceLooper = thread.getLooper();
+    serviceHandler = new ServiceHandler(serviceLooper);
+  }
+
+  @Override
+  public int onStartCommand(Intent intent, int flags, int startId) {
+  // 각 시작 요청에 대해 작업을 시작하라는 메시지와 start ID를 전달하면 
+  //작업 완료 시 어떤 요청을 중지해야하는 알 수 있습니다
+      Message msg = serviceHandler.obtainMessage();
+      msg.arg1 = startId;
+      serviceHandler.sendMessage(msg);
+
+      //중단되면	이곳으로 리턴되어 재시작합니다
+      return START_STICKY;
+  }
+
+  @Override
+  public IBinder onBind(Intent intent) {
+     //바인딩을 하지 않았기에 null을 반환시킵니다.
+      return null;
+  }
+
+  @Override
+  public void onDestroy() {
+    Toast.makeText(this, "service done", Tost.LENGTH_SHORT).show()
+  }
+}
+
+ 위 예제코드는 onStartCommand()에 들어오는 모든 호출 처리와 백그라운드 스레드에서 실행되는 Handler 작업을 보여줍니다. 하나씩 처리하는 작업을 예시로 보여드렸지만 여러 개의 요청을 동시에 수행할 수도 있습니다. 각 호출을 onStartCommand()로 직접 처리하기 때문입니다. 스레드풀에서 각 요청에 대해 새 스레드를 하나씩 생성한 다음 이전 요청이 끝날 때까지 기다리지 않고 곧바로 실행하면 됩니다.
+
+1)IntentService 클래스 
+Service의 하위 클래스로, worker 스레드를 사용하여 모든 시작 요청을 처리하되 한 번에 하나씩 처리합니다. 그렇기에 service가 여러 개의 요청을 동시에 처리하지 않아도 되는 경우에 적합합니다. 위의 예제를 보면 알 수 있 듯이 service 클래스를 사용하면 많은 코드량이 필요하기 때문에 간단히 구현할 수 있는 IntentService를 제공하였습니다. onHandleIntent()를 구현하는데 이는 각 시작 요청에 대해 인텐트를 수신해서 백그라운드 작업을 완료하도록 합니다.작업 큐를 통해 시작 요청을 처리합니다. 
+
+IntentService 클래스는 다음과 같이 작동합니다.
+-애플리케이션의 main 스레드와는 별도로, onStartCommand()에 전달된 모든 인텐트를 실행하는 기본 worker 스레드를 생성
+-인텐트를 한 번에 하나씩 onHandleIntent() 구현에 전달하는 작업 큐를 생성하므로, 다중스레딩에 대해 염려할 필요 없음
+-시작 요청이 모두 처리된 후 service를 중단하므로, 개발자가 stopSelf()를 호출할 필요가 전혀 없음
+-onBind()의 기본 구현을 제공하여 null을 반환
+-onStartCommand()의 기본 구현을 제공하여, 인텐트를 작업 큐로 보내고 그다음은 onHandleIntent() 구현으로 보냄
+
+클라이언트가 제공한 작업을 완료하기 위해 onHandleIntent()를 구현합니다. 
+다음은 IntentService 구현의 예입니다.
+
+public class HelloIntentService extends IntentService {
+
+  /*생성자를 구현해야하며 super(workder 스레드이름)을 꼭 생성해야합니다.*/
+  public HelloIntentService() {
+      super("HelloIntentService");
+  }
+  /**
+   IntentServic는 기본 worker 스레드에서 인텐트로 service를 시작할 때 이 메소드를 부릅니다. 이 메서드가 리턴되면  IntentService가 service를 적당한 시기에 멈춥니다
+   */
+  @Override
+  protected void onHandleIntent(Intent intent) {
+       // 보통 여기서 파일 다운같은 작업을 합니다.
+       // 본 예시에서는 단순히 5초 sleep 합니다
+       try{
+           Thread.sleep(5000);
+       }catch(InterruptedException e){
+          //인터럽트 상태 복원
+          Thread.currentThread().interrupt();
+       }
+  }
+}
+
+단지 생성자 하나와 onHandleIntent()만 구현하면 됩니다. 다른 콜백 메서드도 재정의하려면(onCreate(), onStartCommand() 또는 onDestroy()) 슈퍼 구현을 꼭 호출해야 합니다. 그래야만 IntentService가 작업자 스레드의 수명을 적절하게 처리할 수 있습니다. 예를 들어 onStartCommand()는 반드시 기본 구현을 반환해야 합니다. 그래야 인텐트가 onHandleIntent()로 전달됩니다. onHandleIntent() 외에 슈퍼 클래스를 호출하지 않아도 되는 메서드는 onBind() 뿐입니다.물론 onBind()는 service가 바인드를 허용하는 경우에만 구현해야 합니다.
+
+IntentService는 백그라운드에서 비동기 작업 때 자동으로 스레드를 생성하여 작업을 처리하고 스스로 중단하여 개발자에게 편할 뿐 아니라 코드량도 적어졌습니다. 하지만 백그라운드 실행 제한으로 deprecated되었죠.
+/*이후 대체로 JobIntentService가 나왔습니다. 근데 이것도 deprecated... 젠장 최종적으로 현재는 WorkManager 라이브러리를 사용합니다. JobIntentService와 WorkManager를 여기에 다 다루려면 내용이 너무 많아지기에 다음에 따로 포스팅하도록 하겠습니다.*/
+
+
+
+
+ 
 
 
 
@@ -181,48 +296,6 @@ START_NOT_STICKY(2, 0x00000002)
 
 START_REDELIVER_INTENT(3, 0x00000003)
 시스템이 service를 강제 종료 시킨 후, service를 다시 생성하고 이 service에 전달된 마지막 인텐트로 onStartCommand()를 호출합니다. 모든 pending intent는 차례로 전달됩니다. 파일 다운로드같이 즉시 재개되어야 하는 작업을 능동적으로 수행 중하는 service 에 적합합니다.
-
-
-5)IntentService 클래스 확장
- deprecated 되었는데도 내용 정리하나요? 할 수 있지만 아직 기존 코드에 사용 중일 수 있기에..간단히 해보겠습니다.
-Service의 하위 클래스로, worker 스레드를 사용하여 모든 시작 요청을 처리하되 한 번에 하나씩 처리합니다. 그렇기에 service가 여러 개의 요청을 동시에 처리하지 않아도 되는 경우에 적합합니다. onHandleIntent()를 구현하는데 이는 각 시작 요청에 대해 인텐트를 수신해서 백그라운드 작업을 완료하도록 합니다.작업 큐를 통해 시작 요청을 처리합니다. 
-
-IntentService 클래스는 다음과 같이 작동합니다.
--애플리케이션의 main 스레드와는 별도로, onStartCommand()에 전달된 모든 인텐트를 실행하는 기본 worker 스레드를 생성
--인텐트를 한 번에 하나씩 onHandleIntent() 구현에 전달하는 작업 큐를 생성하므로, 다중스레딩에 대해 염려할 필요 없음
--시작 요청이 모두 처리된 후 service를 중단하므로, 개발자가 stopSelf()를 호출할 필요가 전혀 없음
--onBind()의 기본 구현을 제공하여 null을 반환
--onStartCommand()의 기본 구현을 제공하여, 인텐트를 작업 큐로 보내고 그다음은 onHandleIntent() 구현으로 보냄
-
-클라이언트가 제공한 작업을 완료하기 위해 onHandleIntent()를 구현합니다. 
-다음은 IntentService 구현의 예입니다.
-
-public class HelloIntentService extends IntentService {
-
-  /*생성자를 구현해야하며 super(workder 스레드이름)을 꼭 생성해야합니다.*/
-  public HelloIntentService() {
-      super("HelloIntentService");
-  }
-  /**
-   IntentServic는 기본 worker 스레드에서 인텐트로 service를 시작할 때 이 메소드를 부릅니다. 이 메서드가 리턴되면  IntentService가 service를 적당한 시기에 멈춥니다
-   */
-  @Override
-  protected void onHandleIntent(Intent intent) {
-       // 보통 여기서 파일 다운같은 작업을 합니다.
-       // 본 예시에서는 단순히 5초 sleep 합니다
-       try{
-           Thread.sleep(5000);
-       }catch(InterruptedException e){
-          //인터럽트 상태 복원
-          Thread.currentThread().interrupt();
-       }
-  }
-}
-
-단지 생성자 하나와 onHandleIntent()만 구현하면 됩니다. 다른 콜백 메서드도 재정의하려면(onCreate(), onStartCommand() 또는 onDestroy()) 슈퍼 구현을 꼭 호출해야 합니다. 그래야만 IntentService가 작업자 스레드의 수명을 적절하게 처리할 수 있습니다. 예를 들어 onStartCommand()는 반드시 기본 구현을 반환해야 합니다. 그래야 인텐트가 onHandleIntent()로 전달됩니다. onHandleIntent() 외에 슈퍼 클래스를 호출하지 않아도 되는 메서드는 onBind() 뿐입니다.물론 onBind()는 service가 바인드를 허용하는 경우에만 구현해야 합니다.
-
-IntentService는 백그라운드에서 비동기 작업 때 자동으로 스레드를 생성하여 작업을 처리하고 스스로 중단하여 개발자에게 편할 뿐 아니라 코드량도 적어졌습니다. 하지만 백그라운드 실행 제한으로 deprecated되었죠.
-이후 대체로 JobIntentService가 나왔습니다. 근데 이것도 deprecated... 젠장 최종적으로 현재는 WorkManager 라이브러리를 사용합니다. JobIntentService와 WorkManager를 여기에 다 다루려면 내용이 너무 많아지기에 다음에 따로 포스팅하도록 하겠습니다. 
 
 
 
