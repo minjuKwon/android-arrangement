@@ -63,7 +63,6 @@ service를 더 이상 사용하지 않고 소멸시킬 때 호출됩니다. serv
 
 
 2. Service 변화
-
  service를 구현하기 위해서는 단지 Service를 extends하고 몇가지 메소드를 재정의하면 됩니다. 위에 언급된 주요 메소드들이 그것들이지요. service가 멀티스레딩을 수행해야 하는 경우 Service 클래스를 확장하여 각각의 수신 인텐트를 처리하게 할 수 있습니다. 다음은 각 시작 요청에 대해 work 스레드로 작업을 수행하여 한 번에 하나씩만 순차적으로 처리하는 코드 예시입니다.
 
 public class HelloService extends Service {
@@ -132,6 +131,7 @@ public class HelloService extends Service {
 
  위 예제코드는 onStartCommand()에 들어오는 모든 호출 처리와 백그라운드 스레드에서 실행되는 Handler 작업을 보여줍니다. 하나씩 처리하는 작업을 예시로 보여드렸지만 여러 개의 요청을 동시에 수행할 수도 있습니다. 각 호출을 onStartCommand()로 직접 처리하기 때문입니다. 스레드풀에서 각 요청에 대해 새 스레드를 하나씩 생성한 다음 이전 요청이 끝날 때까지 기다리지 않고 곧바로 실행하면 됩니다.
 
+
 1)IntentService 클래스 
 Service의 하위 클래스로, worker 스레드를 사용하여 모든 시작 요청을 처리하되 한 번에 하나씩 처리합니다. 그렇기에 service가 여러 개의 요청을 동시에 처리하지 않아도 되는 경우에 적합합니다. 위의 예제를 보면 알 수 있 듯이 service 클래스를 사용하면 많은 코드량이 필요하기 때문에 간단히 구현할 수 있는 IntentService를 제공하였습니다. onHandleIntent()를 구현하는데 이는 각 시작 요청에 대해 인텐트를 수신해서 백그라운드 작업을 완료하도록 합니다.작업 큐를 통해 시작 요청을 처리합니다. 
 
@@ -173,9 +173,22 @@ IntentService는 백그라운드에서 비동기 작업 때 자동으로 스레�
 /*이후 대체로 JobIntentService가 나왔습니다. 근데 이것도 deprecated... 젠장 최종적으로 현재는 WorkManager 라이브러리를 사용합니다. JobIntentService와 WorkManager를 여기에 다 다루려면 내용이 너무 많아지기에 다음에 따로 포스팅하도록 하겠습니다.*/
 
 
+2)JobScheduler(extends JobService)
+IntentService 대체로 JobScheduler이 나온 것은 아니지만 백그라운드 최적화를 위해 만들어졌습니다. JobService라는 service를 사용하고 백그라운드 제한이 생김에 따라 이를 해결하는 방법은 중요하기 때문에 이에 대한 내용을 다루어 보겠습니다.
+
+우선 JobScheduler는 이름에서 알 수 있듯이 작업을 스케쥴링을 해주는 API입니다. 이 프레임워크는 언제 작업을 실행하는지 파악하고 최대한 배치 또는 지연하려고 합니다. JobInfo으로 선언된 조건이 충족되면 시스템은 응용 프로그램의 JobService에서 해당 작업을 실행합니다.JobInfo는 네트워크의 연결 상태나 충전 여부 등 JobService가 실행되어야 하는 조건을 관리합니다. 이 조건은 하나일 수도 여러 개일 수도 있습니다. JobService는 시작 및 종료 시의 동작을 처리할 수 있으며 onStartJob()과 onStopJob() 콜백 메소드를 제공합니다. Job 실행을 위한 권한을 등록한 후, 구현된 JobService에 scheduleJob메소드로 선언된 JobInfo을 전달하면 됩니다.
+
+<service
+  android:name=".SyncJobService"
+  android:permission="android.permission.BIND_JOB_SERVICE"
+  android:exported="true"/>
+
+AndroidManifest.xml에 service가 실행할 수 있도록 권한을 부여합니다.
 
 
- 
+
+
+-참고 :  https://medium.com/til-kotlin-ko/android-o%EC%97%90%EC%84%9C%EC%9D%98-%EB%B0%B1%EA%B7%B8%EB%9D%BC%EC%9A%B4%EB%93%9C-%EC%B2%98%EB%A6%AC%EB%A5%BC-%EC%9C%84%ED%95%9C-jobintentservice-250af2f7783c
 
 
 
