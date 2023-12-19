@@ -1,0 +1,35 @@
+어느 날 버튼의 색을 바꾸려고 background를 입력하였는데 적용이 되지 않더군요. 망할 기본 보라색 버튼이 자꾸 설정이 되었습니다. 구글링을 하니 AppCompatButton을 사용하면 된다고 하여 해결은 했지만 왜 Button은 백그라운드 값이 적용되지 않고  AppCompatButton을 사용하면 변경이 되는지 의문이 생겼습니다. 그래서 이 내용을 다루어 볼까 합니다.
+
+AppCompatButton?
+AppCompatButton은 AppCompat 라이브러리에서 지원해주는 뷰입니다. 이 라이브러리는 UI 발전에 따른 하위 호환성을 지원해줍니다. 이전 버전의 플랫폼에서 다음과 같은 호환 기능을 지원합니다.
+
+-Android x.core.view.ViewCompat의 background tint 메소드를 통해 배경의 동적 틴트를 허용합니다.
+-backgroundTint 및 backgroundTintMode를 사용하여 배경 틴트를 설정할 수 있습니다.
+-fontFamily를 사용하여 글꼴 패밀리를 설정할 수 있습니다
+
+왜 백그라운드 색이 적용 되지 않을까?
+스택오버플로우에서 누군가 답변한 내용을 보면 이유를 알 수 있었는데 그 내용은 다음과 같습니다.
+
+특정 버전의 많은 템플릿에서 프로젝트가 Android용 Material Components 라이브러리를 사용하도록 합니다. 그리고 기본 테마를 Theme.Material Components.DayNight.DarkActionBar를 기반으로 설정합니다. 이것의 부작용은 레이아웃의 모든 <Button> 요소가 일반 Button 위젯이 아닌 MaterialButton 위젯으로 변환된다는 것입니다. MaterialButton은 Android:background를 무시합니다. 그렇기기에 색상만 변경하고 싶다면 Android:backgroundTint를 사용하거나 테마의 색상 Primary 속성을 변경합니다. 사용자 지정 배경이 있고 테마를 Theme.MaterialComponents를 사용하고 싶으면 레이아웃의 XML 요소를 <Button> 대신 <android.widget.Button>으로 전환할 수 있습니다. 그러면 Android용 MaterialComponents에서 해당 요소를 무시할 수 있으며 XML 특성에 대해 버튼을 정상적으로 조작할 수 있습니다.
+
+즉, 기본 테마로 인해 적용이 되지 않으니 테마를 변경하거나 background 대신 backgroundTint사용, AppCompatButton 사용이 있습니다.
+
+변경 방법
+1. 테마 변경
+themes.xml에서 parent 값을 변경합니다. 진행하는 프로젝트가 특정 테마 값과 상관 없을 때는 아예 테마 값을 바꾸면 됩니다.
+
+Theme.Material3.DayNight.NoActionBar -> Theme.AppCompat.Light.NoActionBar
+
+2. backgroundTint 사용
+단, drawable 값은 제대로 적용이 되지 않으니 단순히 색만을 바꿀 때 추천드립니다.
+
+android:background="" -> android:backgroundTint=""
+
+3. AppCompatButton 사용
+
+<Button ... /> -> <androidx.appcompat.widget.AppCompatButton .../>
+
+-출처 
+https://developer.android.com/reference/androidx/appcompat/widget/AppCompatButton,
+https://stackoverflow.com/questions/64722733/android-background-drawable-not-working-in-button-since-android-studio-4-1,
+https://stackoverflow.com/questions/31858374/android-button-background-color-not-changing
