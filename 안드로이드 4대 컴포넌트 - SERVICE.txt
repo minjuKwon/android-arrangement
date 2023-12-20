@@ -332,6 +332,79 @@ https://medium.com/til-kotlin-ko/android-o%EC%97%90%EC%84%9C%EC%9D%98-%EB%B0%B1%
 https://tourspace.tistory.com/38
 
 
+4)WorkManager
+WorkManager는 백그라운드 처리에 권장하는 기본 API입니다. 대부분의 백그라운드 처리는 지속적인 작업을 통해 가장 잘 처리되는데 WorkManager는 지속적인 작업에 권장되는 솔루션이기 때문입니다. WorkManager가 처리하는 지속적인 작업의 유형은 세 가지입니다.
+-즉시
+즉시 시작하고 곧 완료해야 하는 작업. 신속하게 처리 가능
+-장기 실행
+10분 이상, 오래 실행될 수 있는 작업.
+-지연 가능
+시작을 지연하고 주기적으로 실행될 수 있는 예약된 작업
+
+앱이 다시 시작되거나 시스템이 재부팅될 때 작업이 예약된 채로 남아 있으면 그 작업은 유지됩니다. 사용자가 화면을 벗어나 이동하거나, 앱이 종료되거나, 기기가 다시 시작되더라도 안정적으로 실행되어야 하는 작업을 대상으로 설계되었습니다. 또한 다음과 같은 특징들을 가집니다.
+
+-작업 제약 조건
+작업 제약 조건을 사용하여 작업을 실행하는 데 최적인 조건을 선언적으로 정의합니다. 예를 들어, 기기가 무제한 네트워크에 있을 때 또는 기기가 유휴 상태이거나 배터리가 충분할 때만 실행합니다.
+
+-강력한 예약 관리
+WorkManager를 사용하면 가변 스케쥴링을 통해 한 번 또는 반복적으로 실행할 작업을 예약할 수 있습니다. 작업에 태그 및 이름을 지정하여 고유 작업 및 대체 가능한 작업을 예약하고 작업 그룹으로 함께 모니터링하거나 취소할 수 있습니다. 예약된 작업은 내부적으로 관리되는 SQLite 데이터베이스에 저장되며 WorkManager에서 기기를 재부팅해도 작업이 유지되고 다시 예약되도록 보장합니다. 또한  절전 기능을 사용하고 doze 같은 권장사항을 준수하므로 배터리 소모를 걱정하지 않아도 됩니다.
+
+-신속 처리 작업
+WorkManager를 사용하여 백그라운드에서 즉시 실행할 작업을 예약할 수 있습니다. 사용자에게 중요하고 몇 분 내에 완료되는 작업에는 신속 처리 작업을 사용해야 합니다.
+
+-유연한 재시도 정책
+경우에 따라 작업이 실패하기도 합니다. WorkManager는 구성 가능한 exponential back-off 정책을 비롯한 유연한 재시도 정책을 제공합니다.
+
+-작업 체이닝
+복잡한 관련 작업의 경우 직관적인 인터페이스를 사용하여 개별 작업을 함께 체이닝하면 순차적으로 실행할 작업과 동시에 실행할 작업을 제어할 수 있습니다.
+
+-내장 스레딩 상호 운용성
+WorkManager는 코루틴 및 RxJava와 원활하게 통합되며 고유한 비동기 API를 연결할 수 있는 유연성을 제공합니다. 코루틴과 WorkManager가 여러 사용 사례에 권장되지만, 상호 배타적이지는 않습니다. WorkManager를 통해 예약된 작업 내에서 코루틴을 사용할 수도 있습니다.
+
+workManager를 사용하기 위해서는 우선 필요한 종속 항목을 추가하고  Worker 클래스를 사용하여 작업을 정의해야 합니다. doWork() 메서드로 WorkManager에서 제공하는 백그라운드 스레드에서 비동기적으로 실행할 수 있습니다. WorkManager에서 실행할 작업을 만들려면 Worker 클래스를 확장하고 doWork() 메서드를 재정의합니다. 예를 들어 이미지를 업로드하는 Worker를 만들려면 다음과 같이 할 수 있습니다.
+
+public class UploadWorker extends Worker {
+   public UploadWorker(
+       @NonNull Context context,
+       @NonNull WorkerParameters params) {
+       super(context, params);
+   }
+
+   @Override
+   public Result doWork() {
+
+     // 여기서 작업할 내용을 작성합니다. 예로 이미지 업로드
+     uploadImages();
+
+     //Result으로 작업이 성공적으로 완료하였는지 나타냄
+     return Result.success();
+   }
+}
+
+doWork()에서 반환된 Result는 작업의 성공 여부를 알려주며 실패한 경우 WorkManager service에 작업을 재시도해야 하는지 알려줍니다.
+
+Result.success(): 작업이 성공적으로 완료되었습니다.
+Result.failure(): 작업에 실패했습니다.
+Result.retry(): 작업에 실패했으며 재시도 정책에 따라 다른 시점에 시도되어야 합니다.
+
+작업을 정의하고 나면 실행을 위해 WorkManager service로 예약해야 합니다. WorkManager에서는 작업을 예약하는 다양한 방법을 제공합니다. 일정한 간격으로 주기적으로 실행되도록 예약하거나 한 번만 실행되도록 예약할 수 있습니다. 어떤 작업 예약 방식을 선택하든 항상 WorkRequest를 사용합니다. Worker는 작업 단위를 정의하는 반면 WorkRequest 및 서브클래스는 언제, 어떻게 작업이 실행되어야 하는지 정의합니다. 가장 간단한 경우 다음 예와 같이 OneTimeWorkRequest를 사용하면 됩니다.
+
+WorkRequest uploadWorkRequest =
+   new OneTimeWorkRequest.Builder(UploadWorker.class)
+       .build();
+
+필요한 경우 setConstraints()를 통해 제약 조건을 설정합니다.
+
+마지막으로 enqueue() 메서드를 사용하여 WorkRequest를 WorkManager에 제출해야 합니다.
+
+WorkManager
+    .getInstance(myContext)
+    .enqueue(uploadWorkRequest);
+
+작업자가 실행되는 정확한 시간은 WorkRequest에 사용된 제약조건과 시스템 최적화에 따라 달라집니다. WorkManager는 이러한 제한사항에 따라 최상의 상태로 작동하도록 설계되었습니다.
+
+
+
 3. Started Service란
 
 1)Started Service?
