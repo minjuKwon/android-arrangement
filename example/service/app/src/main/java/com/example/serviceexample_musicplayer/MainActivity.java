@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.View;
@@ -42,7 +43,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     void startMusic(){
         Intent intent= new Intent(this, MyService.class);
-        startService(intent);
+        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        }
+        else{
+            startService(intent);
+        }
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
