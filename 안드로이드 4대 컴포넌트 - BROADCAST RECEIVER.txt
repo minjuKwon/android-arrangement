@@ -1,0 +1,153 @@
+1. Broadcast Receiver란 
+1)Broadcast Receiver? 
+Broadcast Receiver는 일반적인 사용자 흐름과 달리, 이벤트가 발생하면 시스템 전체로 널리 공지되고 앱이 이를 응답할 수 있도록 하는 구성요소입니다. 이름 그대로 방송, broadcast를 수신합니다. 디자인 패턴의 발행-구독(Publish-Subscribe) 패턴과 유사합니다.  
+
+발행-구독 패턴?
+발행구독 패턴은 발행자(생상자)와 구독자(수신자) 사이에 있는 중간 매개체를 통해 메시지를 비동기적으로 처리하며 서로 간의 의존성을 최소화하는 패턴입니다. 발행자는 메시지를 생성하지만 누가 자신의 메시지를 구독하는지 알 필요 없습니다. 구독자는 메시지를 수신하지만 어떤 발행자로부터 받는지 알 필요 없습니다. 발행자가 특정 데이터 범위나 이벤트를 중간 매개체한데 전달합니다. 그럼 중간 매개체는 해당 데이터나 이벤트를 자신에게 알려달라고 구독한 구독자에게 메시지를 전달합니다. 
+
+Android 시스템에서 broadcast 메시지를 보내거나 받을 수 있습니다. 앱이 관심 있는 이벤트가 발생할 때 이 소식을 받습니다. 즉, 특정 broadcast를 수신하도록 등록할 수 있습니다. Broadcast가 전송되면 시스템은 특정 유형의 broadcast를 수신 받도록 등록한 앱에 broadcast를 자동으로 전달해줍니다. 예를 들어 안드로이드 시스템은 시스템이 부팅될 때 또는 기기가 충전을 시작할 때와 같은 다양한 시스템 이벤트가 발생할 때 broadcast를 전송합니다.
+
+시스템은 현재 실행 중이 아닌 앱에도 broadcast를 전달할 수 있습니다. 예를 들어 앱에서 사용자에게 예정된 이벤트에 관해 알리는 알림을 보여주도록 알람을 예약할 수 있습니다. 알람은 앱의 broadcast receiver에 전달되므로 알람이 울릴 때까지 앱이 실행 중 유지되지 않아도 됩니다. 
+
+또한 안드로이드 시스템뿐만 아니라 다른 안드로이드 앱에서도 broadcast 메시지를 보내거나 받을 수 있습니다. 다른 앱에 관심 있을 만한 사항처럼, 필요할 broadcast를 적절하게 전송하여  알릴 수 있습니다. 예로 일부 새 데이터가 다운로드됨을 알릴 수 있습니다.
+
+많은 broadcast는 시스템에 의해 발생합니다. 예를 들어 화면이 꺼져 있거나 배터리가 부족하거나 사진이 캡처되었음을 알리는 broadcast가 있습니다. 앱은 일부 데이터가 기기에 다운로드되어 사용할 수 있음을 다른 앱에 알리는 등 broadcast를 시작할 수도 있습니다. 시스템이 비행기 모드로 전환하거나 비행기 모드를 해제할 때와 같이 다양한 시스템 이벤트가 발생할 때 시스템은 자동으로 broadcast를 전송합니다. 시스템 broadcast는 이벤트를 수신하도록 등록된 모든 앱으로 전송됩니다. 시스템 broadcast는 이벤트를 수신하도록 구독한 모든 앱으로 전송됩니다.
+
+Broadcast receiver는 BroadcastReceiver의 서브클래스로 구현되며 각 broadcast는 Intent 객체로 전달됩니다. 각 broadcast 메시지는 Intent 객체의 action을 포함합니다. Action은 Intent가 수행할 이벤트를 식별하는 문자열로android.intent.action.AIRPLANE_MODE 같은 형태를 말합니다. 즉, action을 통해  broadcast 메시지를 식별합니다. 또한 Intent로 키-값 쌍의 번들 형태로 추가 정보를 포함할 수도 있습니다. 예를 들어 비행기 모드 Intent에 비행기 모드가 켜져 있는지 여부를 나타내는 boolean 항목을 추가로 포함시킵니다.
+
+시스템 broadcast가 사용하는 Intent action의 전체 목록은 Android SDK의 BROADCAST_ACTIONS.TXT 파일에서 볼 수 있습니다. 각 Action에는 연결된 상수 필드가 있습니다. 예를 들어 상수 ACTION_AIRPLANE_MODE_CHANGED의 값은 android.intent.action.AIRPLANE_MODE 입니다.
+(파일 사진)
++공식 문서에서도 broadcast 작업 목록을 보여줍니다.
+https://developer.android.com/about/versions/11/reference/broadcast-intents-30
+
+
+2)Broadcast Receiver 표시
+Broadcast receiver는 별도의 UI를 표시하지 않지만 상태 표시줄 알림을 만들어 사용자에게 알릴 수 있습니다. 하지만 broadcast receiver는 다른 구성요소를 통신하게 해주는 게이트웨이인 경우가 더 흔하며 최소한의 작업만 실행합니다. 예를 들어 broadcast receiver는 특정 이벤트에 관한 작업을 실행하도록  JobScheduler를 사용하는 JobService 또는 Workmanager로 작업 예약할 수 있습니다. 
+Broadcast receiver는 서로 상호작용하는 앱에 사용되는 경우가 많으므로 broadcast receiver를 설정할 때 보안에 미치는 영향을 알고 있어야 합니다.
+
+
+3)시스템 영향
+시스템은 최적의 시스템 상태를 유지하기 위해 broadcast 전송을 최적화합니다. 따라서 broadcast 전송 시간은 보장되지 않습니다. 전송 시간이 보장되어야 하는, 예를 들어 지연 시간을 짧게 가져야하는 프로세스 간 통신이 필요한 앱은 bound service를 고려해야 합니다. 언제 응답할지 모르는 broadcast는 이벤트를 알리는 역할이기에 통신에는 적합하지 않습니다. 그러니 양방향 통신을 지원하는 bound service를 사용해야하죠. 또한 많은 broadcast 사용과 백그라운드에서의 실행은 시스템 성능을 저하시킬 수 있기에 주의해야 합니다. 많은 응답을 야기하고 백그라운드 작업은 이미 시스템에 부담이 될 수 있기에 적절히 사용해야 합니다.  
+
+
+
+2. Broadcast 수신 구현
+Manifest에 선언된 receiver와 Context에 등록된 receiver, 두 가지 방법으로 broadcast를 수신할 수 있습니다.
+
+1)Manifest에 선언된 수신자
+Manifest에서 broadcast receiver를 선언하면, broadcast가 전송될 때 해당 앱이 아직 실행되고 있지 않은 경우 시스템에서 앱을 시작합니다. manifest에 선언된 receiver를 정적 receiver라고도 표현합니다.
+참고
+앱이 API 수준 26 이상을 타겟팅할 때, 몇 가지 경우를 제외하고 manifest에서 암시적 broadcast (앱을 구체적으로 타겟팅하지 않는 broadcast) 선언할 수 없습니다. 암시적 broadcast 대신 대부분 scheduled jobs을 사용합니다.
+
+Manifest에서 broadcast receiver를 선언하려면 다음 단계를 따르세요.
+(i) 앱의 manifest에서 <receiver> 요소를 지정합니다.
+//사용자 본인이 소유하고 있는 어플이라도 시스템과 다른 앱에서 보낸 broadcast를 수신하려면 android:exported true 설정
+<receiver android:name=".MyBroadcastReceiver" android:exported="false">
+    <intent-filter>
+        <action android:name="APP_SPECIFIC_BROADCAST" />
+    </intent-filter>
+</receiver>
+(ii) BroadcastReceiver 서브클래스를 선언하고 onReceive(Context, Intent)를 구현합니다. 다음 코드의 broadcast receiver는 broadcast의 콘텐츠를 기록하고 표시합니다.
+public class MyBroadcastReceiver extends BroadcastReceiver {
+        private static final String TAG = "MyBroadcastReceiver";
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Action: " + intent.getAction() + "\n");//intent action얻기
+	    //intent객체를 uri 형식의 문자열 얻기
+            sb.append("URI: " + intent.toUri(Intent.URI_INTENT_SCHEME).toString() + "\n");
+            String log = sb.toString();
+            Log.d(TAG, log);
+
+            ActivityNameBinding binding =
+                    ActivityNameBinding.inflate(layoutInflater);
+            val view = binding.root;
+            setContentView(view);
+
+            Snackbar.make(view, log, Snackbar.LENGTH_LONG).show();
+        }
+    }
+앱이 설치될 때 시스템 패키지 관리자가 receiver를 등록합니다. 그러면 broadcast receiver가 앱의 또다른 진입점이 됩니다. 즉, 앱이 현재 실행되고 있지 않으면 시스템에서 앱을 시작하고 broadcast를 전달할 수 있습니다.
+시스템은 각 broadcast를 처리하기 위한 새로운 broadcast receiver 객체를 생성합니다. 이 객체는 onReceive(Context, Intent)를 호출하는 동안에만 유효합니다. 즉, 이 메서드가 반환되면 시스템은 구성요소가 더 이상 활성 상태가 아닌 것으로 간주합니다.
+
+2)Context에 등록된 receiver
+Context에 등록된 receiver는 등록된 context가 유효한 동안 broadcast를 수신합니다. 예를 들어 activity context 내에서 등록하면 activity가 소멸되기 전까지 broadcast를 수신합니다. 애플리케이션 context에 등록하면 앱이 실행되는 동안 broadcast를 수신합니다. 동적 receiver라고도 표현합니다.
+
+수신자를 context에 등록하려면 다음 단계를 따르세요.
+(ⅰ) 앱의 모듈 수준 빌드 파일에 AndroidX Core 라이브러리 버전 1.9.0 이상을 포함합니다.
+dependencies {
+    def core_version = "1.13.1"
+
+    // Java language implementation
+    implementation "androidx.core:core:$core_version"
+    // Kotlin
+    implementation "androidx.core:core-ktx:$core_version"
+
+    // To use RoleManagerCompat
+    implementation "androidx.core:core-role:1.0.0"
+
+    // To use the Animator APIs
+    implementation "androidx.core:core-animation:1.0.0"
+    // To test the Animator APIs
+    androidTestImplementation "androidx.core:core-animation-testing:1.0.0"
+
+    // Optional - To enable APIs that query the performance characteristics of GMS devices.
+    implementation "androidx.core:core-performance:1.0.0"
+
+    // Optional - to use ShortcutManagerCompat to donate shortcuts to be used by Google
+    implementation "androidx.core:core-google-shortcuts:1.1.0"
+
+    // Optional - to support backwards compatibility of RemoteViews
+    implementation "androidx.core:core-remoteviews:1.1.0"
+
+    // Optional - APIs for SplashScreen, including compatibility helpers on devices prior Android 12
+    implementation "androidx.core:core-splashscreen:1.2.0-alpha01"
+}
+(ⅱ) BroadcastReceiver의 인스턴스를 만듭니다.
+BroadcastReceiver br = new MyBroadcastReceiver();
+(ⅲ) IntentFilter의 인스턴스를 만듭니다. IntentFilter는 특정 Intert를 필터링해줍니다. broadcast가 수신 받을 특정 이벤트 Intent를 선언합니다.
+IntentFilter filter = new IntentFilter(APP_SPECIFIC_BROADCAST);
+(ⅳ) broadcast receiver를 다른 앱에 접근 여부선택합니다. 
+ broadcast receiver가 시스템이나 내가 소유한 앱도 포함하여 다른 앱에서 전송된 broadcast를 수신하려는 경우 RECEIVER_EXPORTED 플래그를 사용합니다. 앱에서 보낸 broadcast만 수신 대기하는 경우 RECEIVER_NOT_EXPORTED 플래그를 사용합니다.
++참고
+일부 시스템 broadcast는 Android 프레임워크의 일부이지만 시스템의 고유 프로세스 ID(UID)로 실행되지 않습니다. 운영체제 자체가 직접 관리하여 높은 권한을 가지기 때문인데 블루투스 및 전화 통신 등이 있습니다. 이러한 권한이 높은 앱을 포함하여 시스템 broadcast 모두 수신하려면 RECEIVER_EXPORTED를 사용해야 합니다. RECEIVER_NOT_EXPORTED로 수신기에 플래그를 지정하면 수신기는 앱에서 일부 시스템 broadcast와 broadcast를 수신할 수 있지만 권한이 높은 앱의 broadcast는 수신할 수 없습니다.
+
+앱이 여러 broadcast를 수신하는데 일부 broadcast는 RECEIVER_NOT_EXPORTED로, 일부는 RECEIVER_EXPORTED로 지정되어야 하는 경우 여러 broadcast receiver으로 broadcast를 나눕니다.
+boolean listenToBroadcastsFromOtherApps = false;
+if (listenToBroadcastsFromOtherApps) {
+    receiverFlags = ContextCompat.RECEIVER_EXPORTED;
+} else {
+    receiverFlags = ContextCompat.RECEIVER_NOT_EXPORTED;
+}
+boolean listenToBroadcastsFromOtherApps = false;
+if (listenToBroadcastsFromOtherApps) {
+    receiverFlags = ContextCompat.RECEIVER_EXPORTED;
+} else {
+    receiverFlags = ContextCompat.RECEIVER_NOT_EXPORTED;
+}
+(ⅴ) registerReceiver()를 호출하여 수신자를 등록합니다.
+ContextCompat.registerReceiver(context, br, filter, receiverFlags);
+(ⅵ) Broadcast 수신을 중지하려면 unregisterReceiver(android.content.BroadcastReceiver)를 호출합니다.
+ Receiver가 더 이상 필요하지 않거나 context가 더 이상 유효하지 않으면 receiver를 등록 취소해야 합니다.
+receiver를 등록 및 등록 취소 위치를 주의해야합니다. 예를 들어 activity의 context를 사용하여 onCreate(Bundle)에 receiver를 등록하는 경우 activity 종료 후에도 메모리에 남지 않도록 onDestroy()에서 등록을 취소해야 합니다. onDestory()가 호출된다고 해도 receiver가 자동으로 해제되지 않습니다. onResume()에 receiver를 등록하는 경우 receiver를 여러 번 등록되지 않도록 onPause()에서 등록을 취소해야 합니다. 일시정지 상태에서 broadcast를 해제하면 불필요한 시스템 오버헤드를 줄일 수 있습니다. onSaveInstanceState(Bundle)에서 등록을 취소하면 안됩니다. 사용자가 뒤로 버튼을 눌러 이전 화면으로 돌아가도 이 메서드가 호출되지 않아 제대로 해제 되지 않기 때문입니다. 
+
+3)프로세스 상태에 미치는 영향
+BroadcastReceiver의 작동 여부는 포함된 프로세스에 영향을 미치므로 시스템 종료 가능성이 변경될 수 있습니다. 포그라운드 프로세스는 수신자의 onReceive() 메서드를 실행합니다. 시스템은 메모리 부족이 심하지 않다면 프로세스를 실행합니다. BroadcastReceiver는 onReceive() 후에 비활성화됩니다. Broadcast 수신 프로세스는 앱 구성요소만큼만 중요합니다. 프로세스가 사용자와 상호작용이 적어 manifest 선언 receiver만 호스팅하는 경우,시스템은 다른 더 중요한 프로세스에 리소스를 사용할 수 있도록 onReceive() 후에 이 receiver를 종료할 수 있습니다. 따라서 broadcast receiver는 장기 실행 백그라운드 스레드를 시작해서는 안 됩니다. 시스템은 onReceive() 이후 언제든지 프로세스를 중지하여 메모리를 회수하고 생성된 스레드를 종료할 수 있습니다. 프로세스를 활성 상태로 유지하려면 시스템에서 프로세스가 계속 작동 중임을 알 수 있도록 JobScheduler를 사용하여 receiver에서 JobService를 schedule합니다.
+
+3. Broadcast 전송 구현
+Android는 sendOrderedBroadcast()와 sendBroadcast() 두가지 방법으로 앱에서 broadcast를 전송할 수 있습니다.
+
+sendOrderedBroadcast(Intent, String) 
+한 번에 하나의 receiver로 broadcast를 전송합니다. 각 receiver는 차례로 실행되므로 결과를 다음 receiver로 전파하거나 broadcast를 완전히 중단하여 다른 receiver가 받지 못하도록 할 수 있습니다. Receiver가 실행되는 순서는 intent 필터의 android:priority 속성으로 제어합니다. 우선순위가 동일한 receiver는 임의의 순서로 실행됩니다.
+
+sendBroadcast(Intent) 
+정해진 순서 없이 동시에 모든 receiver에 broadcast를 전송합니다. 이 경우가 일반 broadcast입니다. 동작이 간단하기에 더 효율적이지만, 각 receiver가 독립적이기에 broadcast receiver가 다른 broadcast receiver에서 수정한 결과를 읽거나 어느 broadcast에서 수신된 데이터를 다른 receiver로 전파하거나 broadcast를 취소할 수 없습니다. 모든 receiver에 전송되기에 이 후에는 제어할 수 없습니다. 다음 코드는 intent를 만들고 sendBroadcast(Intent)를 호출하여 broadcast를 전송하는 예시입니다
+
+Intent intent = new Intent();
+intent.setAction("com.example.broadcast.MY_NOTIFICATION");
+intent.putExtra("data", "Nothing to see here, move along.");
+sendBroadcast(intent);
+
+Broadcast 메시지는 Intent 객체에서 래핑됩니다. Intent의 action 문자열에 앱의 자바 패키지 이름 구문을 포함해서 broadcast 이벤트를 고유하게 식별할 수 있게 합니다. putExtra(String, Bundle)를 사용하여 intent에 추가 정보를 첨부할 수 있습니다. Intent에서 setPackage(String)를 호출하여 broadcast를 동일한 조직의 앱 집합으로 제한할 수도 있습니다.
+참고
+Intent는 broadcast를 전송하고 startActivity(Intent)에서 activity을 시작하는 데 사용되지만 이러한 작업은 전혀 관련이 없습니다. Broadcast receiver는 activity를 시작하는 데 사용된 Intent를 보거나 캡처할 수 없습니다. 마찬가지로 intent를 broadcast에 사용할 때 activity을 찾거나 시작할 수 없습니다.
