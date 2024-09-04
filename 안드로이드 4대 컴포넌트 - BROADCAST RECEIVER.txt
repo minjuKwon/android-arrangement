@@ -165,9 +165,12 @@ Intent는 broadcast를 전송하고 startActivity(Intent)에서 activity을 시�
 1)Android 7.0	
 -ACTION_NEW_PICTURE
 -ACTION_NEW_VIDEO
-Android 7.0 (API 수준 24) 이상에서는 ,해당 시스템 broadcast를 전송하지 않습니다. 대신 JobInfo.Builder.JobInfo.Builder.addTriggerContentUri(TriggerContentUri)를 사용할 수 있습니다. 
+Android 7.0 (API 수준 24) 이상에서는 ,해당 시스템 broadcast를 전송하지 않습니다. 대신 JobInfo.Builder.JobInfo.Builder.addTriggerContentUri(TriggerContentUri)를 사용할 수 있습니다.
+ Android 8.0 (API 수준 26)부터 다시 사용할 수 있게 되었지만 동적 등록 receiver에서만 사용할 수 있습니다. 다만 백그라운드 제한으로 인해 활성 상태로 실행 중인 앱에서만 가능하고 무거운 작업을 해야할 경우 JobScheduler를 대신 사용해야 합니다.
 
-또한 Android 7.0 (API 수준 24) 이상을 타겟팅하는 앱은 registerReceiver(BroadcastReceiver, IntentFilter)를 통해서만 CONNECTIVITY_ACTION broadcast를 등록할 수 있습니다. manifest에 선언해도 작동하지 않습니다. API 수준 28이상 부터는 deprecated 되었습니다. 대신 requestNetwork(NetworkRequest, PendingIntent), registerNetworkCallback(NetworkRequest, PendingIntent) 이나 registerDefaultNetworkCallback(NetworkCallback)를 사용할 수 있습니다.
+- CONNECTIVITY_ACTION
+Android 7.0 (API 수준 24) 이상을 타겟팅하는 앱은 registerReceiver(BroadcastReceiver, IntentFilter)를 통해서만 broadcast를 등록할 수 있습니다. manifest에 선언해도 작동하지 않습니다.
+API 수준 28이상 부터는 deprecated 되었습니다. 대신 ConnectivityManager를 사용해야합니다. requestNetwork(NetworkRequest, PendingIntent)과 registerNetworkCallback(NetworkRequest, PendingIntent) 혹은registerDefaultNetworkCallback(NetworkCallback)를 사용하여 더 다양한 기능을 사용할 수 있습니다. 이 메서드들로 네트워크 변경에 대해 더 빠르고 자세한 업데이트를 받을 수 있습니다.
 
 
 2)Android 8.0	
@@ -176,7 +179,7 @@ Android 8.0 (API 수준 26)부터 시스템은 manifest 선언 receiver에 추�
 
 3)Android 9	
 Android 9 (API 수준 28)부터 NETWORK_STATE_CHANGED_ACTION broadcast는 사용자의 위치 또는 개인 식별 데이터에 관한 정보를 수신하지 않습니다.
-또한 앱이 Android 9 이상을 실행하는 기기에 설치된 경우 Wi-Fi의 시스템 broadcast에는 SSID, BSSID, 연결 정보 또는 스캔 결과가 포함되지 않습니다. 이 정보를 가져오려면 getConnectionInfo()를 대신 호출하세요.
+또한 앱이 Android 9 이상을 실행하는 기기에 설치된 경우 Wi-Fi의 시스템 broadcast에는 SSID, BSSID, 연결 정보 또는 스캔 결과가 포함되지 않습니다. 이 정보를 가져오려면 getConnectionInfo()를 대신 호출하세요. 다만 API 수준 31부터는 deprecated 되어 정보를 가져오는 방식이 기존의 WifiManager에서 ConnectivityManager로 변경되었습니다. WifiInfo는 NetworkCapabilities#getTransportInfo()에 첨부되며, 이는 NetworkCallback#onCapabilitiesChanged(Network, NetworkCapabilities) 콜백 또는 ConnectivityManager#getNetworkCapabilities(Network)의 요청 시에 사용할 수 있습니다
 
 
 4)Android 14	
