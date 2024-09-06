@@ -1,0 +1,65 @@
+Broadcast receiver 간단한 예제를 진행해보겠습니다. 배터리 부족 알림을 흉내 낼 겁니다. 특정  % 이하일 경우 broadcast를 보내도록 하겠습니다.
+
+1. BroadcastReceiver 구현
+동적 receiver로 등록할 겁니다. 왜냐하면 사용할 ACTION_BATTERY_CHANGED가 동적 등록만 가능하기 때문이죠. 이름 뜻 대로 배터리가 변화될 때 사용하는 Intent입니다. manifest에 등록하면 앱이 실행 중이 아니라도 배터리가 변화할 때 마다 broadcast가 전송될 수 있기 때문에 엄청난 리소스 낭비가 될겁니다. 그렇기에 동적 receiver가 자연스럽죠.
+
+- BatteryBroadcastReceiver.java
+
+public class BatteryBroadcastReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+	//현재 배터리 수치
+        int level=intent.getIntExtra("level",-1);
+	//배터리 총량(최대수치)
+        int scale=intent.getIntExtra("scale",-1);
+        float battery=level*100/(float)scale;
+        boolean isLow=battery<80;
+        
+        if(isLow){
+            Toast.makeText(
+                    context,
+                    "앱을 사용 위한 배터리가 충분하지 않습니다 : "+battery+"%",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+
+    }
+}
+
+receiver에서는 UI를 직접 조작할 수 없습니다. 이벤트 알림 역할이기 때문이죠. 그렇기에 UI가 필요할 경우 Notification을 주로 사용하지만 그럼 코드가 길어지니 간단히 Toast으로 표시하겠습니다. 
+코드는 단순히 BroadcastReciver를 extends 하고 onReceive()를 구현하면 끝입니다. 배터리에 변화가 생길 때 마다 Intent으로 현재 배터리 양이 전달되고 잔량이 적을 경우 Toast합니다. 80미만 이면 배터리 양이 변화(감소)할 때 마다 Toast가 나올 겁니다. 왜 80미만으로 low 상태로 설정했냐면은 제 노트북에서 avd가 잘 실행되지 않아 실제 기기에서 실행하기 때문이죠..
+
+
+2. BroadcastReceiver 등록/해제
+- MainActivity.java
+
+public class MainActivity extends AppCompatActivity {
+
+    private BatteryBroadcastReceiver batteryBroadcastReceiver;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        batteryBroadcastReceiver=new BatteryBroadcastReceiver();
+        IntentFilter intentFilter=new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(batteryBroadcastReceiver,intentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(batteryBroadcastReceiver);
+    }
+
+}
+
+구현한 receiver를 생성하고 intent와 함께 등록하면 끝입니다. 물론 리소스 낭비 방지를 위해 해제도 잊으면 안됩니다. 단순히 Toast하는 앱이라서 포그라운드 상태일 때만 유지하고 싶기 때문에 onResume()/onPause()에서 등록/해제합니다. 그럼 실제 구현 gif을 끝으로 마무리하겠습니다.
+
++
+(배터리 변화가 단순히 용량만을 의미하지 않기 때문에 용량이 변하지 않아도 Toast가 나옵니다. 어찌되었든 80% 미만이니까요. 하지만 용량이 변하면 Toast가 나오는 것을 볼 수 있죠.)
