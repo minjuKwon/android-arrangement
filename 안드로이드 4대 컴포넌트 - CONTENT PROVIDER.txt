@@ -1,0 +1,521 @@
+1. Content Provider란 
+1)Content provider? 
+
+콘텐츠 제공업체는 파일 시스템, SQLite 데이터베이스, 웹 및 앱의 기타 영구 저장소에 저장된 데이터에 대한 접근을 관리하고 공유하는 방법을 제공합니다. Android framework에서 오디오, 비디오, 이미지뿐만 아니라 개인 연락처 정보와 같은 데이터를 관리합니다. Android.provider 패키지의 참조 문서에 제공자의 일부 종류가 나열되어 있습니다. 
+(https://developer.android.com/reference/android/provider/package-summary)
+
+콘텐츠 제공자는 ContentProvider의 서브클래스로 구현되며, 다른 앱이 트랜잭션을 수행할 수 있도록 표준 API 세트를 구현해야 합니다. 
+
+안드로이드에서 제공하는 콘텐츠 제공자도 있지만 다음과 같은 경우에는 자체 콘텐츠 제공자가 필요합니다:
+-사용자 정의 추천 검색어 구현
+-위젯에 앱 데이터 표시
+-복잡한 데이터나 파일을 다른 앱으로 복사/붙이기
+
+
+2)엑세스 관리
+또한 데이터의 보안를 정의하는 메커니즘과 캡슐화를 제공하고 애플리케이션의 중앙 데이터 저장소 계층에 대한 액세스를 조정합니다. 
+
+일반적으로 다른 앱에 존재하는 콘텐츠 제공업체에 액세스하거나 본인 앱의 콘텐츠 제공업체를 다른 애플리케이션이 엑세스 하는 두 가지 시나리오 중 하나를 가집니다. 주로 제공업체 클라이언트 개체를 사용하여 다른 앱의 제공업체에 액세스합니다. 제공업체와 제공업체 클라이언트는 함께 프로세스 간 통신과 안전한 데이터 액세스를 처리하는 일관된 표준 인터페이스를 데이터에 제공합니다.
+
+데이터를 공유할 계획인 경우 콘텐츠 제공업체를 사용을 추천합니다. 데이터 액세스에 의존하는 다른 애플리케이션에 영향을 주지 않고 애플리케이션 데이터 저장소 구현을 수정할 수 있는 추상화를 제공하기 때문에 데이터를 공유할 계획이없는 경우에도 사용할 수 있습니다. 이 시나리오에서는 콘텐츠 공급자만 영향을 받고 콘텐츠 공급자에 액세스하는 애플리케이션은 영향을 받지 않습니다. 예를 들어, 그림 2와 같이 SQLite 데이터베이스를 대체 스토리지로 교체할 수 있습니다. 콘텐츠 제공업체에는 API와 지원이 많이 내장되어 있기 때문에 주로 데이터베이스의 추상화로 생각할 수 입니다. 그러나 콘텐츠 제공업체는 시스템 설계 관점에서 데이터베이스와 다른 핵심 목적을 가지고 있습니다.
+
+또한 외부로 데이터를 공유할 때 관계형 데이터베이스의 테이블과 유사한 하나 이상의 테이블로 표시합니다. 행은 제공자가 수집하는 데이터 유형의 인스턴스를 나타내며, 행의 각 열은 인스턴스에 대해 수집된 개별 데이터 조각을 나타냅니다. 
+
+이러한 제공업체는 몇 가지 제한 사항과 함께 모든 Android 애플리케이션에 액세스할 수 있습니다. 콘텐츠 공급자는 SQLite 관계형 데이터베이스와 같은 구조화된 데이터 또는 이미지 파일과 같은 비구조화된 데이터를 포함한 다양한 데이터 저장 소스에 대한 액세스를 관리하는 데 사용할 수 있습니다.
+콘텐츠 공급자를 사용하여 애플리케이션의 다양한 데이터 소스에 액세스하기 위한 세부 정보를 추상화할 수 있습니다. 예를 들어, 애플리케이션은 비디오 및 오디오 파일뿐만 아니라 SQLite 데이터베이스에 구조화된 레코드를 저장할 수 있습니다. 콘텐츠 공급자를 사용하여 이 모든 데이터에 액세스할 수 있습니다.
+
+
+3)엑세스 권한
+ 콘텐츠 제공업체는 데이터 액세스 권한에 대한 세분화된 제어를 제공합니다. 응용 프로그램 내에 있는 콘텐츠 제공업체에만 액세스를 제한하거나, 다른 응용 프로그램의 데이터에 액세스할 수 있는 포괄적인 권한을 부여하거나, 데이터 읽기 및 쓰기에 대한 다양한 권한을 구성하도록 선택할 수 있습니다.
+
+권한이 부여된다면, 콘텐츠 제공업체를 통해 다른 앱이 데이터를 쿼리하거나 수정할 수 있습니다. 그림 1과 같이 다른 애플리케이션이 앱 데이터에 안전하게 액세스하고 수정할 수 있도록 콘텐츠 제공업체를 구성할 수 있습니다. 예를 들어 Android 시스템은 사용자의 연락처 정보를 관리하는 콘텐츠 제공업체를 제공합니다. 해당 권한을 가진 모든 앱은 ContactsContract.Data를 사용하여 특정 사람에 대한 정보를 읽고 쓸 수 있도록 콘텐츠 제공업체에 query 할 수 있습니다. 콘텐츠 제공업체는 한 프로세스의 데이터와 다른 프로세스에서 실행 중인 코드를 연결하는 표준 인터페이스입니다. 
+
+
+4)Content Resolver
+콘텐츠 제공자의 데이터에 액세스하려는 경우 애플리케이션의 컨텍스트에서 콘텐츠해결사 개체를 사용하여 제공자와 클라이언트로서 통신합니다. 콘텐츠해결사 개체는 콘텐츠제공자를 구현하는 클래스의 인스턴스인 제공자 개체와 통신합니다.
+
+제공자 개체는 클라이언트로부터 데이터 요청을 받고 요청된 작업을 수행한 다음 결과를 반환합니다. 해결사 개체에는 제공자 개체에서 동일하게 명명된 메서드를 호출하는 메서드가 있는데, 이는 ContentProvider의 구체적인 하위 클래스 중 하나의 인스턴스입니다. ContentResolver 메서드는 영구 스토리지의 기본적인 "CRUD"(생성, 검색, 업데이트 및 삭제) 기능을 제공합니다.
+
+UI에서 콘텐츠 제공자에 액세스하는 일반적인 패턴은 커서로더를 사용하여 백그라운드에서 비동기 쿼리를 실행합니다. UI의 activity 또는 framgnet은 쿼리에 커서로더를 호출하고, 커서로더는 콘텐츠해결사를 사용하여 콘텐츠 제공자를 가져옵니다.
+
+이를 통해 쿼리가 실행되는 동안에도 사용자는 UI를 계속 사용할 수 있습니다. 이 패턴은 그림 2에 표시된 것처럼 기본 저장 메커니즘뿐만 아니라 여러 가지 다른 객체의 상호 작용을 포함합니다.
+(Figure 2. Interaction between ContentProvider, other classes, and storage.)
+
+Android 플랫폼에 내장된 제공업체 중 하나는 사용자가 보관하고자 하는 비표준 단어를 저장하는 사용자 사전 제공업체입니다. 표 1은 이 제공업체의 표에서 데이터가 어떻게 보일지 보여줍니다:
+
+Table 1: Sample user dictionary table.
+
+표 1에서 각 행은 표준 사전에 없는 단어의 인스턴스를 나타냅니다. 각 열은 해당 단어에 대한 데이터의 한 부분을 나타내며, 예를 들어 단어의 locale 같은 정보를 포함합니다. 열 헤더는 공급자에 저장된 열 이름입니다. 예를 들어 행의 로케일을 참조하려면 로케일 열을 참조해야 합니다. 이 공급자의 경우 _ID 열은 공급자가 자동으로 유지 관리하는 기본 키 열 역할을 합니다.
+
+사용자 사전 제공자에서 단어와 단어의 위치 목록을 얻으려면 ContentResolver.query()를 호출합니다. query() 메서드는 사용자 사전 제공자에서 정의한 ContentProvider.query() 메서드를 호출합니다. 다음 코드 줄에는 ContentResolver.query() 호출을 보여줍니다.
+
+// UserDictionary 결과 쿼리
+cursor = getContentResolver().query(
+    UserDictionary.Words.CONTENT_URI,  // 단어 table의 content URI
+    projection,                         // 행에서 반환할 열만을 선택    
+    selectionClause,                  // 선택 기준
+    selectionArgs,                    // 선택 기준
+    sortOrder);                         // 반환할 열의 정렬 순서
+
+Table 2는 query(Uri,projection,selection,selectionArgs,sortOrder) 의 각 매개변수가 SQL SELECT 절에 어떻게 대응되는지 보여줍니다.
+
+Table 2: query() compared to SQL query.
+Uri는 table_name이라는 공급자의 테이블에 매핑됩니다.
+projection 은 검색한 각 행에 포함된 열의 배열입니다.
+selection은 행을 선택하는 기준을 지정합니다.
+정확히 동등한 표현이 없습니다. Selection 인수는 선택 절에 ? 자리 표시자를 대체합니다.
+sortOrder는 반환된 Cursor에 행이 표시되는 순서를 지정합니다.
+
+
+5)URI
+콘텐츠 URI는 공급자의 데이터를 식별하는 URI으로 데이터를 접근하게 해주는 앱이 진입점 역할을 합니다. 따라서 앱의 데이터는 URI 체계에 따라 매핑되며 이 URI를 외부에 제공하고 해당 URI를 통해 데이터를 접근합니다. 콘텐츠 URI에는 전체 공급자의 식별 이름(권한)과 테이블을 가리키는 이름(경로)이 포함됩니다. 클라이언트 메서드를 호출하여 공급자의 테이블에 액세스하면 테이블의 콘텐츠 URI가 인수 중 하나가 됩니다.
+
+URI는 시스템이 앱을 관리하는 데 몇 가지 특별한 기능을 제공합니다
+-URI 할당은 앱의 지속적 실행이 필요 없으므로, URI는 해당 앱이 종료되어도 지속됩니다. 시스템은 URI에 대한 데이터를 검색할 때 해당 앱이 여전히 실행 중인지 확인하기만 하면 됩니다.
+-URI는 중요하고 세밀한 보안 모델을 제공합니다. 예를 들어, 앱은 클립보드에 이미지의 URI를 둘 수 있지만, 콘텐츠 제공자는 해당 URI를 잠금 상태로 유지하여 다른 앱이 자유롭게 접근할 수 없도록 할 수 있습니다. 다른 앱이 클립보드에 있는 URI에 접근하려고 할 때, 시스템은 해당 앱이 임시적으로 접근할 수 있도록  임시 URI 권한 부여를 할 수 있으며, 이는 해당 데이터 외는 접근할 수 없도록 합니다.
+
+이전 코드 행에서 상수 Content_URI는 사용자 사전 제공자의 단어 테이블의 콘텐츠 URI를 포함합니다. ContentResolver 개체는 URI의 권한을 구문 분석하고 해당 권한을 알려진 제공자의 시스템 테이블과 비교하여 제공자를 해결하는 데 사용합니다. 그런 다음 ContentResolver는 쿼리 인수를 올바른 제공자에게 전송할 수 있습니다.
+
+콘텐츠 제공자는 콘텐츠 URI의 경로 부분을 사용하여 액세스할 테이블을 선택합니다. 제공자는 일반적으로 노출되는 각 테이블에 대한 경로를 가지고 있습니다.
+
+이전 코트에서 Word table의 전체 URI는 다음과 같습니다.
+content://user_dictionary/words
+
+content:// 문자열은 필수 구성 요소로 content URI임을 식별해주는 scheme입니다.
+user_dictionary 는 제공자의 권합니다.
+words 문자열은 table의 경로입니다.
+
+많은 공급자가 URI의 끝에 ID 값을 추가하여 테이블의 단일 행에 액세스할 수 있습니다. 예를 들어, 사용자 사전 제공자에서 ID가 4인 행을 검색하려면 이 콘텐츠 URI를 사용할 수 있습니다:
+Uri singleUri = ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI,4);
+
+행 집합을 검색한 다음 행 중 하나를 업데이트하거나 삭제할 때 ID 값을 사용하는 경우가 많습니다.
+URI 및 URI.Builder 클래스에는 문자열로부터 형식이 올바른 URI 객체를 구성하기 위한 편리한 메서드를 제공합니다. 그 중 ContentUris 클래스에는 ID 값을 URI에 추가하는 편의 메서드 포함되어 있습니다. 이전 스니펫에서 withAppendId()를 사용하면 사용자 사전 제공자 콘텐츠 URI에 ID를 추가합니다.
+
+
+6)provider 다른 컴포넌트 관계
+ 다양한 API와 구성 요소를 제공합니다. 그림 1에 표시된 것처럼 여기에는 다음이 포함됩니다:
+(Figure 1. Relationship between a content provider and other components.)
+-애플리케이션 데이터에 대한 액세스 권한을 다른 애플리케이션과 공유하기
+-위젯으로 데이터 보내기
+-SearchRecentSuggesProvider를 사용하여 검색 프레임워크를 통해 응용 프로그램에 대한 사용자 지정 검색 제안 반환
+-AbstractThreedSyncAdapter 구현을 사용하여 애플리케이션 데이터를 서버와 동기화하기
+-CursorLoader를 사용하여 UI에 데이터 로드하기
+
+다음의 클래스들은 콘텐츠 제공자 클래스 구현이 필요합니다.
+
+-AbstractThreadedSyncAdapter
+동기화 작업 호출을 위해 스레드를 생성해주는 SyncAdapter의 추성 클래스입니다. 기존 작업이 없으면 새로운 스레드가 생성됩니다. 기존 작업이 있다면 새로운 요청은 오류로 반환하고 기존 요청을 진행해줍니다. 여기서 콘텐츠 제공자가 동기화 작업에서 데이터를 관리를 제공해줍니다.
+
+-CursorAdapter
+Cursor의 데이터를 ListView에 표시하는걸 도와주는 Adapter입니다. 콘텐츠 제공자를 통해 Cursor를 받는 경우가 일반적이기에 콘텐츠 제공자 구현이 필요합니다.
++Cursor??
+데이터베이스 쿼리로 반환되는 데이터 집합에 대한 임시 읽기/쓰기 접근을 제공해주는 인터페이스입니다. 이때 데이터 집합은 특정 데이터 리스트가 아닌 특정 행을 말합니다. 즉, 특정 행을 가리키는 포인터 역할입니다. 쿼리 결과로 여러 행이 반환된다면 현재 위치인 첫 번째행을 가리킵니다. 그렇기에 
+메서드로 이전/이후 행으로 이동할 수 있습니다.  
+
+-CursorLoader
+콘텐츠 제공자로부터 Cursor를 반환하는 loader입니다. AsyncTaskLoader를 기반으로 cursor를 쿼리하기 위한 표준 Loader 프로토콜를 구현합니다. 앱의 UI를 차단하지 않도록 백그라운드 스레드에서 실행되어 비동기적으로 cursor를 반환합니다.
+이러한 클래스를 사용하는 앱에는 콘텐츠 제공자를 구현해야 합니다. AbstractThreadedSyncAdapter와 CursorLoader같은 동기화 adpater framework로 작업할 때는 테스트나 개발 초기에 콘텐츠 제공자 대신 스텁 콘텐츠 제공자를 사용할 수도 있습니다.
+또한 CursorLoader 개체는 콘텐츠 제공업체에 의존하여 비동기 쿼리를 실행한 다음 그 결과를 응용 프로그램의 UI 계층으로 반환합니다.
+
++스텁 콘텐츠 제공자??
+동기화 어댑터 프레임워크의 콘텐츠 제공자 구현을 위한 임시적인 콘텐츠 제공자입니다. 개발초기나 테스트 단계에서 실제 데이터가 없거나 데이터 소스 구현이 되지 않는 경우에 사용됩니다. 즉, 앱과 제공자가 데이터로 상호작용하는 것처럼 작동하게 합니다. 이를 통해 데이터를 전송하기 위해 동기화 어댑터를 사용할 수 있게 합니다. 스텁 제공자는 콘텐츠 제공자 클래스를 구현하지만, 모든 필수 메서드는 null 또는 0을 반환합니다. 쿼리나 업데이트 같은 메스드는 있지만 실제로 처리는 안 되는 겁니다. 
+
+
+
+2. provider에서 데이터 검색
+위의 설명에 이어서 사용자 사전 제공업체를 예로 provider에서 어떻게 데이터를 검색하는지 알아봅니다. 크게 두가지로 provider의 읽기 접근 권한 요청과 provider로 쿼리 전송 방법으로 나뉩니다. provider 예시에 대한 명확성을 위해 이 글의 코드는 UI 스레드에서 ContentResolver.query()를 호출합니다. 그러나 실제 코드에서는 별도의 스레드에서 비동기식으로 쿼리를 수행합니다. 또한 예시의 한 부분일 뿐 앱에 사용할 수 있는 완전한 코드는 아닙니다.
+
+
+1) 읽기 접근 권한 요청
+공급자로부터 데이터를 검색하려면 애플리케이션에서 공급자에 대한 읽기 액세스 권한이 필요합니다. 런타임에 이 권한을 요청할 수 없습니다. 대신 <us-permission> 요소와 공급자가 정의한 정확한 권한 이름을 사용하여 매니페스트에 이 권한이 필요하다는 것을 지정해야 합니다.
+
+매니페스트에서 이 요소를 지정하면 응용 프로그램에 대해 이 권한을 요청하는 것입니다. 사용자는 응용 프로그램을 설치할 때 암묵적으로 이 요청을 승인합니다.
+
+사용 중인 공급자의 읽기 액세스 권한의 정확한 이름과 공급자가 사용하는 다른 액세스 권한의 이름을 찾으려면 공급자의 설명서를 참조하세요.
+
+사용자 사전 제공업체는 매니페스트 파일에 권한 Android.permission.READ_USER_DICONARY를 정의하므로 제공업체에서 읽으려는 애플리케이션은 이 권한을 요청해야 합니다.
+
+
+2)쿼리 구성
+공급자에서 데이터를 검색하는 다음 단계는 쿼리를 구성하는 것입니다. 다음 스니펫은 사용자 사전 제공자에 액세스하기 위한 몇 가지 변수를 정의합니다:
+
+// projection는 행에서 반환할 열만을 선택에 대해 정의
+String[] mProjection =
+{
+    UserDictionary.Words._ID,    //_ID 열 이름에 대한 Contract class
+    UserDictionary.Words.WORD,   // 단어 열 이름에 대한 Contract class
+    UserDictionary.Words.LOCALE  // locale 열 이름에 대한 Contract class
+};
+
+// 선택 절을 저장할 문자열 정의
+String selectionClause = null;
+
+//선택 인수를 저장할 배열 초기화
+String[] selectionArgs = {""};
+
+다음 스니펫은 사용자 사전 제공자를 예로 들어 ContentResolver.query()를 사용하는 방법을 보여줍니다. 제공자 클라이언트 쿼리는 SQL 쿼리와 유사하며 반환할 열 집합, 선택 기준 집합 및 정렬 순서를 포함합니다.
+쿼리가 반환하는 열 집합을 프로젝션이라고 하며 변수는 mProjection입니다.
+검색할 행을 지정하는 식을 선택 절과 선택 인수로 나뉩니다. 선택 절은 논리식과 boolean식, 열 이름 및 값의 조합입니다. 변수는 mSelectionClause입니다. 대체 가능한 매개 변수 ?를 값 대신 지정하면 쿼리 방법이 변수 mSelectionArgs인 선택 인수 배열에서 값을 가져옵니다.
+다음 스니펫에서는 사용자가 단어를 입력하지 않으면 선택 절이 null로 설정되고 쿼리가 제공자의 모든 단어를 반환합니다. 사용자가 단어를 입력하면 선택 절은 UserDictionary.WORD + "=?"로 설정되며 선택 인수 배열의 첫 번째 요소는 사용자가 입력한 단어로 설정됩니다.
+
+//선택 인수를 포함할 단일 요소 문자열 배열을 정의
+String[] selectionArgs = {""};
+// UI에서 얻은 단어
+searchString = searchWord.getText().toString();
+//유효하지 않거나 악의적인 입력을 방지할 코드를 입력해야합니다.
+//만약 단어가 비어있으면 전체를 반환
+if (TextUtils.isEmpty(searchString)) {
+   //모든 단어를 반환하기 위해 선택절에 null로 설정
+    selectionClause = null;
+    selectionArgs[0] = "";
+} else {
+    //사용자가 입력한 단어와 일치 확인하는 선택 절 구성
+    selectionClause = UserDictionary.Words.WORD + " = ?";
+    // 사용자의 입력 문자열을 선택 인수 이동
+    selectionArgs[0] = searchString;
+
+}
+//테이블에 대해 쿼리를 수행하고 커서 개체를 반환
+mCursor = getContentResolver().query(
+    UserDictionary.Words.CONTENT_URI, // 단어 table의 content URI
+    projection,                       //행에서 반환할 열
+    selectionClause,                  // null 또는 사용자가 입력한 단어
+    selectionArgs,                    // 비어 있거나 사용자가 입력한 문자열
+    sortOrder);                       // 반환된 행의 정렬 순서
+
+//오류가 발생하면 제공자에 따라 null 또는 예외를 반환하기에 
+//이에 따른 예외 처리
+if (null == mCursor) {
+     //... 오류처리 코드 ...
+     //오류 발생에 대비에 Cursor은 사용 금지
+     //Android.util.Log.e() 호출하여 오류 기록 가능
+// 커서가 비어 있으면 제공자는 일치하는 내용을 찾을 수 없음
+} else if (mCursor.getCount() < 1) {
+  // ...검색이 실패했음을 사용자에게 알리는 코드 입력...
+ /*꼭 오류 발생 의미 아님.  사용자에게 새 행을 삽입하거나 
+  검색어를 다시 입력할 수 있는 옵션을 제공 가능*/
+} else {
+    // ... 결과 처리 코드...
+}
+
+이 쿼리는 다음 SQL 문과 유사합니다:
+SELECT _ID, word, locale FROM words WHERE word = <userinput> ORDER BY word ASC;
+이 SQL 문에서는 contract class 상수 대신 실제 열 이름이 사용됩니다.
+
+
+3)쿼리 결과 표시
+`ContentResolver.query()` 클라이언트 메서드는 항상 쿼리의 프로젝션에서 지정된 열을 포함하는 커서를 반환하며, 이는 쿼리의 선택 기준에 맞는 행을 포함합니다. 커서 객체는 포함된 행과 열에 대한 임의의 읽기 접근을 제공합니다. 커서 메서드를 사용하면 결과의 행을 반복(iterate)하고, 각 열의 데이터 유형을 확인하며, 열에서 데이터를 가져오고, 결과의 다른 속성을 확인할 수 있습니다. 일부 커서 구현은 제공자의 데이터가 변경될 때 자동으로 객체를 업데이트하거나, 커서가 변경될 때 observer 객체의 메서드를 트리거하거나, 둘 다 수행할 수 있습니다.
+
+공급자는 쿼리를 수행하는 개체의 특성에 따라 열에 대한 액세스를 제한할 수 있습니다. 예를 들어, 연락처 공급자는 동기화 어댑터에 대해 일부 열에 대한 액세스를 제한하므로 해당 열을 활동이나 서비스로 반환하지 않습니다.
+
+선택 기준과 일치하는 행이 없는 경우 공급자는 Cursor.getCount()가 0인 Cursor 개체, 즉 빈 커서를 반환합니다. 내부 오류가 발생하면 쿼리 결과는 특정 제공업체에 따라 달라집니다. null을 반환하거나 예외를 적용할 수 있습니다.커서는 행 목록이므로 커서의 내용을 표시하는 좋은 방법은 SimpleCursorAdapter를 사용하여 ListView에 연결하는 것입니다.
+
+다음은 이전 코드를 계속합니다. 쿼리에서 검색한 커서가 포함된 SimpleCursorAdapter 개체를 생성하고 이 개체를 ListView의 어댑터로 설정합니다.
+// Cursor에서 검색할 열과 반환할 행 리스트 정의
+String[] wordListColumns =
+{
+    UserDictionary.Words.WORD,   // 단어 열 이름 Contract class 상수
+    UserDictionary.Words.LOCALE  //  locale 열 이름 Contract class 상수
+};
+
+// 각 행의 커서 열을 받을 view ID 목록 정의
+int[] wordListItems = { R.id.dictWord, R.id.locale};
+
+// SimpleCursorAdapter 생성
+cursorAdapter = new SimpleCursorAdapter(
+    getApplicationContext(),               // 앱의 Context 객체
+    R.layout.wordlistrow,                  // ListView에 사용할 행 xml 레이아웃
+    mCursor,                               // 쿼리 결과
+    wordListColumns,                       // cursor의 열 이름 담는 문자 배열
+    wordListItems,                         // 행 레이아웃 view ID 담는 integer 배열
+    0);                                    // 데이터 갱신 Flags(잘 사용 안함)
+
+// ListView에 adapter 설정
+wordList.setAdapter(cursorAdapter);
+
+ListView를 커서로 지원하려면, 커서에 `_ID`라는 이름의 열이 포함되어야 합니다. 이 때문에 이전에 보여준 쿼리는 단어 테이블에 대한 `_ID` 열을 검색하며, 비록 ListView에서 이를 표시하지 않더라도 그렇습니다. 이러한 제한은 대부분의 제공자가 각 테이블에 `_ID` 열을 갖는 이유를 설명합니다.
+
+
+4)쿼리 결과에서 데이터 얻기
+쿼리 결과를 표시하는 것 외에도, 다른 작업에 사용할 수 있습니다. 예를 들어, 사용자 사전 제공자에서 단어 철자를 검색한 후 다른 제공자에서 해당 철자를 조회할 수 있습니다. 이를 위해 다음 예시와 같이 Cursor의 행을 반복해서 처리합니다.
+
+//열 이름이 "word"인 index얻기
+int index = mCursor.getColumnIndex(UserDictionary.Words.WORD);
+/*
+ * cursor가 유효할 때 만 실행. 사용자 사전 Provider는 내부적 오류가 발생하면 null 반환.
+ * 다른 provider는 null대신 오류를 반환할 수도 있음.
+ */
+if (mCursor != null) {
+    /*
+     * cursor를 다음 행으로 이동. cursor를 처음으로 이동하기 전에는 "row pointer"가 -1
+     *  만약 -1일 때 데이터 검색하면 오류 발생
+     */
+    while (mCursor.moveToNext()) {
+        // 해당 열에서 값 얻기
+        newWord = mCursor.getString(index);
+        // 이 부근에 단어 검색 process 코드 삽입
+        ...
+        // while loop 끝
+    }
+} else {
+    // 커서가 null이거나 제공자가 예외를 던진 경우 오류 알릴 코드 삽입
+}
+
+커서 구현에는 개체에서 다양한 유형의 데이터를 검색하기 위한 여러 가지 "겟" 방법이 포함되어 있습니다. 예를 들어, 이전 스니펫은 getString()을 사용합니다. 또한 열의 데이터 유형을 나타내는 값을 반환하는 getType() 방법도 있습니다.
+
+
+5)query resource 해제
+커서 개체가 더 이상 필요하지 않은 경우 닫아야 연결된 리소스가 더 빨리 해제됩니다. 이 작업은 close()를 호출하거나 자바 프로그래밍 언어의 try-with-resources 절 또는 코틀린 프로그래밍 언어의 use() 함수를 사용하여 수행할 수 있습니다.
+
+
+6)악의적 입력 방지
+콘텐츠 제공업체가 관리하는 데이터가 SQL 데이터베이스에 있는 경우, 신뢰할 수 없는 외부 데이터를 원시 SQL 문에 포함하면 SQL 주입이 발생할 수 있습니다.
+
+// 사용자의 입력을 열 이름에 연결하여 선택 절을 구성
+String selectionClause = "var = " + userInput;
+
+이렇게 하면 사용자가 잠재적으로 악의적인 SQL을 SQL 문에 연결할 수 있습니다. 예를 들어, 사용자는 mUserInput에 "nothing, DOP TABLE *;"을 입력하면 선택 절은 var =nothing, DOP TABLE *; 이 됩니다.
+선택 절은 SQL 문으로 취급되므로 제공자가 SQL 주입 시도를 잡도록 설정하지 않는 한 제공자가 기본 SQLite 데이터베이스의 모든 테이블을 지우게 될 수 있습니다.
+이 문제를 방지하려면 ?를 대체 가능한 매개 변수로 사용하는 선택 절과 별도의 선택 인수 배열을 사용합니다. 이렇게 하면 사용자 입력이 SQL 문의 일부로 해석되지 않고 쿼리에 직접 바인딩됩니다. SQL로 처리되지 않기 때문에 사용자 입력은 악의적인 SQL을 주입할 수 없습니다. 다음과 같이 해결할 수 있습니다.
+
+// 대체 가능한 매개 변수로 선택 절을 구성
+String selectionClause =  "var = ?";
+
+선택 인수 배열을 다음과 같이 설정합니다.
+
+// 선택 인수를 정의할 배열를 생성
+String[] selectionArgs = {""};
+
+선택 인수에 다음과 같이 값을 입력합니다.
+
+//선택 인수에 사용자 입력 설정
+selectionArgs[0] = userInput;
+
+`?`를 대체 가능한 매개변수로 사용하는 선택 절과 선택 인수 배열을 사용하는 것이 바람직한 선택 방법입니다. 이는 제공자가 SQL 데이터베이스에 기반하지 않더라도 마찬가지입니다.
+
+
+
+3. Content Provider 권한
+공급자의 애플리케이션은 다른 애플리케이션이 공급자의 데이터에 액세스하기 위해 필요한 권한을 지정할 수 있습니다. 이러한 권한을 통해 사용자는 애플리케이션이 액세스하려고 시도하는 데이터를 알 수 있습니다. 공급자의 요구 사항에 따라 다른 애플리케이션은 공급자에 액세스하는 데 필요한 권한을 요청합니다. 최종 사용자는 애플리케이션을 설치할 때 요청된 권한을 확인합니다.
+
+공급자의 응용 프로그램에 권한이 지정되어 있지 않은 경우, 공급자를 export 않는 한 다른 응용 프로그램은 공급자의 데이터에 액세스할 수 없습니다. 또한 공급자 응용 프로그램의 구성 요소는 지정된 권한에 관계없이 항상 전체 읽기 및 쓰기 액세스 권한을 갖습니다.
+
+사용자 사전 제공자는 데이터를 검색하려면 Android.permission.READ_USER_Dictionary 권한이 필요합니다. 제공자는 데이터 삽입, 업데이트 또는 삭제를 위한 별도의 Android.permission.WRITE_USER_Dictionary 권한을 가지고 있습니다.
+
+공급자에 액세스하는 데 필요한 권한을 얻으려면 애플리케이션이 매니페스트 파일에 <uses-permission> 요소를 포함하여 요청합니다. Android 패키지 관리자가 애플리케이션을 설치할 때 사용자는 애플리케이션이 요청하는 모든 권한을 승인해야 합니다. 사용자가 승인하면 패키지 관리자는 설치를 계속합니다. 사용자가 승인하지 않으면 패키지 관리자는 설치를 중지합니다.
+
+
+
+4.데이터 삽입,업데이트,삭제
+제공자로부터 데이터를 검색하는 방식과 동일하게, 데이터 수정도 제공자 클라이언트와 제공자의 ContentProvider 간 상호작용을 통해 이루어집니다. `ContentResolver`의 메서드를 호출할 때 전달한 인수가 `ContentProvider`의 해당 메서드에 전달됩니다. 제공자와 제공자 클라이언트는 보안과 프로세스 간 통신을 자동으로 처리합니다.
+
+
+1)데이터 삽입
+공급자에 데이터를 삽입하려면 ContentResolver.insert() 메서드를 호출합니다. 이 메서드는 공급자에 새 행을 삽입하고 해당 행의 콘텐츠 URI를 반환합니다. 
+
+//삽입 결과로 받을 uri 객체 정의
+Uri newUri;
+...
+//삽입할 값을 저장할 객체 정의
+ContentValues newValues = new ContentValues();
+
+/*
+ * 각 열의 값을 설정하고 단어 삽입
+ * "put" method의 매개변수는 "열 이름"과 "값"
+ */
+newValues.put(UserDictionary.Words.APP_ID, "example.user");
+newValues.put(UserDictionary.Words.LOCALE, "en_US");
+newValues.put(UserDictionary.Words.WORD, "insert");
+newValues.put(UserDictionary.Words.FREQUENCY, "100");
+
+newUri = getContentResolver().insert(
+    UserDictionary.Words.CONTENT_URI,   //사용자 사전 content URI
+    newValues                           // 삽입할 값
+);
+
+새 행의 데이터는 한 줄 커서와 형태가 유사한 단일 ContentValues 개체로 들어갑니다. 이 개체의 열은 여러 타입을 지원합니다. 예를 들어 위의 코드는 문자열 타입이지만 정수 타입에서도 사용할 수 있습니다. 값을 전혀 지정하지 않으려면 ContentValues.putNull()을 사용하여 열을 null로 설정할 수 있습니다.
+이전 스니펫에서는 _ID 열이 자동으로 관리되므로 _ID 열을 추가하지 않습니다. 공급자는 추가되는 모든 행에 고유한 _ID 값을 할당합니다. 공급자는 일반적으로 이 값을 테이블의 기본 키로 사용합니다.
+새로운 URI로 반환된 콘텐츠는 새로 추가된 행을 다음과 같은 형식으로 식별합니다
+
+content://user_dictionary/words/<id_value>
+
+<id_value>는 새 행에 대한 _ID의 내용입니다. 대부분의 공급자는 이러한 형식의 콘텐츠 URI를 자동으로 인식하고 해당 행에 대해 요청된 작업을 수행할 수 있습니다.
+반환된 Uri에서 _ID 값을 얻으려면 ContentUris.parseId()를 호출합니다.
+
+
+2)데이터 업데이트
+행을 업데이트하려면 삽입과 마찬가지로 ContentValues 객체에 업데이트된 값을 설정하고, query 시 사용하는 것처럼 선택 기준을 사용합니다. 이때 사용하는 클라이언트 메서드는 `ContentResolver.update()`입니다. ContentValues 객체에는 업데이트할 열에 대한 값만 추가하면 됩니다. 열의 내용을 지우려면 값을 null로 설정합니다.
+
+다음 코드 조각은 언어가 "en"인 모든 행의 로케일을 null로 변경합니다. 반환 값은 업데이트된 행의 개수를 나타냅니다.
+
+//업데이트할 값을 넣을 객체 정의
+ContentValues updateValues = new ContentValues();
+// Defines selection criteria for the rows you want to update
+//업데이트를 원하는 행의 선택 기준 정의
+String selectionClause = UserDictionary.Words.LOCALE +  " LIKE ?";
+String[] selectionArgs = {"en_%"};
+//업데이트된 행의 수를 저장할 변수 정의
+int rowsUpdated = 0;
+...
+ //업데이트된 값을 설정하고 선택한 단어를 업데이트
+updateValues.putNull(UserDictionary.Words.LOCALE);
+rowsUpdated = getContentResolver().update(
+    UserDictionary.Words.CONTENT_URI,  // 사용자 사전 content URI
+    updateValues,                      //  업데이트할 열
+    selectionClause,                   // 선택 기준이 될 열
+    selectionArgs                      // 선택 기준과 비교할 값
+);
+ ContentResolver.update() 호출할 때 악의적 입력을 조심해야 합니다.
+
+
+3)데이터 삭제
+행을 삭제하는 것은 행 데이터를 검색하는 것과 비슷합니다. 삭제할 행에 대한 선택 기준을 지정하면 클라이언트 메서드는 삭제된 행의 수를 반환합니다. 다음 스니펫은 앱 ID가 "user"와 일치하는 행을 삭제합니다. 이 방법은 삭제된 행의 수를 반환합니다.
+
+//삭제하고픈 행 선택 기준 정의
+String selectionClause = UserDictionary.Words.APP_ID + " LIKE ?";
+String[] selectionArgs = {"user"};
+
+//삭제될 열 수를 저장할 변수 정의
+int rowsDeleted = 0;
+...
+//선택 기준와 일치하는 단어 삭제
+rowsDeleted = getContentResolver().delete(
+    UserDictionary.Words.CONTENT_URI,  // 사용자 사전 content URI
+    selectionClause,                   // 선택 기준이 될 열
+    selectionArgs                      // 선택 기준과 비교할 값
+);
+
+ContentResolver.delete() 호출할 때 악의적 입력을 조심해야 합니다.
+
+
+
+5.제공자 데이터 타입
+콘텐츠 제공업체는 다양한 데이터 유형을 제공할 수 있습니다. 사용자 사전 제공업체는 텍스트만 제공하지만 제공업체는 다음 형식도 제공할 수 있습니다:
+- integer
+- long integer (long)
+- floating point
+- long floating point (double)
+
+제공업체가 자주 사용하는 또 다른 데이터 유형은 64KB 바이트 배열로 구현된 바이너리 대형 객체(BLOB)입니다. 용량이 크기에 주로 이미지나 오디오같은 미디어 객체에 사용됩니다. 사용 가능한 데이터 유형은 Cursor 클래스 "get" 메서드를 보면 알 수 있습니다.
+
+공급자의 각 열의 데이터 유형은 일반적으로 설명서에 나열됩니다. 사용자 사전 제공자의 데이터 유형은 계약 클래스인 UserDictionary.Words의 참조 설명서에 나열되어 있습니다. Cursor.getType()을 호출하여 데이터 유형을 확할 수도 있습니다.
+
+또한 공급자는 정의한 각 콘텐츠 URI에 대한 MIME 데이터 유형 정보를 유지 관리합니다. MIME 유형 정보를 사용하여 공급자가 제공하는 데이터를 응용 프로그램에서 처리할 수 있는지 확인하거나 MIME 유형에 따라 처리 방식을 선택할 수 있습니다. 예를 들어 MIME 유형이 이미지일 경우 앱에서 이미지를 처리 여부를 확인하고 이미지를 표시할 방법을 처리합니다. 또는 연락처 제공업체의 ContactsContract.Data 테이블은 MIME 유형을 사용하여 각 행에 저장된 연락처 데이터의 유형을 MIME 타입으로 구분합니다. 콘텐츠 URI에 해당하는 MIME 유형을 얻으려면 ContentResolver.getType()을 호출합니다.
+일반적으로 복잡한 데이터 구조나 파일이 포함된 공급자와 함께 작업할 때는 MIME 유형이 필요합니다.
+
+
+
+6.다른 형식의 provider 접근 방법
+애플리케이션 개발에서 중요한 세 가지 대안적인 제공자 접근 방식이 있습니다.
+-Batch 접근 : ContentProviderOperation class의 method 호출을 통해 batch 접근을 생성하고 ContentResolver.applyBatch()로 적용
+-비동기식 쿼리: 별도의 스레드에서 쿼리를 수행합니다. 커서로더 개체를 사용
+Intent 사용한 데이터 액세스: 제공업체에 직접 intent를 보낼 수는 없지만, 일반적으로 제공업체의 데이터를 수정하는 데 가장 적합한 제공업체의 애플리케이션에 intent를 보낼 수 있습니다.
+
+1)batch 접근
+공급자에 대한 일괄 액세스는 많은 수의 행을 삽입하거나, 동일한 메서드 호출에서 여러 테이블의 행을 삽입하거나, 일반적으로 트랜잭션으로 프로세스 경계를 넘어 원자 연산이라고 하는 일련의 연산을 수행하는 데 유용합니다.
+
+배치 모드로 제공자에 액세스하려면 여러 개의 ContentProviderOperation 개체를 만든 다음 ContentResolver.applyBatch()를 사용하는 콘텐츠 제공자에게 보냅니다. 특정 콘텐츠 URI가 아닌 이 method에 콘텐츠 제공자의 권한을 넘겨야 합니다. 이렇게 하면 배열의 각 ContentProviderOperation 개체가 다른 테이블에서 작업할 수 있습니다. ContentResolver.applyBatch()로 호출하면 결과 배열이 반환됩니다.
+
+// 일괄 처리를 위해 ContentProviderOperation 객체를 담을 리스트 생성
+ ArrayList<ContentProviderOperation> ops =
+          new ArrayList<ContentProviderOperation>();
+ ...
+// 현재 ops 리스트의 크기를 기록해, 새로 추가될 RawContact의 인덱스로 사용
+ int rawContactInsertIndex = ops.size();
+// 새 RawContact를 추가하는 insert 작업을 일괄 처리에 추가
+// 새 연락처의 계정 타입과 계정 이름을 지정
+ ops.add(ContentProviderOperation.newInsert(RawContacts.CONTENT_URI)
+          .withValue(RawContacts.ACCOUNT_TYPE, accountType)
+          .withValue(RawContacts.ACCOUNT_NAME, accountName)
+          .build());
+// Data 테이블에 새 insert 작업을 추가
+// 위에서 생성한 RawContact를 참조할 수 있도록 백 레퍼런스 인덱스 사용
+//백 레퍼런스 인덱스란 직전에 작업한 항목의 인덱스
+//삽입할 MIME type과 연락처에 표시할 이름 설정
+ ops.add(ContentProviderOperation.newInsert(Data.CONTENT_URI)
+          .withValueBackReference(Data.RAW_CONTACT_ID, rawContactInsertIndex)
+          .withValue(Data.MIMETYPE, StructuredName.CONTENT_ITEM_TYPE)
+          .withValue(StructuredName.DISPLAY_NAME, "Mike Sullivan")
+          .build());
+// 일괄 작업을 Contacts 콘텐츠 제공자에 적용
+ getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
+
+
+2)Intent 사용하여 데이터에 접근
+Intent는 콘텐츠 제공업체에 간접적으로 액세스할 수 있는 권한을 제공할 수 있습니다. 권한이 있는 응용 프로그램에서 결과 intent를 반환받거나 권한이 있는 응용 프로그램을 활성화하여 사용자가 콘텐츠 제공업체에서 작업하도록 허용함으로써 응용 프로그램에 액세스 권한이 없더라도 사용자가 제공업체의 데이터에 액세스하도록 할 수 있습니다.
+
+ⅰ)임시 권한으로 접근얻기
+적절한 액세스 권한이 없는 경우에도 해당 권한이 있는 애플리케이션에 intent를 보내고 URI 권한이 포함된 결과 intent를 반환하여 콘텐츠 제공업체의 데이터에 액세스할 수 있습니다. 이러한 권한은 특정 콘텐츠 URI를 수신하는 activity가 완료될 때까지 지속되는 권한입니다. 영구 권한이 있는 애플리케이션은 결과 intent에 플래그를 설정하여 임시 권한을 부여합니다
+Read permission: FLAG_GRANT_READ_URI_PERMISSION
+Write permission: FLAG_GRANT_WRITE_URI_PERMISSION
+이러한 플래그는 콘텐츠 URI에 권한이 포함된 제공자에게 일반적인 읽기 또는 쓰기 액세스 권한을 제공하지 않습니다. 액세스 권한은 URI 자체에만 있습니다.
+
+다른 앱으로 콘텐츠 URI를 보낼 때는 다음 중 하나 이상의 플래그를 포함하세요. 이 플래그는 intent를 수신하고 Android 11(API 레벨 30) 이상을 타겟팅하는 모든 앱에 다음 기능을 제공합니다:
+- intent에 포함된 플래그에 따라 콘텐츠 URI가 나타내는 데이터를 읽거나 쓸 수 있습니다.
+- URI 권한과 일치하는 콘텐츠 제공업체가 포함된 앱에 대한 패키지 가시성을 확보합니다. intent를 전송하는 수신 앱과 콘텐츠 제공업체가 포함된 송신 앱은 서로 다른 두 앱일 수 있습니다.
+이때 패키지 가시성은 사용자의 개인정보 강화를 위해 패키지에 대한 정보를 확인할 수 없게 접근 객체를 명확히 정의하는 것을 의미합니다. 그렇기에 접근할 provider와 얻을 권한을 명확히 표시해야합니다.
+
+제공자는 AndroidManifest.xml 파일에서 `<provider>` 요소의 `android:grantUriPermissions` 속성과 `<provider>` 요소의 `<grant-uri-permission>` 자식 요소를 사용하여 콘텐츠 URI에 대한 URI 권한을 정의합니다. 
+<provider
+  android:grantUriPermissions="">
+  <grant-uri-permission/>
+</provider>
+예를 들어, READ_CONTACTS 권한이 없어도 연락처 제공자에서 연락처에 대한 데이터를 검색할 수 있습니다. 예를 들어, 생일에 연락처에게 전자 인사를 보내는 애플리케이션에서 이를 원할 수 있습니다. 사용자의 모든 연락처 및 정보에 접근할 수 있는 READ_CONTACTS 권한을 요청하는 대신, 사용자가 애플리케이션에서 사용할 연락처만 얻을수 있도록 합니다. 이를 위해 다음과 같은 과정을 사용합니다.
+1. 애플리케이션에서 ACTION_PICK action과 "contacts" MIME 타입인 CONTENT_ITEM_TYPE을 포함하는 인텐트를 전송합니다. 이때 `startActivityForResult()` 메서드를 사용합니다.
+2. 이 인텐트는 People 앱의 "선택" 액티비티에 대한 인텐트 필터와 일치하므로, 해당 액티비티가 포그라운드로 올라옵니다.
+3. 선택 액티비티에서 사용자가 업데이트할 연락처를 선택합니다. 이때 선택 액티비티는 `setResult(resultCode, intent)`를 호출하여 애플리케이션에 되돌려줄 인텐트를 설정합니다. 이 인텐트에는 사용자가 선택한 연락처의 콘텐츠 URI와 함께 "extras" 플래그인 FLAG_GRANT_READ_URI_PERMISSION이 포함되어 있습니다. 이 플래그는 애플리케이션이 해당 콘텐츠 URI가 가리키는 연락처의 데이터를 읽을 수 있도록 URI 권한을 부여합니다. 선택 액티비티는 이후 `finish()`를 호출하여 애플리케이션으로 제어를 반환합니다.
+4. 애플리케이션의 액티비티가 포그라운드로 돌아오고, 시스템은 해당 액티비티의 `onActivityResult()` 메서드를 호출합니다. 이 메서드는 People 앱의 선택 액티비티에서 생성된 결과 인텐트를 받습니다.
+5. 결과 인텐트에서 콘텐츠 URI를 사용하여, 애플리케이션이 매니페스트에서 제공자에 대한 영구 읽기 접근 권한을 요청하지 않았음에도 불구하고 Contacts Provider에서 연락처의 데이터를 읽을 수 있습니다. 그런 다음 연락처의 생일 정보나 이메일 주소를 가져와서 e-축하 메시지를 보낼 수 있습니다.
+
+ⅱ)다른 앱 사용
+액세스 권한이 없는 데이터를 사용자가 수정할 수 있는 또 다른 방법은 권한이 있는 애플리케이션을 활성화하고 사용자가 해당 애플리케이션에서 작업을 수행하도록 하는 것입니다.
+
+예를 들어, 캘린더 애플리케이션은 애플리케이션의 삽입 UI를 활성화할 수 있는 ACTION_INSERT 인텐트를 허용합니다. 이 인텐트에서 "추가" 데이터를 전달할 수 있으며, 이 데이터는 애플리케이션이 UI에 미리 채워지는데 사용합니다. 반복 이벤트는 구문이 복잡하기 때문에 캘린더 제공자에 이벤트를 삽입하는 가장 선호되는 방법은 ACTION_INSERT로 캘린더 앱을 활성화한 다음 사용자가 이벤트를 삽입할 수 있도록 하는 것입니다.
+
+ⅲ) 도우미 앱을 사용하여 데이터 표시
+응용 프로그램에 액세스 권한이 있는 경우에도 다른 응용 프로그램에 데이터를 표시하려는 intent를 사용할 수 있습니다. 예를 들어, 캘린더 애플리케이션은 특정 날짜나 이벤트를 표시하는 ACTION_VIEW intent 허용합니다. 이렇게 하면 직접 UI를 만들지 않고도 캘린더 정보를 표시할 수 있습니다. 
+intent를 보내는 애플리케이션이 제공업체와 관련된 애플리케이션일 필요는 없습니다. 예를 들어, 연락처 제공업체에서 연락처를 검색한 다음 연락처 이미지에 대한 URI 콘텐츠가 포함된 ACTION_VIEW intent를 이미지 뷰어로 전송할 수 있습니다.
+
+
+
+7.Contract class
+계약 클래스는 응용 프로그램이 콘텐츠 제공업체의 콘텐츠 URI, 열 이름, 의도 동작 및 기타 기능과 함께 작동하는 데 도움이 되는 상수를 정의합니다. 계약 클래스는 제공업체에 자동으로 포함되지 않습니다. 제공업체의 개발자가 이를 정의한 다음 다른 개발자가 사용할 수 있도록 해야 합니다. Android 플랫폼에 포함된 많은 제공업체는 패키지 Android.provider에 해당하는 계약 클래스를 가지고 있습니다.
+예를 들어, 사용자 사전 제공자에는 콘텐츠 URI와 열 이름 상수가 포함된 계약 클래스 UserDictionary가 있습니다. Words 테이블의 콘텐츠 URI는 상수 UserDictionary.Words.CONTENT_URI에 정의되어 있습니다. UserDictionary.Words 클래스에는 이 가이드의 예제 스니펫에 사용되는 열 이름 상수도 포함되어 있습니다. 예를 들어, 쿼리 프로젝션은 다음과 같이 정의될 수 있습니다:
+
+String[] projection =
+{
+    UserDictionary.Words._ID,
+    UserDictionary.Words.WORD,
+    UserDictionary.Words.LOCALE
+};
+
+또 다른 계약 클래스는 Contacts Provider를 위한 ContactsContract입니다. 이 클래스의 참조 문서에는 예제 코드 조각이 포함되어 있습니다. 이 클래스의 하위 클래스 중 하나인 ContactsContract.Intents.Insert는 인텐트와 인텐트 데이터에 대한 상수를 포함하는 계약 클래스입니다.
+
+8.MIME type
+콘텐츠 공급자는 표준 MIME 미디어 유형, 사용자 지정 MIME 유형 문자열 또는 둘 다를 반환할 수 있습니다. MIME 유형에는 다음과 같은 형식이 있습니다:
+type/subtype
+예를 들어, 잘 알려진 MIME 유형의 text/html에는 text유형과 html 하위 유형이 있습니다. 제공자가 URI에 대해 이 유형을 반환하면 해당 URI를 사용하는 쿼리에서 HTML 태그가 포함된 텍스트를 반환한다는 의미입니다.
+
+사용자 지정 MIME 유형이라고도 하는  vendor-specific MIME 유형 문자열은,  더 복잡한 유형 및 하위 유형 값이 있습니다. 여러 행의 경우 유형 값은 항상 다음과 같습니다:
+vnd.android.cursor.dir
+
+단일 행의 경우 유형 값은 항상 다음과 같습니다:
+vnd.android.cursor.item
+
+하위 유형은 공급업체별로 다릅니다. Android 내장 공급업체는 일반적으로 간단한 하위 유형을 가지고 있습니다. 예를 들어 연락처 응용 프로그램이 전화 번호 행을 만들 때 행에 다음과 같은 MIME 유형을 설정합니다:
+vnd.android.cursor.item/phone_v2
+하위 유형 값이 phone_v2입니다.
+
+공급자의 권한과 테이블 이름을 기반으로 자체 하위 유형 패턴을 만들 수 있습니다. 예를 들어, 열차 시간표가 포함된 공급자를 고려해 보겠습니다. 공급자의 권한은 com.example.trains이며 테이블 Line1, Line2 및 Line3이 포함되어 있습니다. 테이블 Line1에 대한 다음 콘텐츠 URI에 대한 내용입니다:
+content://com.example.trains/Line1
+
+provider는 다음과 같은 MIME 타입을 반환할겁니다
+vnd.android.cursor.dir/vnd.example.line1
+
+테이블 Line2의 5번째 행에 대한 content uri입니다
+content://com.example.trains/Line2/5
+
+provider는 다음과 같은 MIME type를 반환할겁니다
+vnd.android.cursor.item/vnd.example.line2
+
+대부분의 콘텐츠 제공자는 사용하는 MIME 유형에 대한 계약 클래스 상수를 정의합니다. 예를 들어, Contacts Provider 계약 클래스인 ContactsContract.RawContacts는 단일 기본 연락처 행의 MIME 유형에 대한 상수인 CONTENT_ITEM_TYPE을 정의합니다.
