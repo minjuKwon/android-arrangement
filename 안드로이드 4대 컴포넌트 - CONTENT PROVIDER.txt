@@ -1,54 +1,46 @@
 1. Content Provider란 
 1)Content provider? 
 
-콘텐츠 제공업체는 파일 시스템, SQLite 데이터베이스, 웹 및 앱의 기타 영구 저장소에 저장된 데이터에 대한 접근을 관리하고 공유하는 방법을 제공합니다. Android framework에서 오디오, 비디오, 이미지뿐만 아니라 개인 연락처 정보와 같은 데이터를 관리합니다. Android.provider 패키지의 참조 문서에 제공자의 일부 종류가 나열되어 있습니다. 
+Content provider는 파일 시스템, SQLite 데이터베이스, 웹 및 앱의 기타 영구 저장소에 저장된 데이터에 대한 접근을 관리하고 공유하는 방법을 제공합니다. 안드로이드 프레임워크에서 오디오, 비디오, 이미지뿐만 아니라 개인 연락처 정보와 같은 데이터를 관리합니다. Android.provider 패키지의 참조 문서에 provider의 일부 종류가 나열되어 있습니다. 
++Android.provider 패키지의 참조 문서
 (https://developer.android.com/reference/android/provider/package-summary)
 
-콘텐츠 제공자는 ContentProvider의 서브클래스로 구현되며, 다른 앱이 트랜잭션을 수행할 수 있도록 표준 API 세트를 구현해야 합니다. 
+Content provider는 ContentProvider의 서브클래스로 구현되며, 다른 앱이 트랜잭션을 수행할 수 있도록 표준 API 세트를 구현해야 합니다. 
 
-안드로이드에서 제공하는 콘텐츠 제공자도 있지만 다음과 같은 경우에는 자체 콘텐츠 제공자가 필요합니다:
+안드로이드에서 제공하는 content provider도 있지만 다음과 같은 경우에는 자체 content provider가 필요합니다
 -사용자 정의 추천 검색어 구현
 -위젯에 앱 데이터 표시
 -복잡한 데이터나 파일을 다른 앱으로 복사/붙이기
 
 
-2)엑세스 관리
-또한 데이터의 보안를 정의하는 메커니즘과 캡슐화를 제공하고 애플리케이션의 중앙 데이터 저장소 계층에 대한 액세스를 조정합니다. 
+2)접근 관리
+ 데이터의 보안를 정의하는 메커니즘과 캡슐화를 제공하고 애플리케이션의 중앙 데이터 저장소 계층에 대한 접근을 조정합니다. 데이터를 공유할 때 많이 사용됩니다. 일반적으로 다른 앱에 존재하는 content provider에 접근하거나 다른 앱이 content provider에 접근하는 두 가지 시나리오 중 하나를 가지기 때문입니다. 주로 provider 클라이언트 개체를 사용하여 다른 앱의 provider에 접근합니다. Provider와 provider 클라이언트는 함께 프로세스 간 통신과 안전한 데이터 접근을 처리하는 일관된 표준 인터페이스를 데이터에 제공합니다.
 
-일반적으로 다른 앱에 존재하는 콘텐츠 제공업체에 액세스하거나 본인 앱의 콘텐츠 제공업체를 다른 애플리케이션이 엑세스 하는 두 가지 시나리오 중 하나를 가집니다. 주로 제공업체 클라이언트 개체를 사용하여 다른 앱의 제공업체에 액세스합니다. 제공업체와 제공업체 클라이언트는 함께 프로세스 간 통신과 안전한 데이터 액세스를 처리하는 일관된 표준 인터페이스를 데이터에 제공합니다.
+(그림1.Illustration of migrating content provider storage.)
+데이터를 공유하지 않는경우에도 사용할 수 있습니다. 앱의 데이터 저장소 구현을 수정해도 해당 앱의 데이터 접근에 의존하는 앱에 영향을 주지 않는 추상화를 제공하기 때문이죠. 이 경우, content provider만 영향을 받고 content provider에 접근하는 앱은 영향 받지 않습니다. 예를 들어, 그림 1와 같이 SQLite 데이터베이스를 대체 스토리지로 교체할 수 있습니다. Content provider에는 API와 지원이 많이 내장되어 있기 때문에 주로 데이터베이스의 추상화로 생각할 수 입니다. 그러나 content provider는 시스템 설계 관점에서 데이터베이스와 다른 핵심 목적을 가지고 있습니다.
 
-데이터를 공유할 계획인 경우 콘텐츠 제공업체를 사용을 추천합니다. 데이터 액세스에 의존하는 다른 애플리케이션에 영향을 주지 않고 애플리케이션 데이터 저장소 구현을 수정할 수 있는 추상화를 제공하기 때문에 데이터를 공유할 계획이없는 경우에도 사용할 수 있습니다. 이 시나리오에서는 콘텐츠 공급자만 영향을 받고 콘텐츠 공급자에 액세스하는 애플리케이션은 영향을 받지 않습니다. 예를 들어, 그림 2와 같이 SQLite 데이터베이스를 대체 스토리지로 교체할 수 있습니다. 콘텐츠 제공업체에는 API와 지원이 많이 내장되어 있기 때문에 주로 데이터베이스의 추상화로 생각할 수 입니다. 그러나 콘텐츠 제공업체는 시스템 설계 관점에서 데이터베이스와 다른 핵심 목적을 가지고 있습니다.
+또한 외부로 데이터를 공유할 때, 하나 이상의 테이블 모습인데 이는 관계형 데이터베이스 테이블과 유사한 형태입니다. 행은 provider가 수집하는 데이터 유형의 인스턴스를 나타내며, 행의 각 열은 인스턴스에 대해 수집된 개별 데이터 조각을 나타냅니다. 
 
-또한 외부로 데이터를 공유할 때 관계형 데이터베이스의 테이블과 유사한 하나 이상의 테이블로 표시합니다. 행은 제공자가 수집하는 데이터 유형의 인스턴스를 나타내며, 행의 각 열은 인스턴스에 대해 수집된 개별 데이터 조각을 나타냅니다. 
-
-이러한 제공업체는 몇 가지 제한 사항과 함께 모든 Android 애플리케이션에 액세스할 수 있습니다. 콘텐츠 공급자는 SQLite 관계형 데이터베이스와 같은 구조화된 데이터 또는 이미지 파일과 같은 비구조화된 데이터를 포함한 다양한 데이터 저장 소스에 대한 액세스를 관리하는 데 사용할 수 있습니다.
-콘텐츠 공급자를 사용하여 애플리케이션의 다양한 데이터 소스에 액세스하기 위한 세부 정보를 추상화할 수 있습니다. 예를 들어, 애플리케이션은 비디오 및 오디오 파일뿐만 아니라 SQLite 데이터베이스에 구조화된 레코드를 저장할 수 있습니다. 콘텐츠 공급자를 사용하여 이 모든 데이터에 액세스할 수 있습니다.
+이러한 provider는 몇 가지 제한 사항을 제외하고, 모든 Android 애플리케이션에 접근할 수 있습니다. Content provider는 SQLite 관계형 데이터베이스와 같은 구조화된 데이터 또는 이미지 파일과 같은 비구조화된 데이터를 포함한, 다양한 데이터 저장 소스에 대한 접근 관리에 사용됩니다. Content provider를 사용하면 애플리케이션의 다양한 데이터 소스에 접근하기 위한 세부 정보를 추상화할 수 있습니다. 예를 들어, 애플리케이션은 비디오 및 오디오 파일뿐만 아니라 SQLite 데이터베이스같은 구조화된 레코드를 저장할 수 있습니다. Content provider를 사용하면 이 모든 데이터에 간단히 접근할 수 있습니다.
 
 
-3)엑세스 권한
- 콘텐츠 제공업체는 데이터 액세스 권한에 대한 세분화된 제어를 제공합니다. 응용 프로그램 내에 있는 콘텐츠 제공업체에만 액세스를 제한하거나, 다른 응용 프로그램의 데이터에 액세스할 수 있는 포괄적인 권한을 부여하거나, 데이터 읽기 및 쓰기에 대한 다양한 권한을 구성하도록 선택할 수 있습니다.
+3)접근 권한
+Content provider는 데이터 접근 권한에 대한 세분화된 제어를 제공합니다. 응용 프로그램 내에 있는 content provider에만 접근를 제한하거나, 다른 응용 프로그램의 데이터에 접근할 수 있는 포괄적인 권한을 부여하거나, 데이터 읽기 및 쓰기에 대한 다양한 권한을 구성하도록 선택할 수 있습니다.
 
-권한이 부여된다면, 콘텐츠 제공업체를 통해 다른 앱이 데이터를 쿼리하거나 수정할 수 있습니다. 그림 1과 같이 다른 애플리케이션이 앱 데이터에 안전하게 액세스하고 수정할 수 있도록 콘텐츠 제공업체를 구성할 수 있습니다. 예를 들어 Android 시스템은 사용자의 연락처 정보를 관리하는 콘텐츠 제공업체를 제공합니다. 해당 권한을 가진 모든 앱은 ContactsContract.Data를 사용하여 특정 사람에 대한 정보를 읽고 쓸 수 있도록 콘텐츠 제공업체에 query 할 수 있습니다. 콘텐츠 제공업체는 한 프로세스의 데이터와 다른 프로세스에서 실행 중인 코드를 연결하는 표준 인터페이스입니다. 
+(그림2.Overview diagram of how content providers manage access to storage.)
+권한이 부여된다면, content provider를 통해 다른 앱이 데이터를 쿼리하거나 수정할 수 있습니다. 그림 2과 같이, 앱에 다른 앱이 데이터에 안전하게 접근하고 수정할 수 있도록 content provider를 구성합니다. 예를 들어 Android 시스템은 사용자의 연락처 정보를 관리하는 content provider를 제공합니다. 해당 권한을 가진 모든 앱은 ContactsContract.Data를 사용하여 특정 사람에 대한 정보를 읽고 쓸 수 있도록 content provider에 query 할 수 있습니다. Content provider는 한 프로세스의 데이터와 다른 프로세스에서 실행 중인 코드를 연결하는 표준 인터페이스입니다. 
 
 
 4)Content Resolver
-콘텐츠 제공자의 데이터에 액세스하려는 경우 애플리케이션의 컨텍스트에서 콘텐츠해결사 개체를 사용하여 제공자와 클라이언트로서 통신합니다. 콘텐츠해결사 개체는 콘텐츠제공자를 구현하는 클래스의 인스턴스인 제공자 개체와 통신합니다.
+Content provider의 데이터에 접근하려는 경우, 애플리케이션의 context에서 클라이언트인 content resolver 개체가 content provider를 구현한 클래스의 인스턴스인 provider 개체와 통신합니다.  Resolver는 이러한 provider와 동일한 이름의 메소드를 호출합니다. 그럼 provider는 클라이언트로부터 데이터 요청을 받고 요청된 작업을 수행한 다음 결과를 반환합니다. ContentResolver 메서드는 영구 스토리지의 기본적인 "CRUD"(생성, 검색, 업데이트 및 삭제) 기능을 제공합니다.
 
-제공자 개체는 클라이언트로부터 데이터 요청을 받고 요청된 작업을 수행한 다음 결과를 반환합니다. 해결사 개체에는 제공자 개체에서 동일하게 명명된 메서드를 호출하는 메서드가 있는데, 이는 ContentProvider의 구체적인 하위 클래스 중 하나의 인스턴스입니다. ContentResolver 메서드는 영구 스토리지의 기본적인 "CRUD"(생성, 검색, 업데이트 및 삭제) 기능을 제공합니다.
+(그림 3. Interaction between ContentProvider, other classes, and storage.)
+UI에서 content provider에 접근하는 일반적인 패턴은 Cursor Loader를 사용하여 백그라운드에서 비동기 쿼리를 실행하는 겁니다. UI의 activity 또는 framgnet은 쿼리에 cursor loader를 호출하고, cursor loader는 content resolver를 사용하여 content provider를 가져옵니다. 이를 통해 쿼리가 실행되는 동안에도 사용자는 UI를 계속 사용할 수 있습니다. 이 패턴은 그림 3에 표시된 것처럼 기본 저장 메커니즘뿐만 아니라 여러 가지 다른 객체의 상호 작용을 만듭니다.
 
-UI에서 콘텐츠 제공자에 액세스하는 일반적인 패턴은 커서로더를 사용하여 백그라운드에서 비동기 쿼리를 실행합니다. UI의 activity 또는 framgnet은 쿼리에 커서로더를 호출하고, 커서로더는 콘텐츠해결사를 사용하여 콘텐츠 제공자를 가져옵니다.
+(Table 1: Sample user dictionary table.)
+Android 플랫폼에 내장된 provider 중 하나인 사용자가 보관하고자 하는 비표준 단어를 저장하는 사용자 사전 provider입니다. 표 1은 이 provider 테이블의 데이터 모습을 보여줍니다. 표 1에서 각 행은 표준 사전에 없는 단어의 인스턴스를 나타냅니다. 각 열은 해당 단어에 대한 데이터의 한 부분을 나타내며, 단어의 locale 같은 정보를 포함합니다. 열 헤더는 provider에 저장된 열 이름입니다. 예를 들어 locale 행을 참조하려면 locale을 참조해야 합니다. 이 provider에서 _ID 열은 자동으로 provider가 유지 관리를 해주는 기본 키 역할을 합니다.
 
-이를 통해 쿼리가 실행되는 동안에도 사용자는 UI를 계속 사용할 수 있습니다. 이 패턴은 그림 2에 표시된 것처럼 기본 저장 메커니즘뿐만 아니라 여러 가지 다른 객체의 상호 작용을 포함합니다.
-(Figure 2. Interaction between ContentProvider, other classes, and storage.)
-
-Android 플랫폼에 내장된 제공업체 중 하나는 사용자가 보관하고자 하는 비표준 단어를 저장하는 사용자 사전 제공업체입니다. 표 1은 이 제공업체의 표에서 데이터가 어떻게 보일지 보여줍니다:
-
-Table 1: Sample user dictionary table.
-
-표 1에서 각 행은 표준 사전에 없는 단어의 인스턴스를 나타냅니다. 각 열은 해당 단어에 대한 데이터의 한 부분을 나타내며, 예를 들어 단어의 locale 같은 정보를 포함합니다. 열 헤더는 공급자에 저장된 열 이름입니다. 예를 들어 행의 로케일을 참조하려면 로케일 열을 참조해야 합니다. 이 공급자의 경우 _ID 열은 공급자가 자동으로 유지 관리하는 기본 키 열 역할을 합니다.
-
-사용자 사전 제공자에서 단어와 단어의 위치 목록을 얻으려면 ContentResolver.query()를 호출합니다. query() 메서드는 사용자 사전 제공자에서 정의한 ContentProvider.query() 메서드를 호출합니다. 다음 코드 줄에는 ContentResolver.query() 호출을 보여줍니다.
-
+사용자 사전 provider에서 단어와 단어의 위치 목록을 얻으려면 ContentResolver.query()를 호출합니다. query() 메서드는 사용자 사전 provider에서 정의한 ContentProvider.query() 메서드를 호출합니다. 다음 코드 줄에는 ContentResolver.query() 호출을 보여줍니다.
 // UserDictionary 결과 쿼리
 cursor = getContentResolver().query(
     UserDictionary.Words.CONTENT_URI,  // 단어 table의 content URI
@@ -60,84 +52,72 @@ cursor = getContentResolver().query(
 Table 2는 query(Uri,projection,selection,selectionArgs,sortOrder) 의 각 매개변수가 SQL SELECT 절에 어떻게 대응되는지 보여줍니다.
 
 Table 2: query() compared to SQL query.
-Uri는 table_name이라는 공급자의 테이블에 매핑됩니다.
-projection 은 검색한 각 행에 포함된 열의 배열입니다.
-selection은 행을 선택하는 기준을 지정합니다.
-정확히 동등한 표현이 없습니다. Selection 인수는 선택 절에 ? 자리 표시자를 대체합니다.
-sortOrder는 반환된 Cursor에 행이 표시되는 순서를 지정합니다.
+Uri는 provider의 table_name 테이블에 매핑.
+projection 은 검색된 행에 포함할 열의 배열.
+selection은 행을 선택하는 기준을 지정.
+정확히 동등한 표현이 없음. selectionArgs는 selection 절의 ? 자리 표시자를 대체. LIKE연산자에 사용하는 조건과 비슷. 
+sortOrder는 반환된 Cursor의 행이 표시되는 순서 지정.
 
 
 5)URI
-콘텐츠 URI는 공급자의 데이터를 식별하는 URI으로 데이터를 접근하게 해주는 앱이 진입점 역할을 합니다. 따라서 앱의 데이터는 URI 체계에 따라 매핑되며 이 URI를 외부에 제공하고 해당 URI를 통해 데이터를 접근합니다. 콘텐츠 URI에는 전체 공급자의 식별 이름(권한)과 테이블을 가리키는 이름(경로)이 포함됩니다. 클라이언트 메서드를 호출하여 공급자의 테이블에 액세스하면 테이블의 콘텐츠 URI가 인수 중 하나가 됩니다.
+콘텐츠 URI는 provider의 데이터를 식별하는 URI으로 데이터를 접근하게 해주는 앱이 진입점 역할을 합니다. 따라서 앱의 데이터는 URI 체계에 따라 매핑되며 이 URI를 외부에 제공하고 해당 URI를 통해 데이터에 접근합니다. 콘텐츠 URI에는 provider의 식별 이름(권한)과 테이블을 가리키는 이름(경로)이 포함됩니다. Provider 테이블에 접근할 때, 테이블의 콘텐츠 URI가 클라이언트 메서드의 인수로 사용됩니다.
 
 URI는 시스템이 앱을 관리하는 데 몇 가지 특별한 기능을 제공합니다
--URI 할당은 앱의 지속적 실행이 필요 없으므로, URI는 해당 앱이 종료되어도 지속됩니다. 시스템은 URI에 대한 데이터를 검색할 때 해당 앱이 여전히 실행 중인지 확인하기만 하면 됩니다.
--URI는 중요하고 세밀한 보안 모델을 제공합니다. 예를 들어, 앱은 클립보드에 이미지의 URI를 둘 수 있지만, 콘텐츠 제공자는 해당 URI를 잠금 상태로 유지하여 다른 앱이 자유롭게 접근할 수 없도록 할 수 있습니다. 다른 앱이 클립보드에 있는 URI에 접근하려고 할 때, 시스템은 해당 앱이 임시적으로 접근할 수 있도록  임시 URI 권한 부여를 할 수 있으며, 이는 해당 데이터 외는 접근할 수 없도록 합니다.
+-URI 할당은 앱의 지속적 실행이 필요 없으므로, URI는 해당 앱이 종료되어도 유지. 시스템은 URI에 대한 데이터를 검색할 때 해당 앱이 여전히 실행 중인지만 확인.
+-URI는 중요하고 세밀한 보안 모델을 제공. 예를 들어, 앱은 클립보드에 이미지의 URI를 둘 수 있지만, content provider는 해당 URI를 잠금 상태로 유지. 다른 앱이 자유롭게 접근할 수 없도록 관리. 다른 앱이 클립보드에 있는 URI에 접근하려고 할 때, 시스템은 해당 앱이 임시적으로 접근하도록 임시 URI 권한 부여. 해당 데이터 외는 접근 불가능.
 
-이전 코드 행에서 상수 Content_URI는 사용자 사전 제공자의 단어 테이블의 콘텐츠 URI를 포함합니다. ContentResolver 개체는 URI의 권한을 구문 분석하고 해당 권한을 알려진 제공자의 시스템 테이블과 비교하여 제공자를 해결하는 데 사용합니다. 그런 다음 ContentResolver는 쿼리 인수를 올바른 제공자에게 전송할 수 있습니다.
+위에서 사용한 예제 코드에서 상수 UserDictionary.Words.CONTENT_URI는 사용자 사전 provider 단어 테이블의 콘텐츠 URI를 의미합니다. ContentResolver 개체는 URI의 권한을 분석하고 이를 통해 시스템에 등록된 provider와 비교합니다. 해당 provider를 찾으면 ContentResolver의 쿼리를 전달합니다. Content provider는 콘텐츠 URI의 경로 부분을 사용하여 접근할 테이블을 선택합니다. Provider는 일반적으로 각 테이블에 대한 경로를 제공합니다.
 
-콘텐츠 제공자는 콘텐츠 URI의 경로 부분을 사용하여 액세스할 테이블을 선택합니다. 제공자는 일반적으로 노출되는 각 테이블에 대한 경로를 가지고 있습니다.
-
-이전 코트에서 Word table의 전체 URI는 다음과 같습니다.
+이전 코드에서 단어 테이블의 전체 URI는 다음과 같습니다.
 content://user_dictionary/words
+- content:// 은 필수 구성 요소로 content URI임을 식별해주는 scheme.
+- user_dictionary 는 제공자 권한.
+- words 은 table 경로.
 
-content:// 문자열은 필수 구성 요소로 content URI임을 식별해주는 scheme입니다.
-user_dictionary 는 제공자의 권합니다.
-words 문자열은 table의 경로입니다.
-
-많은 공급자가 URI의 끝에 ID 값을 추가하여 테이블의 단일 행에 액세스할 수 있습니다. 예를 들어, 사용자 사전 제공자에서 ID가 4인 행을 검색하려면 이 콘텐츠 URI를 사용할 수 있습니다:
+많은 provider가 URI의 끝에 ID 값을 추가하여 테이블의 단일 행에 접근하게 합니다. 예를 들어, 사용자 사전 provider에서 ID가 4인 행을 검색하려면 코드는 다음과 같습니다.
 Uri singleUri = ContentUris.withAppendedId(UserDictionary.Words.CONTENT_URI,4);
 
-행 집합을 검색한 다음 행 중 하나를 업데이트하거나 삭제할 때 ID 값을 사용하는 경우가 많습니다.
-URI 및 URI.Builder 클래스에는 문자열로부터 형식이 올바른 URI 객체를 구성하기 위한 편리한 메서드를 제공합니다. 그 중 ContentUris 클래스에는 ID 값을 URI에 추가하는 편의 메서드 포함되어 있습니다. 이전 스니펫에서 withAppendId()를 사용하면 사용자 사전 제공자 콘텐츠 URI에 ID를 추가합니다.
+행을 검색한 다음, 행 중 하나를 업데이트하거나 삭제할 때 ID 값을 많이 사용합니다. URI 및 URI.Builder 클래스에는 문자열로부터 올바른 형식의 URI 객체를 구성해주는 편리한 메서드를 제공합니다. 그 중 ContentUris 클래스에는 ID 값을 URI에 추가해주는 편의 메서드가 포함되어 있습니다. 위 코드에서 withAppendId()는 사용자 사전 provider 콘텐츠 URI에 ID를 추가합니다. ID가 4인 정보를 URI 주소에 추가하여 테이블 자체를 가리키는 주소에서 ID가 4인 행을 가리키는 주소로 확장하는 겁니다.
 
 
-6)provider 다른 컴포넌트 관계
- 다양한 API와 구성 요소를 제공합니다. 그림 1에 표시된 것처럼 여기에는 다음이 포함됩니다:
-(Figure 1. Relationship between a content provider and other components.)
--애플리케이션 데이터에 대한 액세스 권한을 다른 애플리케이션과 공유하기
--위젯으로 데이터 보내기
--SearchRecentSuggesProvider를 사용하여 검색 프레임워크를 통해 응용 프로그램에 대한 사용자 지정 검색 제안 반환
--AbstractThreedSyncAdapter 구현을 사용하여 애플리케이션 데이터를 서버와 동기화하기
--CursorLoader를 사용하여 UI에 데이터 로드하기
+6)Provider 다른 컴포넌트 관계
+ Provider는 다양한 API와 구성 요소를 제공합니다. 다음같은 내용이 포함됩니다.
 
-다음의 클래스들은 콘텐츠 제공자 클래스 구현이 필요합니다.
+(그림 4. Relationship between a content provider and other components.)
+-애플리케이션 데이터에 대한 접근 권한을 다른 애플리케이션과 공유
+-위젯으로 데이터 송신
+-SearchRecentSuggesProvider를 사용하여 검색 프레임워크를 통해, 응용 프로그램에 대한 사용자 정의 검색 추천어 반환
+-AbstractThreedSyncAdapter 구현을 사용하여 애플리케이션 데이터를 서버와 동기화
+-CursorLoader를 사용하여 UI에 데이터 로드
 
+다음의 클래스들은 Content provider 클래스 구현이 필요합니다.
 -AbstractThreadedSyncAdapter
-동기화 작업 호출을 위해 스레드를 생성해주는 SyncAdapter의 추성 클래스입니다. 기존 작업이 없으면 새로운 스레드가 생성됩니다. 기존 작업이 있다면 새로운 요청은 오류로 반환하고 기존 요청을 진행해줍니다. 여기서 콘텐츠 제공자가 동기화 작업에서 데이터를 관리를 제공해줍니다.
-
+동기화 작업 호출을 위해 스레드를 생성해주는 SyncAdapter의 추성 클래스. 기존 작업이 없으면 새로운 스레드가 생성. 기존 작업이 있다면 새로운 요청은 오류로 반환하고 기존 요청 진행. 여기서 content provider가 동기화 작업에서 데이터를 관리를 제공.
 -CursorAdapter
-Cursor의 데이터를 ListView에 표시하는걸 도와주는 Adapter입니다. 콘텐츠 제공자를 통해 Cursor를 받는 경우가 일반적이기에 콘텐츠 제공자 구현이 필요합니다.
+Cursor의 데이터를 ListView에 표시하는걸 도와주는 Adapter. Content provider를 통해 cursor를 받는 경우가 일반적이기에 콘텐츠 제공자 구현이 필요.
 +Cursor??
-데이터베이스 쿼리로 반환되는 데이터 집합에 대한 임시 읽기/쓰기 접근을 제공해주는 인터페이스입니다. 이때 데이터 집합은 특정 데이터 리스트가 아닌 특정 행을 말합니다. 즉, 특정 행을 가리키는 포인터 역할입니다. 쿼리 결과로 여러 행이 반환된다면 현재 위치인 첫 번째행을 가리킵니다. 그렇기에 
-메서드로 이전/이후 행으로 이동할 수 있습니다.  
-
+데이터베이스 쿼리로 반환되는 데이터에 대한 임시 읽기/쓰기 접근을 제공해주는 인터페이스. 이때 데이터는 특정 데이터 리스트가 아닌 특정 행을 의미. 즉, 특정 행을 가리키는 포인터 역할. 쿼리 결과로 여러 행이 반환된다면 현재 위치인 첫 번째행을 가리킴. 그렇기에 메서드를 이용하여 이전/이후 행으로 이동 가능.  
 -CursorLoader
-콘텐츠 제공자로부터 Cursor를 반환하는 loader입니다. AsyncTaskLoader를 기반으로 cursor를 쿼리하기 위한 표준 Loader 프로토콜를 구현합니다. 앱의 UI를 차단하지 않도록 백그라운드 스레드에서 실행되어 비동기적으로 cursor를 반환합니다.
-이러한 클래스를 사용하는 앱에는 콘텐츠 제공자를 구현해야 합니다. AbstractThreadedSyncAdapter와 CursorLoader같은 동기화 adpater framework로 작업할 때는 테스트나 개발 초기에 콘텐츠 제공자 대신 스텁 콘텐츠 제공자를 사용할 수도 있습니다.
-또한 CursorLoader 개체는 콘텐츠 제공업체에 의존하여 비동기 쿼리를 실행한 다음 그 결과를 응용 프로그램의 UI 계층으로 반환합니다.
+Content provider로부터 Cursor를 반환하는 loader. AsyncTaskLoader를 기반으로 cursor를 쿼리하기 위한 표준 Loader 프로토콜를 구현. 앱의 UI를 차단하지 않도록 백그라운드 스레드에서 실행되어 비동기적으로 cursor 반환.
 
-+스텁 콘텐츠 제공자??
-동기화 어댑터 프레임워크의 콘텐츠 제공자 구현을 위한 임시적인 콘텐츠 제공자입니다. 개발초기나 테스트 단계에서 실제 데이터가 없거나 데이터 소스 구현이 되지 않는 경우에 사용됩니다. 즉, 앱과 제공자가 데이터로 상호작용하는 것처럼 작동하게 합니다. 이를 통해 데이터를 전송하기 위해 동기화 어댑터를 사용할 수 있게 합니다. 스텁 제공자는 콘텐츠 제공자 클래스를 구현하지만, 모든 필수 메서드는 null 또는 0을 반환합니다. 쿼리나 업데이트 같은 메스드는 있지만 실제로 처리는 안 되는 겁니다. 
-
+이러한 클래스를 사용하는 앱에는 content provider를 구현해야 합니다. AbstractThreadedSyncAdapter와 CursorLoader 같은 동기화 adpater framework로 작업할 때는 테스트나 개발 초기에 content provider 대신 stub content provider를 사용할 수도 있습니다. 또한 CursorLoader 개체는 content provider에 의존하여 비동기 쿼리를 실행한 다음 그 결과를 응용 프로그램의 UI 계층으로 반환합니다.
++Stub content provider??
+동기화 adapter 프레임워크의 content provider 구현을 위한 임시적인 content provider입니다. 개발초기나 테스트 단계에서 실제 데이터가 없거나 데이터 소스 구현이 되지 않는 경우에 사용됩니다. 즉, 앱과 provider가 데이터로 상호작용하는 것처럼 작동하게 합니다. 이를 통해 데이터를 전송하기 위한 동기화 adapter를 사용할 수 있게 합니다. stub provider는 content provider 클래스를 구현하지만, 모든 필수 메서드는 null 또는 0을 반환합니다. 쿼리나 업데이트 같은 메스드는 있지만 실제로 처리는 안 되는 겁니다. 
 
 
-2. provider에서 데이터 검색
-위의 설명에 이어서 사용자 사전 제공업체를 예로 provider에서 어떻게 데이터를 검색하는지 알아봅니다. 크게 두가지로 provider의 읽기 접근 권한 요청과 provider로 쿼리 전송 방법으로 나뉩니다. provider 예시에 대한 명확성을 위해 이 글의 코드는 UI 스레드에서 ContentResolver.query()를 호출합니다. 그러나 실제 코드에서는 별도의 스레드에서 비동기식으로 쿼리를 수행합니다. 또한 예시의 한 부분일 뿐 앱에 사용할 수 있는 완전한 코드는 아닙니다.
+
+2. Provider에서 데이터 검색
+위의 설명에 이어서 사용자 사전 provider를 예로 provider에서 어떻게 데이터를 검색하는지 알아봅니다. 크게 두가지로 provider의 읽기 접근 권한 요청과 provider로 쿼리 전송 방법으로 나뉩니다. provider 예시에 대한 명확성을 위해 이 글의 코드는 UI 스레드에서 ContentResolver.query()를 호출합니다. 실제 코드에서는 별도의 스레드에서 비동기식으로 쿼리를 수행해야 합니다. 또한 예시의 한 부분일 뿐 앱에 사용할 수 있는 완전한 코드는 아닙니다.
 
 
 1) 읽기 접근 권한 요청
-공급자로부터 데이터를 검색하려면 애플리케이션에서 공급자에 대한 읽기 액세스 권한이 필요합니다. 런타임에 이 권한을 요청할 수 없습니다. 대신 <us-permission> 요소와 공급자가 정의한 정확한 권한 이름을 사용하여 매니페스트에 이 권한이 필요하다는 것을 지정해야 합니다.
+provider부터 데이터를 검색하려면 애플리케이션에서 provider에 대한 읽기 접근 권한이 필요합니다. 런타임에 이 권한을 요청할 수 없습니다. 대신 <uses-permission> 요소와 provider가 정의한 정확한 권한 이름을 사용하여 manifest에 이 권한이 필요하다는 것을 지정해야 합니다. manifest에서 이 요소를 지정하면 응용 프로그램에 대해 이 권한을 요청하는 것입니다. 사용자는 응용 프로그램을 설치할 때 암묵적으로 이 요청을 승인합니다.
 
-매니페스트에서 이 요소를 지정하면 응용 프로그램에 대해 이 권한을 요청하는 것입니다. 사용자는 응용 프로그램을 설치할 때 암묵적으로 이 요청을 승인합니다.
-
-사용 중인 공급자의 읽기 액세스 권한의 정확한 이름과 공급자가 사용하는 다른 액세스 권한의 이름을 찾으려면 공급자의 설명서를 참조하세요.
-
-사용자 사전 제공업체는 매니페스트 파일에 권한 Android.permission.READ_USER_DICONARY를 정의하므로 제공업체에서 읽으려는 애플리케이션은 이 권한을 요청해야 합니다.
+사용 중인 provider의 읽기 접근 권한의 정확한 이름과 provider가 사용하는 다른 접근 권한의 이름을 찾으려면 해당 공급자의 설명서를 참조하면 됩니다. 사용자 사전 provider는 manifest 파일에 권한 Android.permission.READ_USER_DICONARY를 정의하므로 provider에서 읽으려는 애플리케이션은 이 권한을 요청해야 합니다.
 
 
 2)쿼리 구성
-공급자에서 데이터를 검색하는 다음 단계는 쿼리를 구성하는 것입니다. 다음 스니펫은 사용자 사전 제공자에 액세스하기 위한 몇 가지 변수를 정의합니다:
+다음 단계는 provider에서 데이터를 검색하는 쿼리를 구성하는 것입니다. 다음 코드는 사용자 사전 provider에 접근하기 위한 몇 가지 변수를 정의합니다.
 
 // projection는 행에서 반환할 열만을 선택에 대해 정의
 String[] mProjection =
@@ -146,17 +126,14 @@ String[] mProjection =
     UserDictionary.Words.WORD,   // 단어 열 이름에 대한 Contract class
     UserDictionary.Words.LOCALE  // locale 열 이름에 대한 Contract class
 };
-
 // 선택 절을 저장할 문자열 정의
 String selectionClause = null;
-
 //선택 인수를 저장할 배열 초기화
 String[] selectionArgs = {""};
 
-다음 스니펫은 사용자 사전 제공자를 예로 들어 ContentResolver.query()를 사용하는 방법을 보여줍니다. 제공자 클라이언트 쿼리는 SQL 쿼리와 유사하며 반환할 열 집합, 선택 기준 집합 및 정렬 순서를 포함합니다.
-쿼리가 반환하는 열 집합을 프로젝션이라고 하며 변수는 mProjection입니다.
-검색할 행을 지정하는 식을 선택 절과 선택 인수로 나뉩니다. 선택 절은 논리식과 boolean식, 열 이름 및 값의 조합입니다. 변수는 mSelectionClause입니다. 대체 가능한 매개 변수 ?를 값 대신 지정하면 쿼리 방법이 변수 mSelectionArgs인 선택 인수 배열에서 값을 가져옵니다.
-다음 스니펫에서는 사용자가 단어를 입력하지 않으면 선택 절이 null로 설정되고 쿼리가 제공자의 모든 단어를 반환합니다. 사용자가 단어를 입력하면 선택 절은 UserDictionary.WORD + "=?"로 설정되며 선택 인수 배열의 첫 번째 요소는 사용자가 입력한 단어로 설정됩니다.
+다음 코드는 사용자 사전 provider를 예로 들어 ContentResolver.query()를 사용하는 방법을 보여줍니다. Provider 클라이언트 쿼리는 SQL 쿼리와 유사하며 반환할 열 집합, 선택 기준 및 정렬 순서를 포함합니다. 쿼리가 반환하는 열 집합을 프로젝션이라고 하며 변수는 mProjection입니다. 검색할 행을 지정하는 식은 선택 절과 선택 인수로 나뉩니다. 선택 절은 논리식 및 boolean식, 열 이름 그리고 값의 조합입니다. 선택 절 변수는 mSelectionClause입니다. 대체 가능한 매개 변수 ?를 값 대신 지정하면 쿼리 메서드가 변수 mSelectionArgs인 선택 인수 배열에서 값을 가져옵니다.
+
+다음 코드에서는 사용자가 단어를 입력하지 않으면 선택 절이 null로 설정되고 쿼리는 provider의 모든 단어를 반환합니다. 사용자가 단어를 입력하면 선택 절은 UserDictionary.WORD + "=?"로 설정되며 선택 인수 배열의 첫 번째 요소는 사용자가 입력한 단어로 설정됩니다.
 
 //선택 인수를 포함할 단일 요소 문자열 배열을 정의
 String[] selectionArgs = {""};
@@ -173,7 +150,6 @@ if (TextUtils.isEmpty(searchString)) {
     selectionClause = UserDictionary.Words.WORD + " = ?";
     // 사용자의 입력 문자열을 선택 인수 이동
     selectionArgs[0] = searchString;
-
 }
 //테이블에 대해 쿼리를 수행하고 커서 개체를 반환
 mCursor = getContentResolver().query(
@@ -182,7 +158,6 @@ mCursor = getContentResolver().query(
     selectionClause,                  // null 또는 사용자가 입력한 단어
     selectionArgs,                    // 비어 있거나 사용자가 입력한 문자열
     sortOrder);                       // 반환된 행의 정렬 순서
-
 //오류가 발생하면 제공자에 따라 null 또는 예외를 반환하기에 
 //이에 따른 예외 처리
 if (null == mCursor) {
@@ -404,7 +379,7 @@ ContentResolver.delete() 호출할 때 악의적 입력을 조심해야 합니�
 일반적으로 복잡한 데이터 구조나 파일이 포함된 공급자와 함께 작업할 때는 MIME 유형이 필요합니다.
 
 
-
+ 
 6.다른 형식의 provider 접근 방법
 애플리케이션 개발에서 중요한 세 가지 대안적인 제공자 접근 방식이 있습니다.
 -Batch 접근 : ContentProviderOperation class의 method 호출을 통해 batch 접근을 생성하고 ContentResolver.applyBatch()로 적용
