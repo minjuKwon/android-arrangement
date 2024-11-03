@@ -363,15 +363,16 @@ https://developer.android.com/reference/android/provider/UserDictionary.Words
 
  
 6.다른 형식의 provider 접근 방법
-애플리케이션 개발에서 중요한 세 가지 대안적인 제공자 접근 방식이 있습니다.
--Batch 접근 : ContentProviderOperation class의 method 호출을 통해 batch 접근을 생성하고 ContentResolver.applyBatch()로 적용
--비동기식 쿼리: 별도의 스레드에서 쿼리를 수행합니다. 커서로더 개체를 사용
-Intent 사용한 데이터 액세스: 제공업체에 직접 intent를 보낼 수는 없지만, 일반적으로 제공업체의 데이터를 수정하는 데 가장 적합한 제공업체의 애플리케이션에 intent를 보낼 수 있습니다.
+앱 개발에서 중요한 세 가지 대안적인 provider 접근 방식이 있습니다.
+-일괄 접근 : ContentProviderOperation class의 메서드 호출을 통해 일괄 접근을 생성하고 ContentResolver.applyBatch()로 적용
+-비동기식 쿼리: 별도의 스레드에서 쿼리를 수행. Cusor loader 개체를 사용
+-Intent 사용한 데이터 접근: provider과 직접 통신 대신, provider의 데이터를 수정하는 데 가장 적합한 provider의 앱에 intent를 송신.
+일괄 접근과 intent를 통한 접근 방식에 대해 알아보겠습니다.
 
-1)batch 접근
-공급자에 대한 일괄 액세스는 많은 수의 행을 삽입하거나, 동일한 메서드 호출에서 여러 테이블의 행을 삽입하거나, 일반적으로 트랜잭션으로 프로세스 경계를 넘어 원자 연산이라고 하는 일련의 연산을 수행하는 데 유용합니다.
+1)일괄 접근
+Provider에 대한 일괄 접근은 많은 수의 행을 삽입하거나 동일한 메서드 호출에서 여러 테이블의 행을 삽입할 때 사용됩니다. 또는 일반적으로 트랜잭션이라 말하는, 프로세스 경계를 넘어 원자 연산이라고 하는 일련의 연산을 수행하는 데 유용합니다.
 
-배치 모드로 제공자에 액세스하려면 여러 개의 ContentProviderOperation 개체를 만든 다음 ContentResolver.applyBatch()를 사용하는 콘텐츠 제공자에게 보냅니다. 특정 콘텐츠 URI가 아닌 이 method에 콘텐츠 제공자의 권한을 넘겨야 합니다. 이렇게 하면 배열의 각 ContentProviderOperation 개체가 다른 테이블에서 작업할 수 있습니다. ContentResolver.applyBatch()로 호출하면 결과 배열이 반환됩니다.
+일괄 모드로 provider에 접근하려면 여러 개의 ContentProviderOperation 개체를 만든 다음 ContentResolver.applyBatch()를 사용하는 content provider에게 보냅니다. 이 메서드에는 특정 콘텐츠 URI 대신 content provider의 권한을 넘겨야 합니다. 배열의 각 ContentProviderOperation 개체가 서로 다른 테이블에서의 작업이 필요할 수 있기 때문입니다. ContentResolver.applyBatch()로 호출하면 결과 배열이 반환됩니다.
 
 // 일괄 처리를 위해 ContentProviderOperation 객체를 담을 리스트 생성
  ArrayList<ContentProviderOperation> ops =
@@ -399,45 +400,42 @@ Intent 사용한 데이터 액세스: 제공업체에 직접 intent를 보낼 �
 
 
 2)Intent 사용하여 데이터에 접근
-Intent는 콘텐츠 제공업체에 간접적으로 액세스할 수 있는 권한을 제공할 수 있습니다. 권한이 있는 응용 프로그램에서 결과 intent를 반환받거나 권한이 있는 응용 프로그램을 활성화하여 사용자가 콘텐츠 제공업체에서 작업하도록 허용함으로써 응용 프로그램에 액세스 권한이 없더라도 사용자가 제공업체의 데이터에 액세스하도록 할 수 있습니다.
+Intent는 content provider에 간접적으로 접근할 수 있는 권한을 제공합니다. 권한이 있는 응용 프로그램에서 intent 결과를 반환받거나 권한이 있는 응용 프로그램을 활성화하여 사용자가 content provider에서 작업하도록 허용합니다. 그러면 응용 프로그램에 접근 권한이 없더라도 사용자가 provider 데이터에 접근하도록 할 수 있습니다.
 
 ⅰ)임시 권한으로 접근얻기
-적절한 액세스 권한이 없는 경우에도 해당 권한이 있는 애플리케이션에 intent를 보내고 URI 권한이 포함된 결과 intent를 반환하여 콘텐츠 제공업체의 데이터에 액세스할 수 있습니다. 이러한 권한은 특정 콘텐츠 URI를 수신하는 activity가 완료될 때까지 지속되는 권한입니다. 영구 권한이 있는 애플리케이션은 결과 intent에 플래그를 설정하여 임시 권한을 부여합니다
+적절한 접근 권한이 없는 경우에도 해당 권한이 있는 앱에 intent를 보내고 URI 권한이 포함된 결과 intent를 받습니다. 간접적으로 content provider 데이터에 접근하게 됩니다. 이러한 권한은 특정 콘텐츠 URI를 수신하는 activity가 완료될 때까지 지속됩니다. 즉, 임시일지라도 한번 받으면 종료될 때까지 사용할 수 있습니다. 권한이 있는 앱은 intent에 플래그를 설정하여 임시 권한을 부여하게 만듭니다.
 Read permission: FLAG_GRANT_READ_URI_PERMISSION
 Write permission: FLAG_GRANT_WRITE_URI_PERMISSION
-이러한 플래그는 콘텐츠 URI에 권한이 포함된 제공자에게 일반적인 읽기 또는 쓰기 액세스 권한을 제공하지 않습니다. 액세스 권한은 URI 자체에만 있습니다.
+이러한 플래그는 provider에 대한 전체적인 읽기나 쓰기 접근 권한을 제공하는 건 아닙니다. 즉, 접근 권한은 해당 URI 자체에만 있습니다.
 
-다른 앱으로 콘텐츠 URI를 보낼 때는 다음 중 하나 이상의 플래그를 포함하세요. 이 플래그는 intent를 수신하고 Android 11(API 레벨 30) 이상을 타겟팅하는 모든 앱에 다음 기능을 제공합니다:
-- intent에 포함된 플래그에 따라 콘텐츠 URI가 나타내는 데이터를 읽거나 쓸 수 있습니다.
-- URI 권한과 일치하는 콘텐츠 제공업체가 포함된 앱에 대한 패키지 가시성을 확보합니다. intent를 전송하는 수신 앱과 콘텐츠 제공업체가 포함된 송신 앱은 서로 다른 두 앱일 수 있습니다.
-이때 패키지 가시성은 사용자의 개인정보 강화를 위해 패키지에 대한 정보를 확인할 수 없게 접근 객체를 명확히 정의하는 것을 의미합니다. 그렇기에 접근할 provider와 얻을 권한을 명확히 표시해야합니다.
+다른 앱으로 콘텐츠 URI를 보낼 때는 위에 언급한 플래그 중 하나 이상을 포함하야합니다. 이 플래그는 intent를 수신하고 Android 11(API 레벨 30) 이상을 타겟팅하는 모든 앱에 다음 기능을 제공합니다:
+- Intent에 포함된 플래그에 따라 콘텐츠 URI가 나타내는 데이터를 읽거나 쓰기 가능.
+- URI 권한과 일치하는 content provider가 포함된 앱에 대한 패키지 가시성을 확보. Intent를 전송하는 수신 앱과 content provider가 포함된 송신 앱은 서로 다른 두 앱일 수 있음. 이때 패키지 가시성은 사용자의 개인정보 강화를 위해 패키지에 대한 정보를 확인할 수 없게 접근 객체를 명확히 정의하는 것을 의미. 그렇기에 접근할 provider와 얻을 권한을 명확히 표시해야 됨.
 
-제공자는 AndroidManifest.xml 파일에서 `<provider>` 요소의 `android:grantUriPermissions` 속성과 `<provider>` 요소의 `<grant-uri-permission>` 자식 요소를 사용하여 콘텐츠 URI에 대한 URI 권한을 정의합니다. 
+Provider는 AndroidManifest.xml 파일에서 <provider> 요소의 android:grantUriPermissions 속성과 <provider> 요소의 <grant-uri-permission> 자식 요소를 사용하여 콘텐츠 URI에 대한 URI 권한을 정의합니다. 
 <provider
   android:grantUriPermissions="">
   <grant-uri-permission/>
 </provider>
-예를 들어, READ_CONTACTS 권한이 없어도 연락처 제공자에서 연락처에 대한 데이터를 검색할 수 있습니다. 예를 들어, 생일에 연락처에게 전자 인사를 보내는 애플리케이션에서 이를 원할 수 있습니다. 사용자의 모든 연락처 및 정보에 접근할 수 있는 READ_CONTACTS 권한을 요청하는 대신, 사용자가 애플리케이션에서 사용할 연락처만 얻을수 있도록 합니다. 이를 위해 다음과 같은 과정을 사용합니다.
-1. 애플리케이션에서 ACTION_PICK action과 "contacts" MIME 타입인 CONTENT_ITEM_TYPE을 포함하는 인텐트를 전송합니다. 이때 `startActivityForResult()` 메서드를 사용합니다.
-2. 이 인텐트는 People 앱의 "선택" 액티비티에 대한 인텐트 필터와 일치하므로, 해당 액티비티가 포그라운드로 올라옵니다.
-3. 선택 액티비티에서 사용자가 업데이트할 연락처를 선택합니다. 이때 선택 액티비티는 `setResult(resultCode, intent)`를 호출하여 애플리케이션에 되돌려줄 인텐트를 설정합니다. 이 인텐트에는 사용자가 선택한 연락처의 콘텐츠 URI와 함께 "extras" 플래그인 FLAG_GRANT_READ_URI_PERMISSION이 포함되어 있습니다. 이 플래그는 애플리케이션이 해당 콘텐츠 URI가 가리키는 연락처의 데이터를 읽을 수 있도록 URI 권한을 부여합니다. 선택 액티비티는 이후 `finish()`를 호출하여 애플리케이션으로 제어를 반환합니다.
-4. 애플리케이션의 액티비티가 포그라운드로 돌아오고, 시스템은 해당 액티비티의 `onActivityResult()` 메서드를 호출합니다. 이 메서드는 People 앱의 선택 액티비티에서 생성된 결과 인텐트를 받습니다.
-5. 결과 인텐트에서 콘텐츠 URI를 사용하여, 애플리케이션이 매니페스트에서 제공자에 대한 영구 읽기 접근 권한을 요청하지 않았음에도 불구하고 Contacts Provider에서 연락처의 데이터를 읽을 수 있습니다. 그런 다음 연락처의 생일 정보나 이메일 주소를 가져와서 e-축하 메시지를 보낼 수 있습니다.
+
+READ_CONTACTS 권한이 없어도 연락처 provider에서 연락처에 대한 데이터를 검색할 수 있습니다. 예를 들어, 생일 인사하는 내용의 전자 메시지를 보내는 앱에서 연락처를 원할 수 있습니다. 사용자가 앱에서 사용할 연락처만 얻으면 되기에, 모든 연락처 및 정보에 접근할 수 있는 READ_CONTACTS 권한을 요청할 필요는 없습니다. 이를 위해 다음과 같은 과정을 사용합니다.
+1. 앱에서 ACTION_PICK action과 연락처 MIME 타입인 CONTENT_ITEM_TYPE을 포함하는 intent를 startActivityForResult()에 전달. 이 메서드의 intent의 action으로 특정 앱이 열리게 하고 MIME 타입으로 그 중 연락처를 가진 앱을 열게 함.
+2. Intent 필터와 일치한 연락처 앱의 목록 activity가 포그라운드로 보임.
+3. 목록 activity에서 사용자가 사용할 연락처 선택. 이때 목록 activity는 setResult(resultCode, intent)를 호출하여 앱에 되돌려줄 intent을 설정. 이 intent에는 사용자가 선택한 연락처의 콘텐츠 URI와 함께 extras 플래그인 FLAG_GRANT_READ_URI_PERMISSION 포함. 이 플래그는 앱이 해당 콘텐츠 URI가 가리키는 연락처의 데이터를 읽을 수 있는 URI 권한 부여. 목록 activity는 이후 finish()를 호출하여 앱으로 제어를 반환.
+4. 본래의 앱 activity가 포그라운드로 돌아오고, 시스템은 해당 activity의 onActivityResult() 호출. 이 메서드는 연락처 앱의 목록 activity에서 생성된 결과 intent를 수신.
+5. 결과 intent에서 콘텐츠 URI를 사용하여, 앱이 manifest에서 provider에 대한 영구 읽기 접근 권한을 요청하지 않았음에도 불구하고 Contacts Provider에서 연락처의 데이터를 읽을 수 있음. 그런 다음 연락처의 생일 정보나 이메일 주소를 가져와서 축하 전자 메시지를 보낼 수 있음.
 
 ⅱ)다른 앱 사용
-액세스 권한이 없는 데이터를 사용자가 수정할 수 있는 또 다른 방법은 권한이 있는 애플리케이션을 활성화하고 사용자가 해당 애플리케이션에서 작업을 수행하도록 하는 것입니다.
-
-예를 들어, 캘린더 애플리케이션은 애플리케이션의 삽입 UI를 활성화할 수 있는 ACTION_INSERT 인텐트를 허용합니다. 이 인텐트에서 "추가" 데이터를 전달할 수 있으며, 이 데이터는 애플리케이션이 UI에 미리 채워지는데 사용합니다. 반복 이벤트는 구문이 복잡하기 때문에 캘린더 제공자에 이벤트를 삽입하는 가장 선호되는 방법은 ACTION_INSERT로 캘린더 앱을 활성화한 다음 사용자가 이벤트를 삽입할 수 있도록 하는 것입니다.
+접근 권한이 없는 데이터를 사용자가 수정할 수 있는 또 다른 방법은 권한이 있는 앱을 활성화하고 사용자가 해당 앱에서 작업을 수행하도록 하는 것입니다. 예를 들어, 캘린더 앱은 입력 UI를 활성화할 수 있는 ACTION_INSERT intent을 허용합니다. 이 intent에서 extras 데이터를 전달할 수 있으며, 이 데이터는 앱 UI에 미리 채워지는데 사용합니다. 데이터를 채우기 위한 반복 이벤트는 구문을 복잡하게 만들기 때문에 캘린더 provider에 이벤트를 삽입하는 가장 선호되는 방법은 ACTION_INSERT로 캘린더 앱을 활성화한 다음 사용자가 직접 데이터를 삽입하는 겁니다.
 
 ⅲ) 도우미 앱을 사용하여 데이터 표시
-응용 프로그램에 액세스 권한이 있는 경우에도 다른 응용 프로그램에 데이터를 표시하려는 intent를 사용할 수 있습니다. 예를 들어, 캘린더 애플리케이션은 특정 날짜나 이벤트를 표시하는 ACTION_VIEW intent 허용합니다. 이렇게 하면 직접 UI를 만들지 않고도 캘린더 정보를 표시할 수 있습니다. 
-intent를 보내는 애플리케이션이 제공업체와 관련된 애플리케이션일 필요는 없습니다. 예를 들어, 연락처 제공업체에서 연락처를 검색한 다음 연락처 이미지에 대한 URI 콘텐츠가 포함된 ACTION_VIEW intent를 이미지 뷰어로 전송할 수 있습니다.
+응용 프로그램에 접근 권한이 있는 경우에도 다른 응용 프로그램으로 데이터를 표시하기 위해 intent를 사용할 수 있습니다. 예를 들어, 캘린더 애플리케이션은 특정 날짜나 이벤트를 표시하는 ACTION_VIEW intent 허용합니다. 이렇게 하면 직접 UI를 만들지 않고도 캘린더 정보를 표시할 수 있습니다. 
+Intent를 보내는 앱이 provider와 관련된 앱일 필요는 없습니다. 예를 들어 연락처 provider에서 연락처를 검색한 다음, 연락처 이미지를 다른 앱으로 보기 위해 URI 콘텐츠가 포함된 ACTION_VIEW intent를 이미지 뷰어로 전송할 수 있습니다.
 
 
 
 7.Contract class
-계약 클래스는 응용 프로그램이 콘텐츠 제공업체의 콘텐츠 URI, 열 이름, 의도 동작 및 기타 기능과 함께 작동하는 데 도움이 되는 상수를 정의합니다. 계약 클래스는 제공업체에 자동으로 포함되지 않습니다. 제공업체의 개발자가 이를 정의한 다음 다른 개발자가 사용할 수 있도록 해야 합니다. Android 플랫폼에 포함된 많은 제공업체는 패키지 Android.provider에 해당하는 계약 클래스를 가지고 있습니다.
-예를 들어, 사용자 사전 제공자에는 콘텐츠 URI와 열 이름 상수가 포함된 계약 클래스 UserDictionary가 있습니다. Words 테이블의 콘텐츠 URI는 상수 UserDictionary.Words.CONTENT_URI에 정의되어 있습니다. UserDictionary.Words 클래스에는 이 가이드의 예제 스니펫에 사용되는 열 이름 상수도 포함되어 있습니다. 예를 들어, 쿼리 프로젝션은 다음과 같이 정의될 수 있습니다:
+Contract class는 응용 프로그램이 content provider의 콘텐츠 URI, 열 이름,  intent action 및 기타 기능과 함께 작동하는 데 도움이 되는 상수를 정의합니다. Contract class는 provider에 자동으로 포함되지 않습니다. 즉, provider를 직접 정의해서 사용한다면 개발자가 이를 정의한 다음 다른 개발자가 사용할 수 있도록 해야 합니다. Android 플랫폼에 포함된 많은 provider는 패키지 Android.provider에 해당하는 계약 클래스를 가지고 있습니다. 예를 들어, 사용자 사전 provider에는 콘텐츠 URI와 열 이름 상수가 포함된 contract class UserDictionary가 있습니다. Words 테이블의 콘텐츠 URI는 상수 UserDictionary.Words.CONTENT_URI에 정의되어 있습니다. UserDictionary.Words 클래스에는 위에서 사용한 예제 코드에 사용되는 열 이름 상수도 포함되어 있습니다. 예를 들어, 쿼리 프로젝션은 다음과 같이 정의될 수 있습니다:
 
 String[] projection =
 {
@@ -446,24 +444,24 @@ String[] projection =
     UserDictionary.Words.LOCALE
 };
 
-또 다른 계약 클래스는 Contacts Provider를 위한 ContactsContract입니다. 이 클래스의 참조 문서에는 예제 코드 조각이 포함되어 있습니다. 이 클래스의 하위 클래스 중 하나인 ContactsContract.Intents.Insert는 인텐트와 인텐트 데이터에 대한 상수를 포함하는 계약 클래스입니다.
+또 다른 contract class는 Contacts Provider를 위한 ContactsContract입니다. 이 클래스의 참조 문서에는 부분 예제 코드가 포함되어 있습니다. 이 클래스의 하위 클래스 중 하나인 ContactsContract.Intents.Insert는 intent와 intent 데이터에 대한 상수를 포함하는 contract class입니다.
 
 8.MIME type
-콘텐츠 공급자는 표준 MIME 미디어 유형, 사용자 지정 MIME 유형 문자열 또는 둘 다를 반환할 수 있습니다. MIME 유형에는 다음과 같은 형식이 있습니다:
+Content provider는 표준 MIME 미디어 유형, 사용자 지정 MIME 유형 문자열 또는 둘 다를 반환할 수 있습니다. MIME 유형에는 다음과 같은 형식이 있습니다:
 type/subtype
-예를 들어, 잘 알려진 MIME 유형의 text/html에는 text유형과 html 하위 유형이 있습니다. 제공자가 URI에 대해 이 유형을 반환하면 해당 URI를 사용하는 쿼리에서 HTML 태그가 포함된 텍스트를 반환한다는 의미입니다.
+예를 들어, 잘 알려진 MIME 유형의 text/html에는 text유형과 html 하위 유형이 있습니다. Provider가 URI에 대해 이 유형을 반환하면 해당 URI를 사용하는 쿼리에서 HTML 태그가 포함된 텍스트를 반환한다는 의미입니다.
 
-사용자 지정 MIME 유형이라고도 하는  vendor-specific MIME 유형 문자열은,  더 복잡한 유형 및 하위 유형 값이 있습니다. 여러 행의 경우 유형 값은 항상 다음과 같습니다:
+사용자 지정 MIME 유형이라고도 하는 vendor-specific MIME 유형 문자열은, 더 복잡한 유형 및 하위 유형 값이 있습니다. 여러 행의 경우 유형 값은 항상 다음과 같습니다:
 vnd.android.cursor.dir
 
 단일 행의 경우 유형 값은 항상 다음과 같습니다:
 vnd.android.cursor.item
 
-하위 유형은 공급업체별로 다릅니다. Android 내장 공급업체는 일반적으로 간단한 하위 유형을 가지고 있습니다. 예를 들어 연락처 응용 프로그램이 전화 번호 행을 만들 때 행에 다음과 같은 MIME 유형을 설정합니다:
+하위 유형은 pvodier별로 다릅니다. Android 내장 provider는 일반적으로 간단한 하위 유형을 가지고 있습니다. 예를 들어 연락처 응용 프로그램이 전화 번호 행을 만들 때 행에 다음과 같은 MIME 유형을 설정합니다:
 vnd.android.cursor.item/phone_v2
 하위 유형 값이 phone_v2입니다.
 
-공급자의 권한과 테이블 이름을 기반으로 자체 하위 유형 패턴을 만들 수 있습니다. 예를 들어, 열차 시간표가 포함된 공급자를 고려해 보겠습니다. 공급자의 권한은 com.example.trains이며 테이블 Line1, Line2 및 Line3이 포함되어 있습니다. 테이블 Line1에 대한 다음 콘텐츠 URI에 대한 내용입니다:
+Provider의 권한과 테이블 이름을 기반으로 자체 하위 유형 패턴을 만들 수 있습니다. 예를 들어, 열차 시간표가 포함된 공급자를 고려해 보겠습니다. 공급자의 권한은 com.example.trains이며 테이블 Line1, Line2 및 Line3이 포함되어 있습니다. 테이블 Line1에 대한 다음 콘텐츠 URI에 대한 내용입니다:
 content://com.example.trains/Line1
 
 provider는 다음과 같은 MIME 타입을 반환할겁니다
@@ -472,7 +470,8 @@ vnd.android.cursor.dir/vnd.example.line1
 테이블 Line2의 5번째 행에 대한 content uri입니다
 content://com.example.trains/Line2/5
 
-provider는 다음과 같은 MIME type를 반환할겁니다
+Provider는 다음과 같은 MIME 타입을 반환할겁니다. 
 vnd.android.cursor.item/vnd.example.line2
+MIME도 결국 타입이기에 테이블 Line2의 2번째 행이라도 같은 타입을 반환합니다.
 
-대부분의 콘텐츠 제공자는 사용하는 MIME 유형에 대한 계약 클래스 상수를 정의합니다. 예를 들어, Contacts Provider 계약 클래스인 ContactsContract.RawContacts는 단일 기본 연락처 행의 MIME 유형에 대한 상수인 CONTENT_ITEM_TYPE을 정의합니다.
+대부분의 content provider는 사용하는 MIME 유형에 대한 contract class 상수를 정의합니다. 예를 들어, Contacts Provider 계약 클래스인 ContactsContract.RawContacts는 단일 기본 연락처 행의 MIME 유형에 대한 상수인 CONTENT_ITEM_TYPE을 정의합니다.
