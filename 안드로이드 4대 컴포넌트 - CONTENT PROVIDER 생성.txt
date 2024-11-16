@@ -61,3 +61,132 @@
 - 이진 대형 객체(BLOB) 데이터 유형을 사용하면 크기가 다르거나 구조가 다른 데이터를 저장할 수 있습니다. 예를 들어 BLOB 열을 사용하여 프로토콜 버퍼 또는 JSON 구조를 저장할 수 있습니다.
 
 BLOB를 사용하여 스키마 독립 테이블을 구현할 수도 있습니다. 이 유형의 테이블에서는 기본 키 열, MIME 유형 열, BLOB 유형의 하나 이상의 일반 열로 정의할 수 있습니다. BLOB 열의 데이터의 의미는 MIME 유형 열의 값으로 표시됩니다. 이렇게 하면 동일한 테이블에 다양한 행 유형을 저장할 수 있습니다. 연락처 제공업체의 "데이터" 테이블 ContactContract.Data는 스키마 독립 테이블의 예입니다.
+
+
+
+3. 콘텐츠 URI 설계
+콘텐츠 URI는 제공자의 데이터를 식별하는 URI입니다. 콘텐츠 URI에는 전체 제공자(권한)의 상징적 이름과 테이블 또는 파일(경로)을 가리키는 이름이 포함됩니다. 옵션 ID 부분은 테이블의 개별 행을 가리킵니다. 콘텐츠 제공자의 모든 데이터 액세스 메서드에는 인수로 콘텐츠 URI를 받습니다. 이를 통해 액세스할 테이블, 행 또는 파일을 결정할 수 있습니다.
+
+1)권한 설계
+공급자는 일반적으로 Android 내부 이름으로 사용되는 단일 권한을 가지고 있습니다. 다른 공급자와의 충돌을 방지하려면 인터넷 도메인 소유권(반대로)을 공급자 권한의 기본으로 사용합니다. 이 권장 사항은 Android 패키지 이름에도 적용되므로 공급자 권한을 공급자가 포함된 패키지 이름의 확장으로 정의할 수 있습니다. 예를 들어, Android 패키지 이름이 com.example.<appname>인 경우 제공업체에 com.example.<appname>.provider 권한을 부여합니다.
+
+
+2)경로 구조 설계
+개발자는 일반적으로 개별 테이블을 가리키는 경로를 추가하여 권한에서 콘텐츠 URI를 생성합니다. 예를 들어, 테이블1과 테이블2의 두 개의 테이블이 있는 경우 이전 예제의 권한과 결합하여 com.example.<appname>.provider/table1 및 com.example.<appname>.provider/table2의 콘텐츠 URI를 생성할 수 있습니다. 경로는 단일 세그먼트로 제한되지 않습니다. 여러 '/'를 사용하여 계층적인 경로를 만들 수 있습니다. 경로의 각 레벨은 반드시 테이블을 나타낼 필요는 없으며, 특정 항목이나 행을 식별하는 데 사용될 수도 있습니다
+
+
+3)콘텐츠 URI ID 처리
+관례에 따라 공급자는 URI의 끝에 있는 행에 대한 ID 값을 가진 콘텐츠 URI를 수락하여 테이블의 단일 행에 대한 액세스를 제공합니다. 또한 관례에 따라 공급자는 ID 값을 테이블의 _ID 열에 일치시키고 요청된 액세스를 일치하는 행에 대해 수행합니다. 이 규칙은 제공업체에 액세스하는 앱의 일반적인 설계 패턴을 용이하게 합니다. 앱은 제공업체에 대한 쿼리를 수행하고 CursorAdapter를 사용하여 결과 Cursor를 ListView에 표시합니다. CursorAdapter의 정의에 따르면 Cursor의 열 중 하나는 _ID여야 합니다. 그런 다음 사용자는 UI에서 표시된 행 중 하나를 선택하여 데이터를 조회하거나 수정합니다. 앱은 ListView를 지원하는 Cursor에서 해당 행을 가져오고, 이 행의 _ID값을 가져와 콘텐츠 URI에 추가한 뒤, 액세스 요청을 제공자에게 보냅니다. 그러면 제공자는 사용자가 선택한 정확한 행에 대해 조회 또는 수정을 수행할 수 있습니다.다.
+
+
+4)콘텐츠 URI 패턴
+수신되는 콘텐츠 URI에 대해 수행할 작업을 선택하는 데 도움이 되도록 제공자 API에는 콘텐츠 URI 패턴을 정수 값에 매핑하는 편의 클래스 UriMatcher가 포함되어 있습니다. 특정 패턴과 일치하는 콘텐츠 URI 또는 URI에 대해 원하는 작업을 선택하는 switch 문에서 정수 값을 사용할 수 있습니다.
+
+콘텐츠 URI 패턴은 와일드카드 문자를 사용하여 콘텐츠 URI와 일치합니다:
+* 는 모든 길이의 유효한 문자 문자열이면 일치.
+# 는 모든 길이의 숫자 문자열이면 일치.
+
+콘텐츠 URI 처리를 설계하고 코딩하는 예로, 테이블을 가리키는 다음 콘텐츠 URI를 인식하는 com.example.app.provider 권한을 가진 공급자를 생각해 보세요
+content://com.example.app.provider/table1: table1 테이블
+content://com.example.app.provider/table2/dataset1: dataset1 테이블
+content://com.example.app.provider/table2/dataset2: dataset2 테이블
+content://com.example.app.provider/table3: table3 테이블
+
+제공자는 콘텐츠 URI에 행 ID가 추가된 경우도 인식합니다. 예를 들어, content://com.example.app.provider/table3/1은 table3에서 ID가 1인 행을 식별하는 URI입니다.
+
+다음과 같은 콘텐츠 URI 패턴도 가능합니다.
+content://com.example.app.provider/*
+제공자의 모든 content URI 일치
+content://com.example.app.provider/table2/*
+dataset1과 dataset2 테이블의 콘텐츠 UIR과 일치하지만 table1 이나 table3 콘텐츠 URI과는 일치하지 않음.
+content://com.example.app.provider/table3/#
+content://com.example.app.provider/table3/6 같이 6으로 식별되는 행처럼 table3의 단일 행의 콘텐츠 URI과 일치.
+
+다음 코드 스니펫은 UriMatcher의 메서드들이 어떻게 작동하는지 보여줍니다. 이 코드는 URI를 처리할 때, 테이블 전체를 위한 URI와 단일 행을 위한 URI를 다르게 처리합니다. 테이블을 위한 URI는 content://<authority>/<path> 패턴을 사용하고 단일 행을 위한 URI content://<authority>/<path>/<id> 패턴을 사용합니다. addURI() 메서드는 권한와 경로를 정수 값에 매핑합니다. match() 메서드는 특정 URI에 대해 해당하는 정수 값을 반환합니다. 그리고 switch 문을 사용해 반환된 정수 값을 기준으로 테이블 전체를 조회할지, 단일 레코드를 조회할지 선택합니다.
+
+public class ExampleProvider extends ContentProvider {
+...
+    //UriMatcher 객체 생성
+    private static final UriMatcher uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+
+    static {
+        /*
+         *여기에서 제공자가 인식하는 모든 콘텐츠 URI 패턴을 처리하기 위해 addURI()호출
+	 * 이 코드의 경우 테이블 3에 대한 호출만 표시됩니다.
+         */
+
+       //테이블 3의 여러 행에 대해 정수 1 설정. 여기서는 와일드카드 사용 안함.
+        uriMatcher.addURI("com.example.app.provider", "table3", 1);
+
+        /*
+         * 단일 행에 대해 2로 설정. 여기서는 # 와일드카드 사용
+         * content://com.example.app.provider/table3/3 일치
+         * content://com.example.app.provider/table3 불일치.
+         */
+        uriMatcher.addURI("com.example.app.provider", "table3/#", 2);
+    }
+...
+    // ContentProvider.query() 구현
+    public Cursor query(
+        Uri uri,
+        String[] projection,
+        String selection,
+        String[] selectionArgs,
+        String sortOrder) {
+...
+        /*
+         * 조회할 테이블과 정렬 순서는 들어오는 URI에 대해 반환된 코드에 따라 선택됩니다. 
+	 * 여기에서도 table3에 대한 구문만 표시됩니다.
+         */
+        switch (uriMatcher.match(uri)) {
+
+
+            // URI가 table3일 경우
+            case 1:
+                if (TextUtils.isEmpty(sortOrder)) sortOrder = "_ID ASC";
+                break;
+
+            // URI가 table3의 단일 행일 경우            
+	    case 2:
+                /*
+                 * 해당 URI가 단일 행 포함하기에 _ID 값 존재.
+                 * URI의 마지막 경로를 통해 _ID 값 얻음
+                 * 쿼리의 WHERE 절에 값 추가
+                 */
+                selection = selection + "_ID = " + uri.getLastPathSegment();
+                break;
+
+            default:
+            ...
+                // URI 인식 불가일 경우에 대한 에러 처리
+        }
+        // 실제 쿼리 실행 코드
+    }
+
+ContentUris 클래스는 콘텐츠 URI의 id 부분을 처리하기 위한 편의 메서드를 제공합니다. 예를 들어 ContentUris.appendId() 있습니다. Uri 및 Uri.Builder 클래스는 기존 Uri 객체를 파싱하고 새로운 Uri 객체를 생성하기 위한 편의 메서드를 포함하고 있습니다. 위 코드에서 사용한 uri.getLastPathSegment()와 Uri.parse()등이 있습니다.
+
+
+
+4. ContentProvider 클래스 구현
+ContentProvider 인스턴스는 다른 애플리케이션의 요청을 처리하여 구조화된 데이터 세트에 대한 액세스를 관리합니다. 모든 형태의 액세스는 결국 ContentResolver를 호출한 다음 구체적인 방법의 ContentProvider를 호출하여 액세스를 얻습니다.
+
+1)필요 메서드
+추상 클래스 ContentProvider는 여섯 개의 추상 메서드를 정의하며, 이를 구체적인 서브클래스에서 구현해야 합니다. onCreate()를 제외한 이러한 모든 메서드는 콘텐츠 공급자에 액세스하려고 시도하는 클라이언트 애플리케이션에 의해 호출됩니다.
+
+query()
+공급업체를 통해 데이터 검색. 인수를 사용하여 쿼리할 테이블, 반환할 행과 열, 결과 정렬 순서 선택. 데이터를 cursor 개체로 반환.
+insert()
+공급자에 새 행을 삽입. 인수를 사용하여 대상 테이블을 선택하고 사용할 열 값을 가져옴. 새로 삽입한 행의 콘텐츠 URI를 반환.
+update()
+공급자의 기존 행을 업데이트. 인수를 사용하여 업데이트할 테이블과 행을 선택하고 업데이트된 열 값을 가져옴. 업데이트된 행의 수를 반환.
+delete()
+공급자에서 행을 삭제. 인수를 사용하여 테이블과 삭제할 행을 선택. 삭제한 행의 수를 반환합니다.
+getType()
+콘텐츠 URI에 대응하는 MIME 타입 리턴
+onCreate()
+제공자초기화. Android 시스템은 공급자 생성 즉후 이 메서드를 호출. 공급자는 ContentResolver 개체가 액세스를 시도할 때까지 생성되지 않음.
+
+이 메서드들은 동일한 이름을 가진 ContentResolver 메서드들과 같은 구조를 가집니다. 이 메서드를 구현할 때는 다음 사항을 고려해야 합니다.
+- onCreate()를 제외한 모든 메서드는 여러 스레드에서 동시에 호출될 수 있기 때문에 스레드 안전성을 고려해야 함.
+- 시간이 오래 걸리는 작업은 onCreate()에서 처리하지 말고, 실제로 필요할 때 지연해서 처리해야 함.
+- 메서드를 구현할 때 반드시 처리할 내용이 없다면, 예상된 데이터 타입을 반환하는 것만 해도 충분. 예를 들어, 데이터를 삽입하지 않으려면 insert() 호출을 무시하고 0을 반환 가능.
