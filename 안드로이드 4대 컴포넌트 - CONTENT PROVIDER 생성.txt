@@ -244,3 +244,42 @@ public class ExampleProvider extends ContentProvider
 	//데이터 삽입, 오류 조건 처리 등에 사용할 DAO를 결정할 코드
     }
 }
+
+
+
+5. ContentProvider MIME 유형 구현
+ContentProvider 클래스는 MIME 유형을 반환하는 두 개의 메서드를 가집니다.
+getType()
+모든 provider 구현에 대해 필수 메서드 중 하나
+getStreamTypes()
+제공자가 파일을 제공할 때 구현해야하는 메소드
+
+1)테이블의 MIME 유형
+getType() 메서드는 매개변수의 콘텐츠 URI 인수가 나타내는 데이터 유형을 설명하는 문자열을 MIME 형식으로 반환합니다. URI 인수는 특정 URI 뿐만 아니라 패턴 형식일 수 있습니다. 이 경우 해당 패턴과 일치하는 콘텐츠 URI와 관련된 데이터 유형을 반환합니다. 글자, HTML 또는 JPEG와 같은 일반적인 유형의 데이터의 경우, getType()은 해당 데이터에 대한 표준 MIME 유형을 반환합니다. 이러한 표준 유형의 전체 목록은 아래의 웹사이트에서 확인할 수 있습니다.
++ IANA MIME Media Types
+https://www.iana.org/assignments/media-types/media-types.xhtml
+
+테이블 데이터의 행이나 여러 행을 가리키는 content URI의 경우, getType()은 Android의 사용자 지정 MIME 형식으로 MIME 유형을 반환합니다.
+- 유형 부분 : vnd
+- 하위 부분
+  - URI 패턴이 단일 행을 가리키는 경우: android.cursor.item/
+  - URI 패턴이 여러 행을 가리키는 경우: android.cursor.dir/
+- 제공자별 부분: vnd.<name>.<type>
+<name> 전역으로 고유한 값이며 회사 이름 또는 응용 프로그램의 Android 패키지 이름의 일부를 추천합니다. <type>은 해당 URI 패턴에 대한 고유한 값이며 URI와 연결된 테이블을 식별하는 문자열을 추천합니다.
+
+예를 들어 제공자의 권한이 com.example.app.provider이면, 테이블의 이름은 table1이고 table1의 여러 행에 대한 MIME 유형은 다음과 같습니다
+vnd.android.cursor.dir/vnd.com.example.provider.table1
+테이블1의 단일 행에 대한 MIME 유형은 다음과 같습니다.
+vnd.android.cursor.item/vnd.com.example.provider.table1
+
+
+2)파일의 MIME 유형 
+제공자가 파일을 제공하는 경우 getStreamTypes()를 구현해야합니다. 이 메서드는 제공자가 특정 콘텐츠 URI에 반환된 파일의 MIME 형식으로된 문자열 배열을 반환합니다. 필터 인수로 MIME 유형을 전달하면, MIME 유형을 필터링하여 클라이언트가 처리하고자 하는 MIME 유형만 반환합니다.
+
+예를들어 제공자는 JPG, PNG, 그리고 GIF 파일 형식의 이미지를 제공합니다. 만약 애플리케이션이 ContentResolver.getStreamTypes()를 호출하여 "image/*" 형태의 필터 문자열을 전달하면, ContentProvider.getStreamTypes()는 "image" 대해 다음과 같은 배열을 반환합니다.
+{ "image/jpeg", "image/png", "image/gif"}
+
+만약 앱이 JPG 파일만 원한다면 "*\/jpeg" 필터 문자열을 ContentResolver.getStreamTypes()에 전달하면 getStreamTypes()는 다음을 반환합니다.
+{"image/jpeg"}
+
+만약 제공자가 필터 문자열에서 요청된 MIME 유형 중 아무것도 제공하지 않는다면, 해당 데이터가 없거나 메서드를 구현하지 않았다면, getStreamTypes()는 null을 반환합니다.
