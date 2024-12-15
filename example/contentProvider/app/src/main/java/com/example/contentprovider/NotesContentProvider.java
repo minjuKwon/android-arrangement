@@ -1,5 +1,9 @@
 package com.example.contentprovider;
 
+import static com.example.contentprovider.NotesContract.AUTHORITY;
+import static com.example.contentprovider.NotesContract.JAVA_NOTES;
+import static com.example.contentprovider.NotesContract.KOTLIN_NOTES;
+
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -12,12 +16,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class NotesContentProvider extends ContentProvider {
-
-    private static final String AUTHORITY="com.example.content-provider";
-    private static final String JAVA_NOTES="java_notes";
-    private static final String KOTLIN_NOTES="kotlin_notes";
-    private static final Uri JAVA_CONTENT_URI=Uri.parse("content://"+AUTHORITY+"/"+JAVA_NOTES);
-    private static final Uri KOTLIN_CONTENT_URI=Uri.parse("content://"+AUTHORITY+"/"+KOTLIN_NOTES);
 
     private static final int JAVA_TABLE=1;
     private static final int JAVA_TABLE_ID=2;
