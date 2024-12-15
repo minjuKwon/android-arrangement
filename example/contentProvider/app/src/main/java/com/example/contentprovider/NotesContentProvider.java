@@ -1,8 +1,8 @@
 package com.example.contentprovider;
 
 import static com.example.contentprovider.NotesContract.AUTHORITY;
-import static com.example.contentprovider.NotesContract.JAVA_NOTES;
-import static com.example.contentprovider.NotesContract.KOTLIN_NOTES;
+import static com.example.contentprovider.NotesContract.TABLE_JAVA;
+import static com.example.contentprovider.NotesContract.TABLE_KOTLIN;
 
 import android.content.ContentProvider;
 import android.content.ContentUris;
@@ -17,19 +17,19 @@ import androidx.annotation.Nullable;
 
 public class NotesContentProvider extends ContentProvider {
 
-    private static final int JAVA_TABLE=1;
-    private static final int JAVA_TABLE_ID=2;
-    private static final int KOTLIN_TABLE=3;
-    private static final int KOTLIN_TABLE_ID=4;
+    private static final int URI_CODE_JAVA_TABLE=1;
+    private static final int URI_CODE_JAVA_TABLE_ID=2;
+    private static final int URI_CODE_KOTLIN_TABLE=3;
+    private static final int URI_CODE_KOTLIN_TABLE_ID=4;
 
     private NotesDatabase notesDatabase;
     private static final UriMatcher uriMatcher=new UriMatcher(UriMatcher.NO_MATCH);
 
     static{
-        uriMatcher.addURI(AUTHORITY,JAVA_NOTES,JAVA_TABLE);
-        uriMatcher.addURI(AUTHORITY,JAVA_NOTES+"/#",JAVA_TABLE_ID);
-        uriMatcher.addURI(AUTHORITY,KOTLIN_NOTES,KOTLIN_TABLE);
-        uriMatcher.addURI(AUTHORITY,KOTLIN_NOTES+"/#",KOTLIN_TABLE_ID);
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA,URI_CODE_JAVA_TABLE);
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA+"/#",URI_CODE_JAVA_TABLE_ID);
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN,URI_CODE_KOTLIN_TABLE);
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN+"/#",URI_CODE_KOTLIN_TABLE_ID);
     }
 
     @Override
@@ -46,24 +46,24 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getReadableDatabase();
 
         switch(uriMatcher.match(uri)){
-            case JAVA_TABLE:
-                cursor=db.query(JAVA_NOTES,projection,selection,selectionArgs,
+            case URI_CODE_JAVA_TABLE:
+                cursor=db.query(TABLE_JAVA,projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
-            case JAVA_TABLE_ID:
+            case URI_CODE_JAVA_TABLE_ID:
                 selection="_ID = ?";
                 selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                cursor=db.query(JAVA_NOTES, projection,selection,selectionArgs,
+                cursor=db.query(TABLE_JAVA, projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
-            case KOTLIN_TABLE:
-                cursor=db.query(KOTLIN_NOTES,projection,selection,selectionArgs,
+            case URI_CODE_KOTLIN_TABLE:
+                cursor=db.query(TABLE_KOTLIN,projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
-            case KOTLIN_TABLE_ID:
+            case URI_CODE_KOTLIN_TABLE_ID:
                 selection="_ID = ?";
                 selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                cursor=db.query(KOTLIN_NOTES, projection,selection,selectionArgs,
+                cursor=db.query(TABLE_KOTLIN, projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
             default:
@@ -78,13 +78,13 @@ public class NotesContentProvider extends ContentProvider {
     @Override
     public String getType(@NonNull Uri uri) {
         switch (uriMatcher.match(uri)){
-            case JAVA_TABLE:
+            case URI_CODE_JAVA_TABLE:
                 return "vnd.android.cursor.dir/vnd.com.example.content-provider/java";
-            case JAVA_TABLE_ID:
+            case URI_CODE_JAVA_TABLE_ID:
                 return "vnd.android.cursor.item/vnd.com.example.content-provider/java";
-            case KOTLIN_TABLE:
+            case URI_CODE_KOTLIN_TABLE:
                 return "vnd.android.cursor.dir/vnd.com.example.content-provider/kotlin";
-            case KOTLIN_TABLE_ID:
+            case URI_CODE_KOTLIN_TABLE_ID:
                 return "vnd.android.cursor.item/vnd.com.example.content-provider/kotlin";
             default:
                 throwInvalidUriException(uri);
@@ -99,11 +99,11 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case JAVA_TABLE_ID:
-                id=db.insert(JAVA_NOTES,null,values);
+            case URI_CODE_JAVA_TABLE_ID:
+                id=db.insert(TABLE_JAVA,null,values);
                 break;
-            case KOTLIN_TABLE_ID:
-                id=db.insert(KOTLIN_NOTES,null,values);
+            case URI_CODE_KOTLIN_TABLE_ID:
+                id=db.insert(TABLE_KOTLIN,null,values);
                 break;
             default:
                 throwInvalidUriException(uri);
@@ -120,11 +120,11 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case JAVA_TABLE_ID:
-                rowsDeleted=db.delete(JAVA_NOTES,selection,selectionArgs);
+            case URI_CODE_JAVA_TABLE_ID:
+                rowsDeleted=db.delete(TABLE_JAVA,selection,selectionArgs);
                 break;
-            case KOTLIN_TABLE_ID:
-                rowsDeleted=db.delete(KOTLIN_NOTES,selection,selectionArgs);
+            case URI_CODE_KOTLIN_TABLE_ID:
+                rowsDeleted=db.delete(TABLE_KOTLIN,selection,selectionArgs);
                 break;
             default:
                 throwInvalidUriException(uri);
@@ -141,11 +141,11 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case JAVA_TABLE_ID:
-                rowsUpdated=db.update(JAVA_NOTES,values, selection,selectionArgs);
+            case URI_CODE_JAVA_TABLE_ID:
+                rowsUpdated=db.update(TABLE_JAVA,values, selection,selectionArgs);
                 break;
-            case KOTLIN_TABLE_ID:
-                rowsUpdated=db.update(KOTLIN_NOTES,values,selection,selectionArgs);
+            case URI_CODE_KOTLIN_TABLE_ID:
+                rowsUpdated=db.update(TABLE_KOTLIN,values,selection,selectionArgs);
                 break;
             default:
                 throwInvalidUriException(uri);
