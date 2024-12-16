@@ -21,6 +21,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:authorities="com.example.content-provider"
+            android:name=".NotesContentProvider"
+            android:writePermission="com.example.content-provider.WRITE_PERMISSION"
+            android:exported="true" />
     </application>
 
 </manifest>
