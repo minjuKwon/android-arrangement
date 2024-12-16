@@ -3,3 +3,4 @@
 *.mp3
 *.gif
 /image
+/example/contentProvider/.idea
