@@ -11,174 +11,224 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/javaList"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_margin="@dimen/recyclerview_margin"
         android:layout_marginTop="88dp"
+        app:layout_constraintBottom_toTopOf="@id/kotlinList"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintVertical_weight="5"
+        />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/kotlinList"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_margin="@dimen/recyclerview_margin"
         app:layout_constraintTop_toBottomOf="@id/javaList"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@id/editDeleteTable"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_weight="5"
+        />
 
     <Button
         android:id="@+id/btnDelete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/button_margin_end"
         android:minHeight="@dimen/min_height"
         android:text="@string/delete"
+        app:layout_constraintBottom_toTopOf="@id/btnInsert"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/kotlinList"
-        app:layout_constraintStart_toStartOf="parent"/>
+        />
 
     <EditText
         android:id="@+id/editDeleteTable"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/table"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/table"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/kotlinList"
-        app:layout_constraintStart_toEndOf="@id/btnDelete"/>
+        app:layout_constraintBottom_toTopOf="@id/editInsertTable"
+        app:layout_constraintStart_toEndOf="@id/btnDelete"
+        app:layout_constraintEnd_toStartOf="@id/editDeleteIdx"
+        app:layout_constraintWidth_max="@dimen/edit_max_width"
+        />
 
     <EditText
         android:id="@+id/editDeleteIdx"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/index"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/index"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/kotlinList"
-        app:layout_constraintStart_toEndOf="@id/editDeleteTable"/>
+        app:layout_constraintBottom_toTopOf="@id/editInsertTable"
+        app:layout_constraintStart_toEndOf="@id/editDeleteTable"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="@dimen/edit_max_width"
+        app:layout_constraintVertical_bias="1.0"
+        />
 
     <Button
         android:id="@+id/btnInsert"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/button_margin_end"
         android:minHeight="@dimen/min_height"
         android:text="@string/insert"
         app:layout_constraintTop_toBottomOf="@id/btnDelete"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@id/btnUpdate"
+        app:layout_constraintStart_toStartOf="parent"
+        />
 
     <EditText
         android:id="@+id/editInsertTable"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/table"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/table"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
-        app:layout_constraintTop_toBottomOf="@id/btnDelete"
-        app:layout_constraintStart_toEndOf="@id/btnInsert"/>
+        app:layout_constraintTop_toBottomOf="@id/editDeleteTable"
+        app:layout_constraintBottom_toTopOf="@id/editUpdateTable"
+        app:layout_constraintStart_toEndOf="@id/btnInsert"
+        app:layout_constraintEnd_toStartOf="@id/editInsertColumnName"
+        app:layout_constraintHorizontal_weight="2"
+        />
 
     <EditText
         android:id="@+id/editInsertColumnName"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/column_name"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/column_name"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
-        app:layout_constraintTop_toBottomOf="@id/btnDelete"
-        app:layout_constraintStart_toEndOf="@id/editInsertTable"/>
+        app:layout_constraintTop_toBottomOf="@id/editDeleteTable"
+        app:layout_constraintBottom_toTopOf="@id/editUpdateColumnName"
+        app:layout_constraintStart_toEndOf="@id/editInsertTable"
+        app:layout_constraintEnd_toStartOf="@id/editInsertColumnValue"
+        app:layout_constraintHorizontal_weight="2"
+        />
 
     <EditText
         android:id="@+id/editInsertColumnValue"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/column_value"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/column_value"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
-        app:layout_constraintTop_toBottomOf="@id/btnDelete"
-        app:layout_constraintStart_toEndOf="@id/editInsertColumnName"/>
+        app:layout_constraintTop_toBottomOf="@id/editDeleteIdx"
+        app:layout_constraintBottom_toTopOf="@id/editUpdateColumnValue"
+        app:layout_constraintStart_toEndOf="@id/editInsertColumnName"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="@dimen/edit_max_width"
+        app:layout_constraintHorizontal_weight="6"
+        />
 
     <Button
         android:id="@+id/btnUpdate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/button_margin_end"
         android:minHeight="@dimen/min_height"
         android:text="@string/update"
         app:layout_constraintTop_toBottomOf="@id/btnInsert"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        />
 
     <EditText
         android:id="@+id/editUpdateTable"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/table"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/table"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/btnInsert"
-        app:layout_constraintStart_toEndOf="@id/btnUpdate"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btnUpdate"
+        app:layout_constraintEnd_toStartOf="@id/editUpdateIdx"
+        app:layout_constraintHorizontal_weight="2"
+        />
 
     <EditText
         android:id="@+id/editUpdateIdx"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/index"
-        android:importantForAutofill="no"
-        android:inputType="number"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/index"
         android:textColorHint="@color/hint_color"
+        android:inputType="number"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/btnInsert"
-        app:layout_constraintStart_toEndOf="@id/editUpdateTable"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/editUpdateTable"
+        app:layout_constraintEnd_toStartOf="@id/editUpdateColumnName"
+        app:layout_constraintHorizontal_weight="2"
+        />
 
     <EditText
         android:id="@+id/editUpdateColumnName"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/column_name"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/column_name"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/btnInsert"
-        app:layout_constraintStart_toEndOf="@id/editUpdateIdx"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/editUpdateIdx"
+        app:layout_constraintEnd_toStartOf="@id/editUpdateColumnValue"
+        app:layout_constraintHorizontal_weight="2"
+        />
 
     <EditText
         android:id="@+id/editUpdateColumnValue"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="@string/column_value"
-        android:importantForAutofill="no"
-        android:inputType="text"
         android:minHeight="@dimen/min_height"
+        android:gravity="center_horizontal"
+        android:hint="@string/column_value"
         android:textColorHint="@color/hint_color"
+        android:inputType="text"
+        android:importantForAutofill="no"
         tools:ignore="DuplicateSpeakableTextCheck"
         app:layout_constraintTop_toBottomOf="@id/btnInsert"
-        app:layout_constraintStart_toEndOf="@id/editUpdateColumnName"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/editUpdateColumnName"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="@dimen/edit_max_width"
+        app:layout_constraintHorizontal_weight="4"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
