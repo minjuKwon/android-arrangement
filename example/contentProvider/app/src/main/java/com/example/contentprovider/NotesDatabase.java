@@ -17,13 +17,13 @@ public class NotesDatabase extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         final String SQLITE_CREATE_JAVA_TABLE=
                 "CREATE TABLE "+ NotesContract.JavaNotesEntry.TABLE_NAME +"("+
-                NotesContract.JavaNotesEntry._ID +"INTEGER PRIMARY KEY AUTOINCREMENT, "+
+                NotesContract.JavaNotesEntry._ID +" INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 NotesContract.JavaNotesEntry.COLUMN_TITLE+" TEXT NOT NULL, "+
                 NotesContract.JavaNotesEntry.COLUMN_CONTENT+" TEXT NOT NULL);";
 
         final String SQLITE_CREATE_KOTLIN_TABLE=
                 "CREATE TABLE "+ NotesContract.KotlinNotesEntry.TABLE_NAME +"("+
-                NotesContract.KotlinNotesEntry._ID +"INTEGER PRIMARY KEY AUTOINCREMENT, "+
+                NotesContract.KotlinNotesEntry._ID +" INTEGER PRIMARY KEY AUTOINCREMENT, "+
                 NotesContract.KotlinNotesEntry.COLUMN_TITLE+" TEXT NOT NULL, "+
                 NotesContract.KotlinNotesEntry.COLUMN_CONTENT+" TEXT NOT NULL);";
 
