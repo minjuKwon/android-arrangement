@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.BaseColumns;
+import android.util.Log;
 
 import com.example.contentprovider.databinding.ActivityMainBinding;
 
@@ -114,8 +115,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         Uri uri=checkTable(table);
 
         ContentValues values=new ContentValues();
-        values.put("name", name);
-        values.put("value",value);
+        values.put(NotesContract.JavaNotesEntry.COLUMN_TITLE, name);
+        values.put(NotesContract.JavaNotesEntry.COLUMN_CONTENT,value);
         getContentResolver().insert(uri,values);
     }
 
@@ -123,8 +124,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         Uri uri=checkTable(table);
 
         ContentValues values=new ContentValues();
-        values.put("name",name);
-        values.put("values",value);
+        values.put(NotesContract.JavaNotesEntry.COLUMN_TITLE,name);
+        values.put(NotesContract.JavaNotesEntry.COLUMN_CONTENT,value);
         String selection=BaseColumns._ID+"=?";
         String [] selectionArgs=new String[]{idx};
         getContentResolver().update(uri,values,selection,selectionArgs);
