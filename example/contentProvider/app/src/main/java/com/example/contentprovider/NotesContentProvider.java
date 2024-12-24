@@ -99,10 +99,10 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case URI_CODE_JAVA_TABLE_ID:
+            case URI_CODE_JAVA_TABLE:
                 id=db.insert(TABLE_JAVA,null,values);
                 break;
-            case URI_CODE_KOTLIN_TABLE_ID:
+            case URI_CODE_KOTLIN_TABLE:
                 id=db.insert(TABLE_KOTLIN,null,values);
                 break;
             default:
