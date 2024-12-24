@@ -120,10 +120,10 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case URI_CODE_JAVA_TABLE_ID:
+            case URI_CODE_JAVA_TABLE:
                 rowsDeleted=db.delete(TABLE_JAVA,selection,selectionArgs);
                 break;
-            case URI_CODE_KOTLIN_TABLE_ID:
+            case URI_CODE_KOTLIN_TABLE:
                 rowsDeleted=db.delete(TABLE_KOTLIN,selection,selectionArgs);
                 break;
             default:
@@ -141,10 +141,10 @@ public class NotesContentProvider extends ContentProvider {
         SQLiteDatabase db=notesDatabase.getWritableDatabase();
 
         switch (uriMatcher.match(uri)){
-            case URI_CODE_JAVA_TABLE_ID:
+            case URI_CODE_JAVA_TABLE:
                 rowsUpdated=db.update(TABLE_JAVA,values, selection,selectionArgs);
                 break;
-            case URI_CODE_KOTLIN_TABLE_ID:
+            case URI_CODE_KOTLIN_TABLE:
                 rowsUpdated=db.update(TABLE_KOTLIN,values,selection,selectionArgs);
                 break;
             default:
