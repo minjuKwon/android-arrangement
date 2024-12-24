@@ -44,22 +44,34 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,null,this);
         getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN,null,this);
 
-        String deleteTable= String.valueOf(binding.editDeleteTable.getText());
-        String deleteIdx= String.valueOf(binding.editDeleteIdx);
-        String insertTable= String.valueOf(binding.editInsertTable);
-        String insertColumnName= String.valueOf(binding.editInsertColumnName);
-        String insertColumnValue= String.valueOf(binding.editInsertColumnValue);
-        String updateTable= String.valueOf(binding.editUpdateTable);
-        String updateIdx= String.valueOf(binding.editUpdateIdx);
-        String updateColumnName= String.valueOf(binding.editUpdateColumnName);
-        String updateColumnValue= String.valueOf(binding.editUpdateColumnValue);
-        
         binding.btnDelete.setOnClickListener(
-                v->deleteData(deleteTable, deleteIdx) );
+                v->{
+                    String deleteTable= String.valueOf(binding.editDeleteTable.getText());
+                    String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
+                    deleteData(deleteTable, deleteIdx);
+                });
         binding.btnInsert.setOnClickListener(
-                v->insertData(insertTable, insertColumnName, insertColumnValue) );
+                v->{
+                    String insertTable=
+                            String.valueOf(binding.editInsertTable.getText());
+                    String insertColumnName=
+                            String.valueOf(binding.editInsertColumnName.getText());
+                    String insertColumnValue=
+                            String.valueOf(binding.editInsertColumnValue.getText());
+                    insertData(insertTable, insertColumnName, insertColumnValue);
+                });
         binding.btnUpdate.setOnClickListener(
-                v->updateData(updateTable, updateIdx, updateColumnName, updateColumnValue) );
+                v->{
+                    String updateTable=
+                            String.valueOf(binding.editUpdateTable.getText());
+                    String updateIdx=
+                            String.valueOf(binding.editUpdateIdx.getText());
+                    String updateColumnName=
+                            String.valueOf(binding.editUpdateColumnName.getText());
+                    String updateColumnValue=
+                            String.valueOf(binding.editUpdateColumnValue.getText());
+                    updateData(updateTable, updateIdx, updateColumnName, updateColumnValue);
+                });
     }
 
     @Override
