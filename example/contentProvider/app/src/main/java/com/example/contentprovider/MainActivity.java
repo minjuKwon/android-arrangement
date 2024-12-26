@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.BaseColumns;
-import android.util.Log;
 
 import com.example.contentprovider.databinding.ActivityMainBinding;
 
@@ -26,7 +25,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private static final int LOADER_ID_TABLE_KOTLIN=2;
 
     private ActivityMainBinding binding;
-    private NotesRecyclerviewAdapter adapter;
+    private NotesRecyclerviewAdapter javaListAdapter;
+    private NotesRecyclerviewAdapter kotlinListAdapter;
     private ContentObserver contentObserver;
 
     @Override
@@ -35,11 +35,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         binding=ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        adapter=new NotesRecyclerviewAdapter(this);
+        javaListAdapter=new NotesRecyclerviewAdapter(this, NotesContract.TABLE_JAVA);
+        kotlinListAdapter=new NotesRecyclerviewAdapter(this,NotesContract.TABLE_KOTLIN);
         binding.javaList.setLayoutManager(new LinearLayoutManager(this));
         binding.kotlinList.setLayoutManager(new LinearLayoutManager(this));
-        binding.javaList.setAdapter(adapter);
-        binding.kotlinList.setAdapter(adapter);
+        binding.javaList.setAdapter(javaListAdapter);
+        binding.kotlinList.setAdapter(kotlinListAdapter);
 
         getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,null,this);
         getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN,null,this);
@@ -107,12 +108,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
-        adapter.swapCursor(data);
+        if(loader.getId()==LOADER_ID_TABLE_JAVA) javaListAdapter.swapCursor(data);
+        else if(loader.getId()==LOADER_ID_TABLE_KOTLIN) kotlinListAdapter.swapCursor(data);
     }
 
     @Override
     public void onLoaderReset(@NonNull Loader<Cursor> loader) {
-        adapter.swapCursor(null);
+        javaListAdapter.swapCursor(null);
+        kotlinListAdapter.swapCursor(null);
     }
 
     public void deleteData(String table, String idx){

@@ -15,6 +15,7 @@ public class NotesRecyclerviewAdapter extends RecyclerView.Adapter<NotesRecycler
 
     private Cursor cursor;
     private final LayoutInflater inflater;
+    private final String table;
 
     public static class ViewHolder extends RecyclerView.ViewHolder{
         final RecyclerviewItemBinding binding;
@@ -24,8 +25,9 @@ public class NotesRecyclerviewAdapter extends RecyclerView.Adapter<NotesRecycler
         }
     }
 
-    public NotesRecyclerviewAdapter(Context context){
+    public NotesRecyclerviewAdapter(Context context, String table){
         this.inflater=LayoutInflater.from(context);
+        this.table=table;
     }
 
     @NonNull
@@ -38,16 +40,30 @@ public class NotesRecyclerviewAdapter extends RecyclerView.Adapter<NotesRecycler
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        String idx = "";
+        String title = "";
+        String content= "";
         if(cursor.moveToPosition(position)){
-            String idx=String.valueOf(
-                    cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-            );
-            String title=String.valueOf(
-                    cursor.getString(cursor.getColumnIndexOrThrow("title"))
-            );
-            String content=String.valueOf(
-                    cursor.getString(cursor.getColumnIndexOrThrow("content"))
-            );
+            if(table.equals(NotesContract.TABLE_JAVA)){
+                idx=String.valueOf(
+                        cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)) );
+                title=String.valueOf(
+                        cursor.getString(cursor.getColumnIndexOrThrow(
+                                NotesContract.JavaNotesEntry.COLUMN_TITLE)) );
+                content=String.valueOf(
+                        cursor.getString(cursor.getColumnIndexOrThrow(
+                                NotesContract.JavaNotesEntry.COLUMN_CONTENT)) );
+            }else if(table.equals(NotesContract.TABLE_KOTLIN)){
+                idx=String.valueOf(
+                        cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)) );
+                title=String.valueOf(
+                        cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                        NotesContract.KotlinNotesEntry.COLUMN_TITLE)) );
+                content=String.valueOf(
+                        cursor.getString(cursor.getColumnIndexOrThrow(
+                                NotesContract.KotlinNotesEntry.COLUMN_CONTENT)) );
+            }
 
             holder.binding.txtIdx.setText(idx);
             holder.binding.txtTitle.setText(title);
