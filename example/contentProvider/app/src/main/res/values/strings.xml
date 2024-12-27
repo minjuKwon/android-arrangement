@@ -7,6 +7,6 @@
 
     <string name="table">테이블</string>
     <string name="index">인덱스</string>
-    <string name="column_name">칼럼명</string>
-    <string name="column_value">칼럼값</string>
+    <string name="column_name">제목</string>
+    <string name="column_value">내용</string>
 </resources>
