@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     String deleteTable= String.valueOf(binding.editDeleteTable.getText());
                     String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
                     deleteData(deleteTable, deleteIdx);
+                    binding.editDeleteTable.setText("");
                 });
         binding.btnInsert.setOnClickListener(
                 v->{
@@ -60,6 +61,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     String insertColumnValue=
                             String.valueOf(binding.editInsertColumnValue.getText());
                     insertData(insertTable, insertColumnName, insertColumnValue);
+                    binding.editInsertTable.setText("");
+                    binding.editInsertColumnName.setText("");
+                    binding.editInsertColumnValue.setText("");
                 });
         binding.btnUpdate.setOnClickListener(
                 v->{
@@ -72,6 +76,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     String updateColumnValue=
                             String.valueOf(binding.editUpdateColumnValue.getText());
                     updateData(updateTable, updateIdx, updateColumnName, updateColumnValue);
+                    binding.editUpdateTable.setText("");
+                    binding.editUpdateIdx.setText("");
+                    binding.editUpdateColumnName.setText("");
+                    binding.editUpdateColumnValue.setText("");
                 });
     }
 
