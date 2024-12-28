@@ -15,6 +15,8 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.Objects;
+
 public class NotesContentProvider extends ContentProvider {
 
     private static final int URI_CODE_JAVA_TABLE=1;
@@ -70,7 +72,10 @@ public class NotesContentProvider extends ContentProvider {
                 throwInvalidUriException(uri);
         }
 
-        cursor.setNotificationUri(getContext().getContentResolver(),uri);
+        cursor.setNotificationUri(
+                Objects.requireNonNull(getContext(),"Context cannot be null")
+                        .getContentResolver()
+                ,uri );
         return cursor;
     }
 
@@ -156,7 +161,8 @@ public class NotesContentProvider extends ContentProvider {
     }
 
     private void notifyChange(Uri uri){
-        getContext().getContentResolver().notifyChange(uri,null);
+        Objects.requireNonNull(getContext(),"Context cannot be null")
+                .getContentResolver().notifyChange(uri,null);
     }
 
     private void throwInvalidUriException(Uri uri) {
