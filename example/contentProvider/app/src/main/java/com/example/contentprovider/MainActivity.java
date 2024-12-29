@@ -32,55 +32,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding=ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
 
-        javaListAdapter=new NotesRecyclerviewAdapter(this, NotesContract.TABLE_JAVA);
-        kotlinListAdapter=new NotesRecyclerviewAdapter(this,NotesContract.TABLE_KOTLIN);
-        binding.javaList.setLayoutManager(new LinearLayoutManager(this));
-        binding.kotlinList.setLayoutManager(new LinearLayoutManager(this));
-        binding.javaList.setAdapter(javaListAdapter);
-        binding.kotlinList.setAdapter(kotlinListAdapter);
-
-        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,null,this);
-        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN,null,this);
-
-        binding.btnDelete.setOnClickListener(
-                v->{
-                    String deleteTable= String.valueOf(binding.editDeleteTable.getText());
-                    String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
-                    deleteData(deleteTable, deleteIdx);
-                    binding.editDeleteTable.setText("");
-                });
-        binding.btnInsert.setOnClickListener(
-                v->{
-                    String insertTable=
-                            String.valueOf(binding.editInsertTable.getText());
-                    String insertColumnName=
-                            String.valueOf(binding.editInsertColumnName.getText());
-                    String insertColumnValue=
-                            String.valueOf(binding.editInsertColumnValue.getText());
-                    insertData(insertTable, insertColumnName, insertColumnValue);
-                    binding.editInsertTable.setText("");
-                    binding.editInsertColumnName.setText("");
-                    binding.editInsertColumnValue.setText("");
-                });
-        binding.btnUpdate.setOnClickListener(
-                v->{
-                    String updateTable=
-                            String.valueOf(binding.editUpdateTable.getText());
-                    String updateIdx=
-                            String.valueOf(binding.editUpdateIdx.getText());
-                    String updateColumnName=
-                            String.valueOf(binding.editUpdateColumnName.getText());
-                    String updateColumnValue=
-                            String.valueOf(binding.editUpdateColumnValue.getText());
-                    updateData(updateTable, updateIdx, updateColumnName, updateColumnValue);
-                    binding.editUpdateTable.setText("");
-                    binding.editUpdateIdx.setText("");
-                    binding.editUpdateColumnName.setText("");
-                    binding.editUpdateColumnValue.setText("");
-                });
+        initializeBinding();
+        initializeLoaders();
+        setupRecyclerviewAdapter();
+        setupClickListener();
     }
 
     @Override
@@ -124,6 +80,66 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onLoaderReset(@NonNull Loader<Cursor> loader) {
         javaListAdapter.swapCursor(null);
         kotlinListAdapter.swapCursor(null);
+    }
+    
+    private void initializeBinding(){
+        binding=ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+    }
+
+    private void setupRecyclerviewAdapter(){
+        javaListAdapter=new NotesRecyclerviewAdapter(this, NotesContract.TABLE_JAVA);
+        kotlinListAdapter=new NotesRecyclerviewAdapter(this,NotesContract.TABLE_KOTLIN);
+        binding.javaList.setLayoutManager(new LinearLayoutManager(this));
+        binding.kotlinList.setLayoutManager(new LinearLayoutManager(this));
+        binding.javaList.setAdapter(javaListAdapter);
+        binding.kotlinList.setAdapter(kotlinListAdapter);
+    }
+
+    private void initializeLoaders(){
+        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,null,this);
+        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN,null,this);
+    }
+
+    private void setupClickListener(){
+        binding.btnDelete.setOnClickListener(
+                v->{
+                    String deleteTable= String.valueOf(binding.editDeleteTable.getText());
+                    String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
+                    deleteData(deleteTable, deleteIdx);
+                    binding.editDeleteTable.setText("");
+                });
+
+        binding.btnInsert.setOnClickListener(
+                v->{
+                    String insertTable=
+                            String.valueOf(binding.editInsertTable.getText());
+                    String insertColumnName=
+                            String.valueOf(binding.editInsertColumnName.getText());
+                    String insertColumnValue=
+                            String.valueOf(binding.editInsertColumnValue.getText());
+                    insertData(insertTable, insertColumnName, insertColumnValue);
+                    binding.editInsertTable.setText("");
+                    binding.editInsertColumnName.setText("");
+                    binding.editInsertColumnValue.setText("");
+                });
+
+        binding.btnUpdate.setOnClickListener(
+                v->{
+                    String updateTable=
+                            String.valueOf(binding.editUpdateTable.getText());
+                    String updateIdx=
+                            String.valueOf(binding.editUpdateIdx.getText());
+                    String updateColumnName=
+                            String.valueOf(binding.editUpdateColumnName.getText());
+                    String updateColumnValue=
+                            String.valueOf(binding.editUpdateColumnValue.getText());
+                    updateData(updateTable, updateIdx, updateColumnName, updateColumnValue);
+                    binding.editUpdateTable.setText("");
+                    binding.editUpdateIdx.setText("");
+                    binding.editUpdateColumnName.setText("");
+                    binding.editUpdateColumnValue.setText("");
+                });
     }
 
     public void deleteData(String table, String idx){
