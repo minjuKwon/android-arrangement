@@ -108,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
                     deleteData(deleteTable, deleteIdx);
                     binding.editDeleteTable.setText("");
+                    binding.editDeleteIdx.setText("");
                 });
 
         binding.btnInsert.setOnClickListener(
