@@ -40,10 +40,14 @@ public class NotesRecyclerviewAdapter extends RecyclerView.Adapter<NotesRecycler
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        if (cursor == null || cursor.isClosed()) return;
+
         String idx = "";
         String title = "";
         String content= "";
+
         if(cursor.moveToPosition(position)){
+
             if(table.equals(NotesContract.TABLE_JAVA)){
                 idx=String.valueOf(
                         cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)) );
@@ -73,13 +77,11 @@ public class NotesRecyclerviewAdapter extends RecyclerView.Adapter<NotesRecycler
 
     @Override
     public int getItemCount() {
-        return (cursor==null)?0:cursor.getCount();
+        return (cursor==null||cursor.isClosed())?0:cursor.getCount();
     }
 
     public void swapCursor(Cursor newCursor) {
-        if(cursor!=null){
-            cursor.close();
-        }
+        if(cursor==newCursor) return;
         cursor=newCursor;
         notifyDataSetChanged();
     }
