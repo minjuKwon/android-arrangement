@@ -39,6 +39,8 @@ public class DataRecyclerviewAdapter extends RecyclerView.Adapter<DataRecyclervi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        if (cursor == null || cursor.isClosed()) return;
+
         String title = "";
         String content= "";
 
@@ -69,13 +71,11 @@ public class DataRecyclerviewAdapter extends RecyclerView.Adapter<DataRecyclervi
 
     @Override
     public int getItemCount() {
-        return (cursor==null)?0:cursor.getCount();
+        return (cursor==null||cursor.isClosed())?0:cursor.getCount();
     }
 
     public void swapCursor(Cursor newCursor){
-        if(cursor!=null){
-            cursor.close();
-        }
+        if(cursor==newCursor) return;
         cursor=newCursor;
         notifyDataSetChanged();
     }
