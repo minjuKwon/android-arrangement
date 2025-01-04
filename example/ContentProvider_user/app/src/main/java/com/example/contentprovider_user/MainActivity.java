@@ -17,10 +17,10 @@ import com.example.contentprovider_user.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
 
-    private static final int LOADER_ID_TABLE_JAVA=1;
-    private static final int LOADER_ID_TABLE_KOTLIN=2;
+    private static final int LOADER_ID=1;
 
     private DataRecyclerviewAdapter adapter;
+    private boolean isLoaderStarted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,14 +32,23 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerView.setAdapter(adapter);
 
-        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,null,this);
-        getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN,null,this);
-
         binding.btnDelete.setOnClickListener(v->deleteAllData());
         binding.btnQuery.setOnClickListener(v->{
+
             String deleteTable= String.valueOf(binding.editDeleteTable.getText());
             String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
-            queryData(deleteTable, deleteIdx);
+
+            Bundle args = new Bundle();
+            args.putString("table", deleteTable);
+            args.putString("idx",deleteIdx);
+
+            if(!isLoaderStarted){
+                getSupportLoaderManager().initLoader(LOADER_ID,args,this);
+                isLoaderStarted=true;
+            }else{
+                getSupportLoaderManager().restartLoader(LOADER_ID,args,this);
+            }
+
             binding.editDeleteTable.setText("");
             binding.editDeleteIdx.setText("");
         });
@@ -48,20 +57,33 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @NonNull
     @Override
     public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
-        Uri uri;
-        switch (id){
-            case LOADER_ID_TABLE_JAVA:
-                uri=DataContract.JavaNotesEntry.CONTENT_URI;
-                break;
-            case LOADER_ID_TABLE_KOTLIN:
-                uri=DataContract.KotlinNotesEntry.CONTENT_URI;
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid loader ID");
+        String table;
+        String idx="";
+        Uri uri=Uri.EMPTY;
+
+        if (args != null) {
+            table=args.getString("table");
+            idx=args.getString("idx");
+            if(table!=null) uri=checkTable(table);
         }
-        return new CursorLoader(
-                this,uri,null,null,null,null
-        );
+
+        String selection = BaseColumns._ID+"=?";
+        String [] selectionArgs=new String[]{idx};
+
+        if (id == LOADER_ID&&idx!=null) {
+            if (idx.equals("0")) {
+                return new CursorLoader(
+                        this, uri, null, null, null, null
+                );
+            } else {
+                return new CursorLoader(
+                        this, uri, null, selection, selectionArgs, null
+                );
+            }
+        }
+
+        throw new IllegalArgumentException("Invalid loader ID");
+
     }
 
     @Override
@@ -76,20 +98,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void deleteAllData(){
         adapter.swapCursor(null);
-    }
-
-    public void queryData(String table, String idx){
-        Uri uri=checkTable(table);
-
-        String selection = BaseColumns._ID+"=?";
-        String [] selectionArgs=new String[]{idx};
-        Cursor cursor;
-        if(idx.equals("0")){
-            cursor=getContentResolver().query(uri,null,null, null,null);
-        }else{
-            cursor=getContentResolver().query(uri,null,selection, selectionArgs,null);
-        }
-        if(cursor!=null) cursor.close();
     }
 
     private Uri checkTable(String table){
