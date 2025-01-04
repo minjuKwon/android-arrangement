@@ -1,8 +1,11 @@
 package com.example.contentprovider_user;
 
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.BaseColumns;
 
 import androidx.annotation.NonNull;
@@ -20,6 +23,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private static final int LOADER_ID=1;
 
     private DataRecyclerviewAdapter adapter;
+    private ContentObserver contentObserver;
     private boolean isLoaderStarted = false;
 
     @Override
@@ -52,6 +56,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             binding.editDeleteTable.setText("");
             binding.editDeleteIdx.setText("");
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerContentObserver();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        getContentResolver().unregisterContentObserver(contentObserver);
     }
 
     @NonNull
@@ -110,6 +126,30 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             adapter.setTable(DataContract.TABLE_KOTLIN);
         }
         return uri;
+    }
+
+    private void registerContentObserver(){
+        contentObserver=new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange, @Nullable Uri uri) {
+                super.onChange(selfChange, uri);
+
+                if(uri==null) throw new NullPointerException("uri is null");
+
+                if(uri.equals(DataContract.JavaNotesEntry.CONTENT_URI)
+                        ||uri.equals(DataContract.KotlinNotesEntry.CONTENT_URI)){
+                    getSupportLoaderManager().restartLoader(
+                            LOADER_ID,null,MainActivity.this);
+                }
+
+            }
+        };
+
+        getContentResolver().registerContentObserver(
+                DataContract.JavaNotesEntry.CONTENT_URI,true,contentObserver);
+        getContentResolver().registerContentObserver(
+                DataContract.KotlinNotesEntry.CONTENT_URI,true,contentObserver
+        );
     }
 
 }
