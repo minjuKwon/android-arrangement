@@ -1,7 +1,6 @@
 package com.example.contentprovider_user;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -10,23 +9,25 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.contentprovider_user.databinding.RecyclerviewItemBinding;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DataRecyclerviewAdapter extends RecyclerView.Adapter<DataRecyclerviewAdapter.ViewHolder>{
 
-    private Cursor cursor;
     private final LayoutInflater inflater;
-    private String table="";
+    private final List<Note> list;
 
     public static class ViewHolder extends RecyclerView.ViewHolder{
         final RecyclerviewItemBinding binding;
         public ViewHolder(RecyclerviewItemBinding binding){
             super(binding.getRoot());
             this.binding=binding;
-
         }
     }
 
-    public DataRecyclerviewAdapter(Context context){
+    public DataRecyclerviewAdapter(Context context, ArrayList<Note>list){
         this.inflater=LayoutInflater.from(context);
+        this.list=list;
     }
 
     @NonNull
@@ -39,49 +40,27 @@ public class DataRecyclerviewAdapter extends RecyclerView.Adapter<DataRecyclervi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        if (cursor == null || cursor.isClosed()) return;
+        Note note=list.get(position);
 
-        String title = "";
-        String content= "";
-
-        if(cursor.moveToPosition(position)){
-
-            if(table.equals(DataContract.TABLE_JAVA)){
-                title=String.valueOf(
-                        cursor.getString(cursor.getColumnIndexOrThrow(
-                                DataContract.JavaNotesEntry.COLUMN_TITLE)) );
-                content=String.valueOf(
-                        cursor.getString(cursor.getColumnIndexOrThrow(
-                                DataContract.JavaNotesEntry.COLUMN_CONTENT)) );
-            }else if(table.equals(DataContract.TABLE_KOTLIN)) {
-                title = String.valueOf(
-                        cursor.getString(
-                                cursor.getColumnIndexOrThrow(
-                                        DataContract.KotlinNotesEntry.COLUMN_TITLE)));
-                content = String.valueOf(
-                        cursor.getString(cursor.getColumnIndexOrThrow(
-                                DataContract.KotlinNotesEntry.COLUMN_CONTENT)));
-            }
-
-            holder.binding.txtIdx.setText(String.valueOf(position+1));
-            holder.binding.txtTitle.setText(title);
-            holder.binding.txtContent.setText(content);
-        }
+        holder.binding.txtIdx.setText(String.valueOf(position+1));
+        holder.binding.txtTitle.setText(note.title);
+        holder.binding.txtContent.setText(note.content);
     }
 
     @Override
     public int getItemCount() {
-        return (cursor==null||cursor.isClosed())?0:cursor.getCount();
+        return list==null?0:list.size();
     }
 
-    public void swapCursor(Cursor newCursor){
-        if(cursor==newCursor) return;
-        cursor=newCursor;
-        notifyDataSetChanged();
+    public void insertData(int newDataSize){
+        int size=list.size();
+        notifyItemRangeInserted(size, newDataSize);
     }
 
-    public void setTable(String table){
-        this.table=table;
+    public void resetList(){
+        int size=list.size();
+        list.clear();
+        notifyItemRangeRemoved(0,size);
     }
 
 }
