@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         String idx="";
 
         if (args != null) {
-            table=args.getString("table");
-            idx=args.getString("idx");
+            table=args.getString(getString(R.string.bundle_key_table));
+            idx=args.getString(getString(R.string.bundle_key_idx));
         }
 
         Uri contentUri= Uri.EMPTY;
@@ -114,8 +114,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     private void queryData(String deleteTable, String deleteIdx){
         Bundle args = new Bundle();
-        args.putString("table", deleteTable);
-        args.putString("idx",deleteIdx);
+        args.putString(getString(R.string.bundle_key_table), deleteTable);
+        args.putString(getString(R.string.bundle_key_idx),deleteIdx);
 
         if(!isLoaderStarted){
             if(deleteTable.equals("j")){

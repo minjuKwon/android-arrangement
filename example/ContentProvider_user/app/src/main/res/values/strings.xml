@@ -6,4 +6,7 @@
 
     <string name="table">테이블</string>
     <string name="index">인덱스</string>
+    
+    <string name="bundle_key_table">table</string>
+    <string name="bundle_key_idx">idx</string>
 </resources>
