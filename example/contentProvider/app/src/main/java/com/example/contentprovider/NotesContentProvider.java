@@ -11,6 +11,7 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -115,6 +116,10 @@ public class NotesContentProvider extends ContentProvider {
         }
 
         if(id>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+        
         return ContentUris.withAppendedId(uri,id);
     }
 
@@ -136,6 +141,10 @@ public class NotesContentProvider extends ContentProvider {
         }
 
         if(rowsDeleted>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+
         return rowsDeleted;
     }
 
@@ -157,6 +166,10 @@ public class NotesContentProvider extends ContentProvider {
         }
 
         if(rowsUpdated>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+
         return rowsUpdated;
     }
 

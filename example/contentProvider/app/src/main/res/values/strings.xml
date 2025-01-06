@@ -9,4 +9,6 @@
     <string name="index">인덱스</string>
     <string name="column_name">제목</string>
     <string name="column_value">내용</string>
+
+    <string name="invalid_value">잘못된 값을 전달하였습니다</string>
 </resources>
