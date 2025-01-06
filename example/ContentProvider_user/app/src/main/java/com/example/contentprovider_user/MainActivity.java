@@ -43,28 +43,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         binding.btnDelete.setOnClickListener(v->deleteAllData());
         binding.btnQuery.setOnClickListener(v->{
-
             String deleteTable= String.valueOf(binding.editDeleteTable.getText());
             String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
 
-            Bundle args = new Bundle();
-            args.putString("table", deleteTable);
-            args.putString("idx",deleteIdx);
-
-            if(!isLoaderStarted){
-                if(deleteTable.equals("j")){
-                    getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,args,this);
-                }else if(deleteTable.equals("k")) {
-                    getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN, args, this);
-                }
-                isLoaderStarted=true;
-            }else{
-                if(deleteTable.equals("j")){
-                    getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_JAVA,args,this);
-                }else if(deleteTable.equals("k")) {
-                    getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_KOTLIN,args,this);
-                }
-            }
+            queryData(deleteTable,deleteIdx);
 
             binding.editDeleteTable.setText("");
             binding.editDeleteIdx.setText("");
@@ -94,36 +76,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             idx=args.getString("idx");
         }
 
-        String selection = BaseColumns._ID+"=?";
-        String [] selectionArgs=new String[]{idx};
+        Uri contentUri= Uri.EMPTY;
+        String selection= null;
+        String [] selectionArgs= null;
 
         if(idx!=null&&table!=null){
             if (id == LOADER_ID_TABLE_JAVA) {
-                if (idx.equals("0")) {
-                    return new CursorLoader(
-                            this, DataContract.JavaNotesEntry.CONTENT_URI,
-                            null, null, null, null
-                    );
-                } else {
-                    return new CursorLoader(
-                            this, DataContract.JavaNotesEntry.CONTENT_URI,
-                            null, selection, selectionArgs, null
-                    );
-                }
+                contentUri=DataContract.JavaNotesEntry.CONTENT_URI;
             }else if(id == LOADER_ID_TABLE_KOTLIN){
-                if (idx.equals("0")) {
-                    return new CursorLoader(
-                            this, DataContract.KotlinNotesEntry.CONTENT_URI,
-                            null, null, null, null
-                    );
-                } else {
-                    return new CursorLoader(
-                            this, DataContract.KotlinNotesEntry.CONTENT_URI,
-                            null, selection, selectionArgs, null
-                    );
-                }
-
+                contentUri=DataContract.KotlinNotesEntry.CONTENT_URI;
             }
+            if (!idx.equals("0")) {
+                selection=BaseColumns._ID+"=?";
+                selectionArgs= new String[]{idx};
+            }
+            return createCursorLoad(contentUri, selection, selectionArgs);
         }
 
         throw new IllegalArgumentException("Invalid loader ID");
@@ -141,8 +108,29 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         adapter.resetList();
     }
 
-    public void deleteAllData(){
+    private void deleteAllData(){
         adapter.resetList();
+    }
+
+    private void queryData(String deleteTable, String deleteIdx){
+        Bundle args = new Bundle();
+        args.putString("table", deleteTable);
+        args.putString("idx",deleteIdx);
+
+        if(!isLoaderStarted){
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN, args, this);
+            }
+            isLoaderStarted=true;
+        }else{
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_KOTLIN,args,this);
+            }
+        }
     }
 
     private void registerContentObserver(){
@@ -168,6 +156,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 DataContract.JavaNotesEntry.CONTENT_URI,true,contentObserver);
         getContentResolver().registerContentObserver(
                 DataContract.KotlinNotesEntry.CONTENT_URI,true,contentObserver
+        );
+    }
+
+    private CursorLoader createCursorLoad(
+            Uri contentUri, String selection, String[] selectionArgs
+    ){
+        return new CursorLoader(
+                this, contentUri,
+                null, selection, selectionArgs, null
         );
     }
 
