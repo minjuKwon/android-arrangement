@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.BaseColumns;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -196,6 +197,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 list.add(new Note(title,content));
             } while(cursor.moveToNext());
         }
+
+        Toast.makeText(getApplicationContext(),
+                getString(R.string.last_data), Toast.LENGTH_LONG).show();
 
     }
 

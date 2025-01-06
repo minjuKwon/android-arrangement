@@ -9,4 +9,6 @@
     
     <string name="bundle_key_table">table</string>
     <string name="bundle_key_idx">idx</string>
+
+    <string name="last_data">데이터 끝</string>
 </resources>
