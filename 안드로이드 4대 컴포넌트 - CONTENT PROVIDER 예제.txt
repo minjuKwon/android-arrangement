@@ -48,3 +48,25 @@ public class NotesDatabase extends SQLiteOpenHelper {
 }
 
 코드에 사용된 상수는 contract class 구현 부분에 설명하겠습니다.
+
+
+3)콘텐츠 URI 설계
+Content provider를 구현하기 전, provider의 데이터를 식별하기 위한 URI를 설계할겁니다. 콘텐츠 URI는 provider 권한과 경로로 구성됩니다. 권한은 고유성을 위해 패키지 이름을 활용할 것입니다. 경로는 개별 테이블을 가리키기 위해 필요합니다. 단지 권한에서 java와 kotlin 테이블 명을 추가하면 됩니다. 테이블 전체 데이터뿐만 아니라 테이블의 특정 데이터 또한 가져오고 싶기 때문에 각 행의 ID를 더하기도 할겁니다.
+
+그럼 현재 java와 kotlin 테이블에 대한 URI와 각 테이블의 특정 데이터를 가져올 URI가 필요하기 때문에 총 4개가 필요해집니다.여러 개의 URI를 쉽게 작업하기 위해 UriMatcher를 사용할겁니다. URI는 비교적 복잡하고 길이가 길기 때문에 URI에 대한 상수를 정의하고 해당 상수를 이용하여 작업을 수행할겁니다. 콘텐츠 URI에 정수 값을 매핑하기 위해서는 addURI()를 사용하면 됩니다. addURI()의 매개변수로 권한, 경로, 정수 값을 전달하면 됩니다. 권한과 경로를 나누지 않고 바로 URI를 전달 할 수도 있습니다. 하지만 공통된 권한을 가지고 경로에만 차이가 있기 때문에 각각 상수로 정의하여 전달하겠습니다. 상수로 관리하는 것이 활용하기도 편합니다. provider에 관한 상수는 추후 설명할 contract파일에 정의하였습니다. Uri 패턴은 content provider 구현 파일에 작성하였습니다.
+
+private static final int URI_CODE_JAVA_TABLE=1;
+private static final int URI_CODE_JAVA_TABLE_ID=2;
+private static final int URI_CODE_KOTLIN_TABLE=3;
+private static final int URI_CODE_KOTLIN_TABLE_ID=4;
+
+private static final UriMatcher uriMatcher=new UriMatcher(UriMatcher.NO_MATCH);
+
+static{
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA,URI_CODE_JAVA_TABLE);//java 테이블 전체를 위한 URI
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA+"/#",URI_CODE_JAVA_TABLE_ID);//java 테이블 단일 행을 위한 URI
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN,URI_CODE_KOTLIN_TABLE);//kotlin 테이블 전체를 위한 URI
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN+"/#",URI_CODE_KOTLIN_TABLE_ID);/kotlin 테이블 단일 행을 위한 URI
+    }
+
+UriMatcher 생성자에 전달한 UriMatcher.NO_MATCH는 일치하는 패턴이 없을 때 반환하는 값으로 -1입니다.
