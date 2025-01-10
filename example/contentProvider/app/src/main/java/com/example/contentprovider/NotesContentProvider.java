@@ -50,23 +50,13 @@ public class NotesContentProvider extends ContentProvider {
 
         switch(uriMatcher.match(uri)){
             case URI_CODE_JAVA_TABLE:
+            case URI_CODE_JAVA_TABLE_ID:
                 cursor=db.query(TABLE_JAVA,projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
-            case URI_CODE_JAVA_TABLE_ID:
-                selection="_ID = ?";
-                selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                cursor=db.query(TABLE_JAVA, projection,selection,selectionArgs,
-                        null,null,sortOrder);
-                break;
             case URI_CODE_KOTLIN_TABLE:
-                cursor=db.query(TABLE_KOTLIN,projection,selection,selectionArgs,
-                        null,null,sortOrder);
-                break;
             case URI_CODE_KOTLIN_TABLE_ID:
-                selection="_ID = ?";
-                selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                cursor=db.query(TABLE_KOTLIN, projection,selection,selectionArgs,
+                cursor=db.query(TABLE_KOTLIN,projection,selection,selectionArgs,
                         null,null,sortOrder);
                 break;
             default:
