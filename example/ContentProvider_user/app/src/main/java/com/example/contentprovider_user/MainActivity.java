@@ -61,8 +61,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
         getContentResolver().unregisterContentObserver(contentObserver);
     }
 
