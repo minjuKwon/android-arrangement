@@ -235,9 +235,177 @@ update()도 위와 비슷한 로직을 따라갑니다. delete()와 마찬가지
         }
     }
 
+ContentProvider 구현 전체 코드입니다.
+
+- NotesContentProvider.java
+
+public class NotesContentProvider extends ContentProvider {
+
+    private static final int URI_CODE_JAVA_TABLE=1;
+    private static final int URI_CODE_JAVA_TABLE_ID=2;
+    private static final int URI_CODE_KOTLIN_TABLE=3;
+    private static final int URI_CODE_KOTLIN_TABLE_ID=4;
+
+    private NotesDatabase notesDatabase;
+    private static final UriMatcher uriMatcher=new UriMatcher(UriMatcher.NO_MATCH);
+
+    static{
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA,URI_CODE_JAVA_TABLE);
+        uriMatcher.addURI(AUTHORITY,TABLE_JAVA+"/#",URI_CODE_JAVA_TABLE_ID);
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN,URI_CODE_KOTLIN_TABLE);
+        uriMatcher.addURI(AUTHORITY,TABLE_KOTLIN+"/#",URI_CODE_KOTLIN_TABLE_ID);
+    }
+
+    @Override
+    public boolean onCreate() {
+        notesDatabase=new NotesDatabase(getContext());
+        return true;
+    }
+
+    @Nullable
+    @Override
+    public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection,
+                        @Nullable String[] selectionArgs, @Nullable String sortOrder) {
+        Cursor cursor=null;
+        SQLiteDatabase db=notesDatabase.getReadableDatabase();
+
+        switch(uriMatcher.match(uri)){
+            case URI_CODE_JAVA_TABLE:
+            case URI_CODE_JAVA_TABLE_ID:
+                cursor=db.query(TABLE_JAVA,projection,selection,selectionArgs,
+                        null,null,sortOrder);
+                break;
+            case URI_CODE_KOTLIN_TABLE:
+            case URI_CODE_KOTLIN_TABLE_ID:
+                cursor=db.query(TABLE_KOTLIN,projection,selection,selectionArgs,
+                        null,null,sortOrder);
+                break;
+            default:
+                throwInvalidUriException(uri);
+        }
+
+        cursor.setNotificationUri(
+                Objects.requireNonNull(getContext(),"Context cannot be null")
+                        .getContentResolver()
+                ,uri );
+        return cursor;
+    }
+
+    @Nullable
+    @Override
+    public String getType(@NonNull Uri uri) {
+        switch (uriMatcher.match(uri)){
+            case URI_CODE_JAVA_TABLE:
+                return "vnd.android.cursor.dir/vnd.com.example.content-provider/java";
+            case URI_CODE_JAVA_TABLE_ID:
+                return "vnd.android.cursor.item/vnd.com.example.content-provider/java";
+            case URI_CODE_KOTLIN_TABLE:
+                return "vnd.android.cursor.dir/vnd.com.example.content-provider/kotlin";
+            case URI_CODE_KOTLIN_TABLE_ID:
+                return "vnd.android.cursor.item/vnd.com.example.content-provider/kotlin";
+            default:
+                throwInvalidUriException(uri);
+                return "";
+        }
+    }
+
+    @Nullable
+    @Override
+    public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
+        long id=-1L;
+        SQLiteDatabase db=notesDatabase.getWritableDatabase();
+
+        switch (uriMatcher.match(uri)){
+            case URI_CODE_JAVA_TABLE:
+                id=db.insert(TABLE_JAVA,null,values);
+                break;
+            case URI_CODE_KOTLIN_TABLE:
+                id=db.insert(TABLE_KOTLIN,null,values);
+                break;
+            default:
+                throwInvalidUriException(uri);
+        }
+
+        if(id>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+        
+        return ContentUris.withAppendedId(uri,id);
+    }
+
+    @Override
+    public int delete(@NonNull Uri uri, @Nullable String selection,
+                      @Nullable String[] selectionArgs) {
+        int rowsDeleted=0;
+        SQLiteDatabase db=notesDatabase.getWritableDatabase();
+
+        switch (uriMatcher.match(uri)){
+            case URI_CODE_JAVA_TABLE:
+                rowsDeleted=db.delete(TABLE_JAVA,selection,selectionArgs);
+                break;
+            case URI_CODE_KOTLIN_TABLE:
+                rowsDeleted=db.delete(TABLE_KOTLIN,selection,selectionArgs);
+                break;
+            default:
+                throwInvalidUriException(uri);
+        }
+
+        if(rowsDeleted>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+
+        return rowsDeleted;
+    }
+
+    @Override
+    public int update(@NonNull Uri uri, @Nullable ContentValues values, @Nullable String selection,
+                      @Nullable String[] selectionArgs) {
+        int rowsUpdated=0;
+        SQLiteDatabase db=notesDatabase.getWritableDatabase();
+
+        switch (uriMatcher.match(uri)){
+            case URI_CODE_JAVA_TABLE:
+                rowsUpdated=db.update(TABLE_JAVA,values, selection,selectionArgs);
+                break;
+            case URI_CODE_KOTLIN_TABLE:
+                rowsUpdated=db.update(TABLE_KOTLIN,values,selection,selectionArgs);
+                break;
+            default:
+                throwInvalidUriException(uri);
+        }
+
+        if(rowsUpdated>0) notifyChange(uri);
+        else Toast.makeText(getContext(),
+                Objects.requireNonNull(getContext()).getString(R.string.invalid_value),
+                Toast.LENGTH_LONG).show();
+
+        return rowsUpdated;
+    }
+
+    private void notifyChange(Uri uri){
+        Objects.requireNonNull(getContext(),"Context cannot be null")
+                .getContentResolver().notifyChange(uri,null);
+    }
+
+    private void throwInvalidUriException(Uri uri) {
+        throw new InvalidUriException(uri.toString());
+    }
+
+    private static class InvalidUriException extends RuntimeException{
+        public InvalidUriException(String uri){
+            super("Invalid uri"+uri);
+        }
+    }
+
+}
+
 
 5)Contract class 구현
 Contract class는 provider와 관련된 URI, 권한, 열 이름 등에 대한 상수 정의를 포함하는 public final class입니다. 앞에 코드에서 사용한 상수 대부분이 여기에 생성한 것들입니다. 
+
+- NotesContract.java
 
 public final class NotesContract {
 
