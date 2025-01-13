@@ -758,4 +758,378 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
 }
- 
++ contentProvider 전체 코드
+https://github.com/minjuKwon/android-arrangement/tree/main/example/contentProvider/app/src/main/java/com/example/contentprovider
+
+
+
+2. ContentProvider 사용 문서
+Content provider에 대한 모든 구현이 끝났습니다. 구현 앱에서만 content provider를 사용하면 별다른 문제가 없겠지만 외부 앱에서 content provider를 사용하는 상황이 있습니다. 이 경우에는 content provider에 대한 권한과 콘텐츠 URI 정보 등이 필요합니다. 문서를 통해 정보를 제공해야합니다.
+
++ contentProvider 사용 문서
+https://github.com/minjuKwon/android-arrangement/blob/main/example/contentProvider/NoteContentProvider%20%EC%82%AC%EC%9A%A9%20%EB%AC%B8%EC%84%9C.md
+
+
+
+3. ContentProvider 사용하는 외부 앱
+외부 앱에서 content provider 데이터를 가져오겠습니다. 쿼리하기 위해 필요한 content provider 정보를 문서를 통해 얻고 이를 contract 파일에 작성하겠습니다.
+
+- DataContract.java
+
+public final class DataContract {
+
+    public static final String AUTHORITY="com.example.content-provider";
+    public static final String TABLE_JAVA="java_notes";
+    public static final String TABLE_KOTLIN="kotlin_notes";
+    public static final Uri BASE_CONTENT_URI=Uri.parse("content://"+AUTHORITY);
+
+    public static final class JavaNotesEntry implements BaseColumns {
+        static final Uri CONTENT_URI=Uri.withAppendedPath(BASE_CONTENT_URI,TABLE_JAVA);
+        static final String COLUMN_TITLE="title";
+        static final String COLUMN_CONTENT="content";
+    }
+
+    public static final class KotlinNotesEntry implements BaseColumns{
+        static final Uri CONTENT_URI=Uri.withAppendedPath(BASE_CONTENT_URI,TABLE_KOTLIN);
+        static final String COLUMN_TITLE="title";
+        static final String COLUMN_CONTENT="content";
+    }
+
+}
+
+쿼리하는 로직은 content provider 구현앱에서 했던 구조와 비슷합니다. 데이터 변경을 알리는 contentObserver를 생성하고 등록 및 해제하겠습니다.
+
+contentObserver=new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange, @Nullable Uri uri) {
+                super.onChange(selfChange, uri);
+
+                if(uri==null) throw new NullPointerException("uri is null");
+
+                if(uri.equals(DataContract.JavaNotesEntry.CONTENT_URI)){
+                    getSupportLoaderManager().restartLoader(
+                            LOADER_ID_TABLE_JAVA,null,MainActivity.this);
+                }else if(uri.equals(DataContract.KotlinNotesEntry.CONTENT_URI)){
+                    getSupportLoaderManager().restartLoader(
+                            LOADER_ID_TABLE_KOTLIN,null,MainActivity.this);
+                }
+
+            }
+        };
+
+        getContentResolver().registerContentObserver(
+                DataContract.JavaNotesEntry.CONTENT_URI,true,contentObserver);
+        getContentResolver().registerContentObserver(
+                DataContract.KotlinNotesEntry.CONTENT_URI,true,contentObserver
+        );
+...
+ @Override
+    protected void onStop() {
+        super.onStop();
+        getContentResolver().unregisterContentObserver(contentObserver);
+    }
+
+쿼리 버튼을 클릭하면 해당 데이터를 리스트에 추가하여 보여줄 겁니다. 이전과 똑같이 CursorLoader를 통해 비동기처리를 할 겁니다. 다만 Loader를 사용하는 경우 contentResolver의 query()없이 initLoader()/restartLoader()를 통해 가져올 수 있습니다. 삽입의 경우, insert() 호출 후 변경이 감지되면 추가된 데이터를 포함한 전체 정보를 CursorLoader가 쿼리해서 다시 가져왔습니다. 즉, CursorLoader에서 쿼리하는 과정이 있기에 이를 이용하여 바로 데이터를 가져오겠습니다. 처음 버튼을 눌렀을 때는 initLoader() 호출하지만 그 이후에는 restartLoader() 호출해야하므로 이를 구분할 플래그를 설정합니다.
+
+        Bundle args = new Bundle();
+        args.putString(getString(R.string.bundle_key_table), deleteTable);
+        args.putString(getString(R.string.bundle_key_idx),deleteIdx);
+
+        if(!isLoaderStarted){
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN, args, this);
+            }
+            isLoaderStarted=true;
+        }else{
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_KOTLIN,args,this);
+            }
+        }
+
+외부에서 데이터를 쿼리하기 때문에 필요한 테이블과 인덱스 값을 Bundle로 전달하였습니다.
+
+LoaderManager.LoaderCallbacks<Cursor>를 implements하고 필수 메서드 3개를 구현하겠습니다.
+
+@NonNull
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+        String table="";
+        String idx="";
+
+        if (args != null) {
+            table=args.getString(getString(R.string.bundle_key_table));
+            idx=args.getString(getString(R.string.bundle_key_idx));
+        }
+
+        Uri contentUri= Uri.EMPTY;
+        String selection= null;
+        String [] selectionArgs= null;
+
+        if(idx!=null&&table!=null){
+            if (id == LOADER_ID_TABLE_JAVA) {
+                contentUri=DataContract.JavaNotesEntry.CONTENT_URI;
+            }else if(id == LOADER_ID_TABLE_KOTLIN){
+                contentUri=DataContract.KotlinNotesEntry.CONTENT_URI;
+            }
+            if (!idx.equals("0")) {
+                selection=BaseColumns._ID+"=?";
+                selectionArgs= new String[]{idx};
+            }
+            return createCursorLoad(contentUri, selection, selectionArgs);
+        }
+
+        throw new IllegalArgumentException("Invalid loader ID");
+
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
+        loadCursorInToList(loader.getId(),data);
+        adapter.insertData(data.getCount());
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+        adapter.resetList();
+    }
+
+private CursorLoader createCursorLoad(
+            Uri contentUri, String selection, String[] selectionArgs
+    ){
+        return new CursorLoader(
+                this, contentUri,
+                null, selection, selectionArgs, null
+        );
+    }
+
+    private void loadCursorInToList(int loaderId,Cursor cursor){
+
+        if (cursor == null || cursor.isClosed()) return;
+
+        String title = "";
+        String content= "";
+
+        if(cursor.moveToFirst()){
+            do{
+                if(loaderId==LOADER_ID_TABLE_JAVA){
+                    title=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.JavaNotesEntry.COLUMN_TITLE)) );
+                    content=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.JavaNotesEntry.COLUMN_CONTENT)) );
+                }else if(loaderId==LOADER_ID_TABLE_KOTLIN){
+                    title=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.KotlinNotesEntry.COLUMN_TITLE)) );
+                    content=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.KotlinNotesEntry.COLUMN_CONTENT)) );
+                }
+
+                list.add(new Note(title,content));
+            } while(cursor.moveToNext());
+        }
+
+        Toast.makeText(getApplicationContext(),
+                getString(R.string.last_data), Toast.LENGTH_LONG).show();
+
+    }
+
+cursor는 처음에 -1을 가리키기 때문에 첫번째 행으로 이동할 수 있는지, 즉 데이터가 있는지 확인합니다. 그런후, 다음 행으로 이동할 수 있으면 이동할 수 있을 만큼 반복하며 리스트에 데이터를 추가합니다.
+
+- MainActivity.java
+
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
+
+    private static final int LOADER_ID_TABLE_JAVA=1;
+    private static final int LOADER_ID_TABLE_KOTLIN=2;
+
+    private final ArrayList<Note> list= new ArrayList<>();
+
+    private DataRecyclerviewAdapter adapter;
+    private ContentObserver contentObserver;
+    private boolean isLoaderStarted = false;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        adapter=new DataRecyclerviewAdapter(this,list);
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        binding.recyclerView.setAdapter(adapter);
+
+        binding.btnDelete.setOnClickListener(v->deleteAllData());
+        binding.btnQuery.setOnClickListener(v->{
+            String deleteTable= String.valueOf(binding.editDeleteTable.getText());
+            String deleteIdx= String.valueOf(binding.editDeleteIdx.getText());
+
+            queryData(deleteTable,deleteIdx);
+
+            binding.editDeleteTable.setText("");
+            binding.editDeleteIdx.setText("");
+        });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerContentObserver();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        getContentResolver().unregisterContentObserver(contentObserver);
+    }
+
+    @NonNull
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+        String table="";
+        String idx="";
+
+        if (args != null) {
+            table=args.getString(getString(R.string.bundle_key_table));
+            idx=args.getString(getString(R.string.bundle_key_idx));
+        }
+
+        Uri contentUri= Uri.EMPTY;
+        String selection= null;
+        String [] selectionArgs= null;
+
+        if(idx!=null&&table!=null){
+            if (id == LOADER_ID_TABLE_JAVA) {
+                contentUri=DataContract.JavaNotesEntry.CONTENT_URI;
+            }else if(id == LOADER_ID_TABLE_KOTLIN){
+                contentUri=DataContract.KotlinNotesEntry.CONTENT_URI;
+            }
+            if (!idx.equals("0")) {
+                selection=BaseColumns._ID+"=?";
+                selectionArgs= new String[]{idx};
+            }
+            return createCursorLoad(contentUri, selection, selectionArgs);
+        }
+
+        throw new IllegalArgumentException("Invalid loader ID");
+
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
+        loadCursorInToList(loader.getId(),data);
+        adapter.insertData(data.getCount());
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+        adapter.resetList();
+    }
+
+    private void deleteAllData(){
+        adapter.resetList();
+    }
+
+    private void queryData(String deleteTable, String deleteIdx){
+        Bundle args = new Bundle();
+        args.putString(getString(R.string.bundle_key_table), deleteTable);
+        args.putString(getString(R.string.bundle_key_idx),deleteIdx);
+
+        if(!isLoaderStarted){
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().initLoader(LOADER_ID_TABLE_KOTLIN, args, this);
+            }
+            isLoaderStarted=true;
+        }else{
+            if(deleteTable.equals("j")){
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_JAVA,args,this);
+            }else if(deleteTable.equals("k")) {
+                getSupportLoaderManager().restartLoader(LOADER_ID_TABLE_KOTLIN,args,this);
+            }
+        }
+    }
+
+    private void registerContentObserver(){
+        contentObserver=new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange, @Nullable Uri uri) {
+                super.onChange(selfChange, uri);
+
+                if(uri==null) throw new NullPointerException("uri is null");
+
+                if(uri.equals(DataContract.JavaNotesEntry.CONTENT_URI)){
+                    getSupportLoaderManager().restartLoader(
+                            LOADER_ID_TABLE_JAVA,null,MainActivity.this);
+                }else if(uri.equals(DataContract.KotlinNotesEntry.CONTENT_URI)){
+                    getSupportLoaderManager().restartLoader(
+                            LOADER_ID_TABLE_KOTLIN,null,MainActivity.this);
+                }
+
+            }
+        };
+
+        getContentResolver().registerContentObserver(
+                DataContract.JavaNotesEntry.CONTENT_URI,true,contentObserver);
+        getContentResolver().registerContentObserver(
+                DataContract.KotlinNotesEntry.CONTENT_URI,true,contentObserver
+        );
+    }
+
+    private CursorLoader createCursorLoad(
+            Uri contentUri, String selection, String[] selectionArgs
+    ){
+        return new CursorLoader(
+                this, contentUri,
+                null, selection, selectionArgs, null
+        );
+    }
+
+    private void loadCursorInToList(int loaderId,Cursor cursor){
+
+        if (cursor == null || cursor.isClosed()) return;
+
+        String title = "";
+        String content= "";
+
+        if(cursor.moveToFirst()){
+            do{
+                if(loaderId==LOADER_ID_TABLE_JAVA){
+                    title=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.JavaNotesEntry.COLUMN_TITLE)) );
+                    content=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.JavaNotesEntry.COLUMN_CONTENT)) );
+                }else if(loaderId==LOADER_ID_TABLE_KOTLIN){
+                    title=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.KotlinNotesEntry.COLUMN_TITLE)) );
+                    content=String.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    DataContract.KotlinNotesEntry.COLUMN_CONTENT)) );
+                }
+
+                list.add(new Note(title,content));
+            } while(cursor.moveToNext());
+        }
+
+        Toast.makeText(getApplicationContext(),
+                getString(R.string.last_data), Toast.LENGTH_LONG).show();
+
+    }
+
+}
+
++contentProvider user 전체 코드
+https://github.com/minjuKwon/android-arrangement/tree/main/example/ContentProvider_user/app/src/main/java/com/example/contentprovider_user
+
+
+드디어 content provider에 대한 예제가 끝났습니다. 이 예제로 많은 도움이 되었으면 좋겠네요. 구현 영상 올리고 마치겠습니다:D
