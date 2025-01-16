@@ -28,3 +28,280 @@ Calendar provider는 유연하고 강력하게 설계되었습니다. 또한 좋
 Calendar provider에서 이벤트를 직접 삽입, 수정, 읽기 위해서는 적절한 권한이 필요합니다. 하지만 calendar의 전체 기능을 사용하거나 동기화 adapter가 아니라면 intent을 사용하여 충분히 해결할 수 있습니다. 해당 intent는 안드로이드의 calendar 앱에서 지원하며 읽기와 쓰기 작업을 도와줍니다. Intent를 사용하면 calendar 앱으로 이동되며 미리 작성된 양식을 바탕으로 작업(이벤트 생성, 수정 등)을 수행하도록 요청합니다. 사용자가 작업을 완료하게 되면 원래의 애플리케이션으로 돌아오게 됩니다. Intent를 통해 calendar 앱에서 작업을 수행하도록 설계하면 사용자에게 일관되고 안정적인 UI를 제공할 수 있기 때문에 권장되는 방식입니다.
 - 동기화 adapter
 동기화 adapter는 사용자 기기의 calendar 데이터를 다른 서버나 데이터와 동기화해줍니다. CalendarContract.Calendars와 CalendarContract.Events 테이블에는 동기화 adapter 전용으로 예약된 열이 있습니다. 해당 열을 provider나 일반 애플리케이션이 수정해서는 안 됩니다. 사실 이 열들은 동기화 adapter로 접근하지 않으면 보이지도 않습니다.
+
+
+
+2. 사용자 권한
+Calendar의 데이터를 읽기 위해서는 애플리케이션의 manifest 파일에 READ_CALENDAR 권한이 반드시 포함되어야 합니다. 삭제하거나 삽입, 업데이트일 때는 WRITE_CALENDAR가 필수로 있어야 합니다.
+
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"...>
+    <uses-sdk android:minSdkVersion="14" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    ...
+</manifest>
+
+
+
+3. Calendar 테이블
+CalendarContract.Calendars 테이블에는 개별 calendar에 대한 상세 정보를 포함하고 있습니다. 해당 열은 대표적으로 다음과 같습니다. 이때 애플리케이션과 동기화 adapter 모두에서 작성할 수 있습니다.
+
+- NAME	
+Calendar의 이름
+- CALENDAR_DISPLAY_NAME	
+사용자에게 보여지는 calendar 이름
+- VISIBLE	
+Calendar가 보여질 여부를 선택하는 booelan. 값이 0일 경우, 해당 calendar와 관련된 이벤트들이 숨겨짐. 값이 1일 경우, 해당 calendar와 관련된 이벤트들이 보여짐. CalendarContract.Instances 테이블의 행 생성에 영향을 줌.
+- SYNC_EVENTS	
+Calendar를 동기화하고 이벤트를 기기에 저장할 여부를 선택하는 boolean. 값이 0일 경우, calendar를 동기화하지 않으며 기기에 저장하지 않음. 값이 1일 경우, 이벤트를 동기화하고 기기에 저장함. 
++전체 열
+https://developer.android.com/reference/android/provider/CalendarContract.Calendars#calendar-columns
+
+
+1)모든 연산에 계정 유형 포함
+Calendars.ACCOUNT_NAME을 기준으로 쿼리할 경우, 반드시 Calendars.ACCOUNT_TYPE도 selection에 포함해야 합니다. 왜냐하면 ACCOUNT_NAME과 ACCOUNT_TYPE이 함께 사용될 때만 고유하게 구별되기 때문입니다. 
+ACCOUNT_TYPE는 계정이 AccountManager에 등록될 때 사용된 계정 인증자 문자열로 계정의 서비스 제공자를 구분합니다. 즉, 해당 계정이 Google인지 Microsoft인지 구별해줍니다. 또한, 디바이스 계정과 연결되지 않은 calendar를 위한 특별한 계정 유형인 ACCOUNT_TYPE_LOCAL이 존재합니다. ACCOUNT_TYPE_LOCAL 계정은 동기화되지 않습니다.
+
+
+2)Calendar 쿼리
+다음은 특정 사용자가 소유한 calendar를 가져오는 방법을 보여주는 예시입니다. 간단히 하기 위해 이 예시에서는 쿼리 작업이 사용자 인터페이스 스레드(메인 스레드)에 표시됩니다. 실제로는 메인 스레드가 아닌 비동기 스레드에서 수행되어야 합니다. 데이터를 읽는 것뿐만 아니라 수정하는 경우 AsyncQueryHandler를 참조해야합니다. 
+
+// Projection 배열. 
+//동적 조회 대신 배열로 인덱스를 생성하면 성능이 향상
+public static final String[] EVENT_PROJECTION = new String[] {
+    Calendars._ID,                           // 0
+    Calendars.ACCOUNT_NAME,                  // 1
+    Calendars.CALENDAR_DISPLAY_NAME,         // 2
+    Calendars.OWNER_ACCOUNT                  // 3
+};
+
+//projection 배열에 대한 인덱스.
+private static final int PROJECTION_ID_INDEX = 0;
+private static final int PROJECTION_ACCOUNT_NAME_INDEX = 1;
+private static final int PROJECTION_DISPLAY_NAME_INDEX = 2;
+private static final int PROJECTION_OWNER_ACCOUNT_INDEX = 3;
+
+이제 쿼리를 구성합니다. Selection는 쿼리에 대한 기준을 지정합니다. 이 예제에서 쿼리는 ACCOUNT_NAME "hera@example.com ", ACCOUNT_TYPE "com.example", OWNER_ACCOUNT "hera@example.com "를 포함하는 calendar를 찾고 있습니다. 사용자가 본 모든 캘린더를 보고 싶다면, OWNER_ACCOUNT를 생략하세요. 쿼리는 데이터베이스 쿼리가 반환한 결과 집합을 탐색하는 데 사용할 수 있는 Cursor 객체를 반환합니다.
+
+// 쿼리 실행
+Cursor cur = null;
+ContentResolver cr = getContentResolver();
+Uri uri = Calendars.CONTENT_URI;
+String selection = "((" + Calendars.ACCOUNT_NAME + " = ?) AND ("
+                        + Calendars.ACCOUNT_TYPE + " = ?) AND ("
+                        + Calendars.OWNER_ACCOUNT + " = ?))";
+String[] selectionArgs = new String[] {"hera@example.com", "com.example",
+        "hera@example.com"};
+// 쿼리 실행 후 Cursor 객체 반환
+cur = cr.query(uri, EVENT_PROJECTION, selection, selectionArgs, null);
+
+커서를 사용하여 결과 집합을 단계별로 살펴봅니다. 예제의 시작 부분에 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
+
+//커서를 사용하여 반환된 레코드 사용
+while (cur.moveToNext()) {
+    long calID = 0;
+    String displayName = null;
+    String accountName = null;
+    String ownerName = null;
+
+    // 필드 값 얻기
+    calID = cur.getLong(PROJECTION_ID_INDEX);
+    displayName = cur.getString(PROJECTION_DISPLAY_NAME_INDEX);
+    accountName = cur.getString(PROJECTION_ACCOUNT_NAME_INDEX);
+    ownerName = cur.getString(PROJECTION_OWNER_ACCOUNT_INDEX);
+
+    //필드 값 처리
+   ...
+}
+
+
+3)Calendar 수정
+Calender 업데이트하려면 withAppendId() 사용하여 캘린더의 _ID를 URI()에 추가된 ID로 제공하거나 첫 번째 selection 항목으로 제공할 수 있습니다. selection은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 calendar의 _ID여야 합니다. 또한 URI에서 ID를 인코딩하여 업데이트를 수행할 수도 있습니다. 이 예제에서는 (withAppendId()) 접근 방식을 사용하여 캘린더의 표시 이름을 변경합니다.
+
+private static final String DEBUG_TAG = "MyActivity";
+...
+long calID = 2;
+ContentValues values = new ContentValues();
+// calendar의 새로운 표시 이름
+values.put(Calendars.CALENDAR_DISPLAY_NAME, "Trevor's Calendar");
+Uri updateUri = ContentUris.withAppendedId(Calendars.CONTENT_URI, calID);
+int rows = getContentResolver().update(updateUri, values, null, null);
+Log.i(DEBUG_TAG, "Rows updated: " + rows);
+
+
+4) calendar 삽입
+Calendar는 주로 동기화 adapter로 관리되도록 설계되었으므로 새 캘린더를 동기화 adapter 삽입해야 합니다. 대부분의 경우 애플리케이션은 디스플레이 이름을 변경하는 등 겉보기에만 캘린더를 변경할 수 있습니다. 애플리케이션이 로컬 캘린더를 만들어야 하는 경우 ACCOUNT_TYPE_LOCAL을 사용하여 캘린더 삽입을 동기화 어댑터로 수행하여 이 작업을 수행할 수 있습니다. ACCOUNT_TYPE_LOCAL은 디바이스 계정과 연결되지 않은 캘린더를 위한 특수 계정 유형입니다. 이러한 유형의 캘린더는 서버에 동기화되지 않습니다.
+
+
+
+4.Events 테이블
+CalendarContract.Events 테이블에는 개별 이벤트에 대한 상세 정보를 포함하고 있습니다. 이벤트를 삽입, 삭제, 업데이트를 하기 위해서는 애플리케이션의 manifest에  WRITE_CALENDAR 권한을 반드시 포함해야합니다. 해당 열은 대표적으로 다음과 같습니다. 이때 애플리케이션과 동기화 adapter 모두에서 작성할 수 있습니다.
+
+- CALENDAR_ID	
+이벤트가 속한 캘린더의 ID
+- ORGANIZER
+이벤트 주최자(소유자)의 이메일.
+- TITLE	
+이벤트 이름
+- EVENT_LOCATION	
+이벤트 열릴 장소
+- DESCRIPTION	
+이벤트 상세 정보
+- DTSTART	
+이벤트가 시작되는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
+- DTEND	
+이벤트가 끝나는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
+- EVENT_TIMEZONE	
+이벤트의 time zone(동일한 로컬 시간을 따르는 지역)
+- EVENT_END_TIMEZONE
+이벤트 끝나는 시간의 timezone
+- DURATION	
+이벤트의 지속 시간을 RFC5545 포맷으로 나타냄. 예를 들어 PT1H는 1시간 동안 지속, P2W는 2주 동안 지속. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.5)
+- ALL_DAY	
+값이 1일 경우, 로컬 시간대를 기준으로 하루 종일 이벤트 지속. 값이 0일 경우, 특정 시간에 시작하고 종료되는 일반 이벤트
+- RRULE	
+이벤트의 반복 규칙. 예를 들어 FREQ=WEEKLY;COUNT=10;WKST=SU 는매주 반복하며 총 10번 발생. 주의 시작일은 일요일. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.3)
+- RDATE	
+이벤트의 반복 날짜. 일반적으로 RDATE는 RRULE과 함께 사용되어 특정 날짜 집합으로 반복되는 이벤트를 정의. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.2)
+- AVAILABILITY	
+해당 이벤트가 바쁜 시간(다른 일정 추가가 불가)인지 여유시간(다른 일정 추가가 가능)인지를 나타냄
+- GUESTS_CAN_MODIFY	
+게스트가 이벤트 수정 가능 여부
+- GUESTS_CAN_INVITE_OTHERS	
+게스트가 다른 게스트 초대 가능 여부
+- GUESTS_CAN_SEE_GUESTS	
+게스트가 참석자 목록 볼 수 있는 여부
++전체 열
+https://developer.android.com/reference/android/provider/CalendarContract.Events#writing-to-events
+
+
+1)이벤트 추가
+애플리케이션에 새로운 이벤트를 추가할 때 INSERT intent 사용을 권장합니다. 하지만 원한다면 직접적으로 삽입이 가능합니다. 이벤트 삽입에는 다음과 같은 규칙이 있습니다.
+
+- CALENDAR_ID 와 DTSTART가 포함 필수
+- EVENT_TIMEZONE 포함 필수. 시스템에 설치된 timezone ID 목록을 얻으려면 getAvailableIDs() 사용. INSERT intent를 통해 이벤트를 삽입하는 경우에는 불필요. 이때는 기본 timezone 제공
+- 반복 이벤트가 아닌 경우, DTEND 포함 필수
+- 반복 이벤트인 경우, DURATION + RRUE 또는 DURATION +RDATE  포함 필수. INSERT intent를 통해 이벤트를 삽입하는 경우에는 불필요. 이때는 RRUE를 DTSTART 및 DTEND와 함께 사용 가능. 그럼 Calendar가 이를 바탕으로 자동으로 기간으로 변환해줌.
+
+다음은 이벤트 삽입 예시입니다. 이는 단순화를 위해 UI 스레드에서 수행되고 있습니다. 실제로는 작업을 백그라운드 스레드로 이동하기 위해 비동기 스레드에서 삽입 및 업데이트를 수행해야 합니다. 
+
+long calID = 3;
+long startMillis = 0;
+long endMillis = 0;
+Calendar beginTime = Calendar.getInstance();
+beginTime.set(2012, 9, 14, 7, 30);
+startMillis = beginTime.getTimeInMillis();
+Calendar endTime = Calendar.getInstance();
+endTime.set(2012, 9, 14, 8, 45);
+endMillis = endTime.getTimeInMillis();
+...
+
+ContentResolver cr = getContentResolver();
+ContentValues values = new ContentValues();
+values.put(Events.DTSTART, startMillis);
+values.put(Events.DTEND, endMillis);
+values.put(Events.TITLE, "Jazzercise");
+values.put(Events.DESCRIPTION, "Group workout");
+values.put(Events.CALENDAR_ID, calID);
+values.put(Events.EVENT_TIMEZONE, "America/Los_Angeles");
+Uri uri = cr.insert(Events.CONTENT_URI, values);
+
+// URI의 마지막 요소에서 이벤트 ID 가져오기
+long eventID = Long.parseLong(uri.getLastPathSegment());
+//
+// 이벤트 ID 처리
+//
+//
+
+이 예제는 이벤트가 생성된 후 이벤트 ID를 가져오는 방법을 확인합니다. 이것이 이벤트 ID를 얻는 가장 쉬운 방법입니다. 예를 들어 이벤트에 참석자 또는 알림을 추가하는 등 다른 캘린더 작업을 수행하려면 이벤트 ID가 필요한 경우가 많습니다.
+
+
+2) 이벤트 업데이트
+애플리케이션에서 사용자가 이벤트를 편집할 수 있도록 허용하려면 EDIT Intent를 사용하는 것이 좋습니다. 그러나 필요한 경우 이벤트를 직접 편집할 수 있습니다. 이벤트 업데이트를 수행하려면 이벤트의 _ID를 제공하기 위해 withAppendId()를 통해  URI에 ID를 더하거나 첫 번째 selection 항목으로 제공할 수 있습니다. selection 은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 이벤트의 _ID여야 합니다. 또한 ID없이 selection을 사용하여 업데이트할 수도 있습니다. 다음은 이벤트 업데이트의 예입니다. withAppendId() 접근 방식을 사용하여 이벤트 제목을 변경합니다
+
+private static final String DEBUG_TAG = "MyActivity";
+...
+long eventID = 188;
+...
+ContentResolver cr = getContentResolver();
+ContentValues values = new ContentValues();
+Uri updateUri = null;
+// 이벤트의 새로운 제목
+values.put(Events.TITLE, "Kickboxing");
+updateUri = ContentUris.withAppendedId(Events.CONTENT_URI, eventID);
+int rows = cr.update(updateUri, values, null, null);
+Log.i(DEBUG_TAG, "Rows updated: " + rows);
+
+
+3)이벤트 삭제
+이벤트를 _ID을 사용하려 삭제하려면 URI에 추가된 ID 사용하거나 표준 selection을 사용해야 합니다. 추가된 ID사용하는 경우 selection 필요없습니다. 삭제에는 애플리케이션과 동기화 어댑터의 두 가지 버전이 있습니다. 애플리케이션 삭제는 삭제된 열을 1로 설정합니다. 이 플래그는 동기화 어댑터에 의해 행이 삭제되었으며 이 삭제가 서버로 전파되어야 함을 알려줍니다. 동기화 어댑터 삭제는 이벤트와 관련된 모든 데이터를 데이터베이스에서 제거합니다. 다음은 애플리케이션이 _ID를 통해 이벤트를 삭제하는 예제입니다.
+
+private static final String DEBUG_TAG = "MyActivity";
+...
+long eventID = 201;
+...
+ContentResolver cr = getContentResolver();
+Uri deleteUri = null;
+deleteUri = ContentUris.withAppendedId(Events.CONTENT_URI, eventID);
+int rows = cr.delete(deleteUri, null, null);
+Log.i(DEBUG_TAG, "Rows deleted: " + rows);
+
+
+
+5. 참석자 테이블
+CalendarContract.Attendees 테이블의 각 행은 이벤트의 단일 참석자 또는 게스트를 나타냅니다. query() 메서드를 호출하면 주어진 EVENT_ID에 해당하는 이벤트의 참석자 목록을 반환합니다. 이 EVENT_ID는 특정 이벤트의 _ID와 일치해야 합니다. 다음 표에는 쓰기 가능한 필드가 나열되어 있습니다. 새 참석자를 삽입할 때는 ATEUNTEE_NAME을 제외한 모든 사항을 포함해야 합니다.
+
+- EVENT_ID	
+이벤트 ID 값
+- ATTENDEE_NAME	
+참석자 이름
+- ATTENDEE_EMAIL	
+참석자 이메일 주소
+- ATTENDEE_RELATIONSHIP	
+이벤트 참석자 관계. 다음 중 하나를 가짐 (RELATIONSHIP_ATTENDEE, RELATIONSHIP_NONE, RELATIONSHIP_ORGANIZER, RELATIONSHIP_PERFORMER, RELATIONSHIP_SPEAKER)
+- ATTENDEE_TYPE	
+참석자 유형 다음 중 하나를 가짐(TYPE_REQUIRED, TYPE_OPTIONAL)
+- ATTENDEE_STATUS	
+참석자의 출석 상태. 다음 중 하나를 가짐(ATTENDEE_STATUS_ACCEPTED, ATTENDEE_STATUS_DECLINED, ATTENDEE_STATUS_INVITED, ATTENDEE_STATUS_NONE, ATTENDEE_STATUS_TENTATIVE
+
+
+1)참석자 추가
+다음은 이벤트에 참석자 한 명을 추가하는 예시입니다. EVENT_ID가 필요하다는 점에 유의하세요.
+long eventID = 202;
+...
+ContentResolver cr = getContentResolver();
+ContentValues values = new ContentValues();
+values.put(Attendees.ATTENDEE_NAME, "Trevor");
+values.put(Attendees.ATTENDEE_EMAIL, "trevor@example.com");
+values.put(Attendees.ATTENDEE_RELATIONSHIP, Attendees.RELATIONSHIP_ATTENDEE);
+values.put(Attendees.ATTENDEE_TYPE, Attendees.TYPE_OPTIONAL);
+values.put(Attendees.ATTENDEE_STATUS, Attendees.ATTENDEE_STATUS_INVITED);
+values.put(Attendees.EVENT_ID, eventID);
+Uri uri = cr.insert(Attendees.CONTENT_URI, values);
+
+
+
+6.알람 테이블
+CalendarContract.Reminders 테이블의 각 행은 이벤트에 대한 단일 알람을 나타냅니다. qeury() 호출하면 해당 EVENT_ID와 일치하는 이벤트 알림 목록을 반환합니다. 다음 표에는 알림을 위한 쓰기 가능한 필드가 나열되어 있습니다. 새 알림을 삽입할 때는 모든 알림 필드를 포함해야 합니다. 동기화 어댑터는 CalendarContract.Calendars 테이블에서 지원하는 알림 유형을 지정합니다. 동기화 어댑터에서만 직접적으로 설정할 수 있는 필드며 애플리케이션은 읽어서 참조만 가능합니다. ALWALLED_REMINERDS필드를 통해 알람 유형을 지정할 수 있고 다음 값이 있습니다. Reminders.METHOD_DEFAULT, Reminders.METHOD_ALERT, Reminders.METHOD_EMAIL, Reminders.METHOD_SMS, Reminders.METHOD_ALARM.
+
+- EVENT_ID	
+이벤트 ID값
+- MINUTES
+알림이 실행되기 전까지의 시간.
+- METHOD	
+서버에 설정된 알람 방식. 다음 중 하나의 값을 가집니다(METHOD_ALERT, METHOD_DEFAULT, ETHOD_EMAIL,
+METHOD_SMS)
+
+
+1)알람 추가
+이 예제는 이벤트에 알림을 추가합니다. 알림은 이벤트 15분 전에 실행됩니다.
+
+long eventID = 221;
+...
+ContentResolver cr = getContentResolver();
+ContentValues values = new ContentValues();
+values.put(Reminders.MINUTES, 15);
+values.put(Reminders.EVENT_ID, eventID);
+values.put(Reminders.METHOD, Reminders.METHOD_ALERT);
+Uri uri = cr.insert(Reminders.CONTENT_URI, values);
