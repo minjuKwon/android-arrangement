@@ -305,3 +305,197 @@ values.put(Reminders.MINUTES, 15);
 values.put(Reminders.EVENT_ID, eventID);
 values.put(Reminders.METHOD, Reminders.METHOD_ALERT);
 Uri uri = cr.insert(Reminders.CONTENT_URI, values);
+
+
+
+7. Instance 테이블
+CalendarContract.Instances 테이블의 각 행은 이벤트의 단일 시작과 종료 시간을 나타냅니다. Instance 테이블은 쓰기가 불가능하며 이벤트 발생을 쿼리하는 방법만 제공합니다. 다음 표에는 Instance에 대해 쿼리할 수 있는 필드 중 일부가 나열되어 있습니다. time zone은 KEY_TIMEZONE_TYPE 및 KEY_TIMEZONE_INSTANCE에 의해 정의된다는 점에 유의하세요.
+
+- BEGIN	
+Instance의 시작 시간(UTC 밀리초)
+- END	
+Instance의 종료 시간(UTC 밀리초)
+- END_DAY	
+Calendar의 time zone을 기준으로 종료일을 줄리안 날짜 변환(일수로 변환 후 시간은 소수점으로 변환)
+- END_MINUTE	
+Calendar의 time zone을 기준으로 자정부터 사례 종료 시간까지의 분
+- EVENT_ID	
+해당 Instance에 대한 이벤트 ID
+- START_DAY
+Calendar의 time zone을 기준으로 시작일을 줄리안 날짜 변환(일수로 변환 후 시간은 소수점으로 변환)
+- START_MINUTE	
+Calendar의 time zone을 기준으로 자정부터 사례 시작 시간까지의 분
+
+1)Instances 테이블 쿼리
+Instance 테이블을 쿼리하려면 URI에서 쿼리할 시간 범위을 지정해야 합니다. 이 예제에서는 CalendarContract.Instances가 CalendarContract.EventsColumns 인터페이스를 구현하여 TITLE 필드에 접근합니다. 즉, TITLE은 CalendarContract.Instances 테이블의 원본 데이터를 직접 쿼리하는 것이 아니라, 데이터베이스 view를 통해 반환됩니다. 이때 view는 데이터베이스에서 원본 테이블의 데이터를 가공하거나 결합하여 제공하는 가상의 테이블을 말합니다.
+
+private static final String DEBUG_TAG = "MyActivity";
+public static final String[] INSTANCE_PROJECTION = new String[] {
+    Instances.EVENT_ID,      // 0
+    Instances.BEGIN,         // 1
+    Instances.TITLE          // 2
+  };
+
+//projection 배열 인덱스
+private static final int PROJECTION_ID_INDEX = 0;
+private static final int PROJECTION_BEGIN_INDEX = 1;
+private static final int PROJECTION_TITLE_INDEX = 2;
+...
+
+// 반복 이벤트에 대한 instance를 검색할 날짜 범위 지정
+Calendar beginTime = Calendar.getInstance();
+beginTime.set(2011, 9, 23, 8, 0);
+long startMillis = beginTime.getTimeInMillis();
+Calendar endTime = Calendar.getInstance();
+endTime.set(2011, 10, 24, 8, 0);
+long endMillis = endTime.getTimeInMillis();
+
+Cursor cur = null;
+ContentResolver cr = getContentResolver();
+
+// Instances 테이블에서 해당 인스턴스와 일치하는 반복 이벤트의 ID
+String selection = Instances.EVENT_ID + " = ?";
+String[] selectionArgs = new String[] {"207"};
+
+// 원하는 날짜 범위로 쿼리 구성
+Uri.Builder builder = Instances.CONTENT_URI.buildUpon();
+ContentUris.appendId(builder, startMillis);
+ContentUris.appendId(builder, endMillis);
+
+// 쿼리제출
+cur =  cr.query(builder.build(),
+    INSTANCE_PROJECTION,
+    selection,
+    selectionArgs,
+    null);
+
+while (cur.moveToNext()) {
+    String title = null;
+    long eventID = 0;
+    long beginVal = 0;
+
+    //필드 값 얻기
+    eventID = cur.getLong(PROJECTION_ID_INDEX);
+    beginVal = cur.getLong(PROJECTION_BEGIN_INDEX);
+    title = cur.getString(PROJECTION_TITLE_INDEX);
+
+    // 값 처리
+    Log.i(DEBUG_TAG, "Event:  " + title);
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTimeInMillis(beginVal);
+    DateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");
+    Log.i(DEBUG_TAG, "Date: " + formatter.format(calendar.getTime()));
+    }
+ }
+
+
+
+8. Calendar intent
+애플리케이션은 calendar 데이터를 읽고 쓰기 위한 권한 permission이 필요하지 않습니다. 이것이 가능한 이유는 android의 calendar 애플리케이션에서 지원하는 intent를 사용하여 읽기 및 쓰기 작업하였기 때문이죠. 아래 표는 Calendar Provider에서 지원하는 intent를 나열한 것입니다
+
+Action | URI | Description | Extras
+VIEW | content://com.android.calendar/time/<ms_since_epoch> CalendarContract.CONTENT_URI 사용하여 참조 가능 | <ms_since_epoch>으로 명시된 시간의 calender 열림 | None.
+VIEW | content://com.android.calendar/events/<event_id> Events.CONTENT_URI 사용하여 참조 가능 |  <event_id>으로 명시된 이벤트 보임 | CalendarContract.EXTRA_EVENT_BEGIN_TIME, CalendarContract.EXTRA_EVENT_END_TIME
+EDIT | content://com.android.calendar/events/<event_id> Events.CONTENT_URI 사용하여 참조 가능 | <event_id>으로 명시된 이벤트 편집 | CalendarContract.EXTRA_EVENT_BEGIN_TIME, CalendarContract.EXTRA_EVENT_END_TIME
+EDIT, INSERT | content://com.android.calendar/events Events.CONTENT_URI 사용차여 참조 가능 | 이벤트 생성 | 아래 표 참고
+
+Calendar Provider에서 지원하는 intent extras를 나열한 것입니다
+
+- Events.TITLE	
+이벤트 이름
+- CalendarContract.EXTRA_EVENT_BEGIN_TIME	
+Epoch Time으로부터 이벤트 시작 시간을 밀리초로 나타낸 값
+- CalendarContract.EXTRA_EVENT_END_TIME	
+Epoch Time으로부터 이벤트 끝나는 시간을 밀리초로 나타낸 값
+- CalendarContract.EXTRA_EVENT_ALL_DAY	
+이벤트가 하루종일 진행되는 여부. true 또는 false으로 값 부여
+- Events.EVENT_LOCATION	
+이벤트 장소
+- Events.DESCRIPTION	
+이벤트 설명
+- Intent.EXTRA_EMAIL	
+초대할 사람들의 이메일 주소를 쉼표로 구분된 목록
+- Events.RRULE	
+이벤트의 반복 주기 규칙
+- Events.ACCESS_LEVEL	
+이벤트가 공적인지 사적인지
+- Events.AVAILABILITY	
+해당 시간에 다른 일정 추가 가능 여부
+
+
+1)Intent 사용하여 이벤트 삽입
+INSERT intent를 사용하면 애플리케이션이 이벤트 삽입 작업을 calendar 자체에 넘겨줄 수 있습니다. 이 접근 방식을 사용하면 애플리케이션의 manifest 파일에 WRITE_CALENDAR 권한이 포함되어 있지 않아도 됩니다. 사용자가 이 접근 방식을 사용하는 애플리케이션을 실행하면 애플리케이션은 calendar로 이벤트 추가를 완료합니다. INSERT intent는 extra 필드를 사용하여 캘린더에 이벤트 세부 정보가 포함된 양식을 미리 입력합니다. 그런 다음 사용자는 이벤트를 취소하거나 필요에 따라 양식을 편집하거나 캘린더에 이벤트를 저장할 수 있습니다.
+
+다음은 2012년 1월 19일 오전 7시 30분부터 8시 30분까지 진행되는 이벤트를 예약하는 코드 예제입니다. 이 코드 예제에 대해 다음 사항에 유의하세요:
+
+- Events.CONTENT_URI를 URI로 지정합니다.
+- CalendarContract.EXTRA_EVENT_BEGIN_TIME 및 CalendarContract.EXTRA_EVENT_END_TIME extra 필드를 사용하여 이벤트 시간을 미리 입력합니다. 이 시간의 값은 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타냅니다.
+- Intent.EXTRA_EMAIL extra 필드를 사용하여 쉼표로 구분된 초대자의 이메일 주소 목록을 제공합니다.
+
+Calendar beginTime = Calendar.getInstance();
+beginTime.set(2012, 0, 19, 7, 30);
+Calendar endTime = Calendar.getInstance();
+endTime.set(2012, 0, 19, 8, 30);
+Intent intent = new Intent(Intent.ACTION_INSERT)
+        .setData(Events.CONTENT_URI)
+        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginTime.getTimeInMillis())
+        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime.getTimeInMillis())
+        .putExtra(Events.TITLE, "Yoga")
+        .putExtra(Events.DESCRIPTION, "Group class")
+        .putExtra(Events.EVENT_LOCATION, "The gym")
+        .putExtra(Events.AVAILABILITY, Events.AVAILABILITY_BUSY)
+        .putExtra(Intent.EXTRA_EMAIL, "rowan@example.com,trevor@example.com");
+startActivity(intent);
+
+
+2)Intent 사용하여 이벤트 편집
+이벤트를 직접 업데이트할 수 있습니다. 하지만 EDIT Intent를 사용하면 이벤트 편집 권한이 없는 애플리케이션이 캘린더 애플리케이션에 이벤트 편집 권한을 넘겨줄 수 있습니다. 사용자가 캘린더에서 이벤트 편집을 완료하면 원래 애플리케이션으로 돌아갑니다. 다음은 특정 이벤트에 대한 새 제목을 설정하고 사용자가 캘린더에서 이벤트를 편집할 수 있도록 하는 intent의 예입니다.
+
+long eventID = 208;
+Uri uri = ContentUris.withAppendedId(Events.CONTENT_URI, eventID);
+Intent intent = new Intent(Intent.ACTION_EDIT)
+    .setData(uri)
+    .putExtra(Events.TITLE, "My New Title");
+startActivity(intent);
+
+
+3)Intent 사용하여 이벤트 보기
+Calendar Provide는 VIEW intent를 사용하는 두 가지 다른 방법을 제공합니다. 특정 날짜의 calendar 열기와
+이벤트 보기 입니다. 
+
+다음은 특정 날짜의 calendar를 여는 방법을 보여주는 예입니다.
+// epoch이후 밀리초 단위로 지정된 날짜 시간.
+long startMillis;
+...
+Uri.Builder builder = CalendarContract.CONTENT_URI.buildUpon();
+builder.appendPath("time");
+ContentUris.appendId(builder, startMillis);
+Intent intent = new Intent(Intent.ACTION_VIEW)
+    .setData(builder.build());
+startActivity(intent);
+
+다음은 이벤트를 보려고 calendar를 여는 방법을 보여주는 예입니다.
+long eventID = 208;
+...
+Uri uri = ContentUris.withAppendedId(Events.CONTENT_URI, eventID);
+Intent intent = new Intent(Intent.ACTION_VIEW)
+   .setData(uri);
+startActivity(intent);
+
+
+
+9. 동기화 adapter
+애플리케이션과 동기화 adapter가 calendar provider에 접근하는 방식에는 약간의 차이점만 있습니다.
+
+- 동기화 adapter는 CALLER_IS_SYNCADAPTER를 true로 설정하여 동기화 adapter임을 지정해야 합니다.
+- 동기화 adapter는 URI에서 쿼리 매개변수로 ACCOUNT_NAME 과 ACCOUNT_TYPE을 제공해야 합니다.
+- 동기화 adapter는 애플리케이션이나 위젯보다 더 많은 열에 대한 쓰기 액세스 권한을 가지고 있습니다. 예를 들어, 애플리케이션은 캘린더의 이름, 표시 이름, 가시성 설정, 캘린더 동기화 여부와 같은 몇 가지 특성만 수정할 수 있습니다. 이에 비해 동기화 어댑터는 해당 열뿐만 아니라 캘린더 색상, 시간대, 액세스 수준, 위치 등 많은 다른 열에도 액세스할 수 있습니다. 그러나 동기화 어댑터는 지정한 ACCOUNT_NAME 및 ACCOUNT_TYPE에서의 열 접근만 가능합니다. 동기화 어댑터라고 모든 계정에 대해서 접근이 가능한 건 아닙니다.
+
+다음은 동기화 어댑터와 함께 사용하여 URI를 반환하는 것에 도움을 주는 메서드입니다
+
+static Uri asSyncAdapter(Uri uri, String account, String accountType) {
+    return uri.buildUpon()
+        .appendQueryParameter(android.provider.CalendarContract.CALLER_IS_SYNCADAPTER,"true")
+        .appendQueryParameter(Calendars.ACCOUNT_NAME, account)
+        .appendQueryParameter(Calendars.ACCOUNT_TYPE, accountType).build();
+ }
