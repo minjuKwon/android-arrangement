@@ -46,6 +46,7 @@ Calendar의 데이터를 읽기 위해서는 애플리케이션의 manifest 파�
 
 
 3. Calendar 테이블
+1)테이블 열
 CalendarContract.Calendars 테이블에는 개별 calendar에 대한 상세 정보를 포함하고 있습니다. 해당 열은 대표적으로 다음과 같습니다. 이때 애플리케이션과 동기화 adapter 모두에서 작성할 수 있습니다.
 
 - NAME	
@@ -53,23 +54,25 @@ Calendar의 이름
 - CALENDAR_DISPLAY_NAME	
 사용자에게 보여지는 calendar 이름
 - VISIBLE	
-Calendar가 보여질 여부를 선택하는 booelan. 값이 0일 경우, 해당 calendar와 관련된 이벤트들이 숨겨짐. 값이 1일 경우, 해당 calendar와 관련된 이벤트들이 보여짐. CalendarContract.Instances 테이블의 행 생성에 영향을 줌.
+Calendar가 보여질 여부를 선택하는 booelan. 값이 0일 경우, 해당 calendar와 관련된 event들이 숨겨짐. 값이 1일 경우, 해당 calendar와 관련된 이벤트들이 보여짐. CalendarContract.Instances 테이블의 행 생성에 영향을 줌.
 - SYNC_EVENTS	
 Calendar를 동기화하고 이벤트를 기기에 저장할 여부를 선택하는 boolean. 값이 0일 경우, calendar를 동기화하지 않으며 기기에 저장하지 않음. 값이 1일 경우, 이벤트를 동기화하고 기기에 저장함. 
 +전체 열
 https://developer.android.com/reference/android/provider/CalendarContract.Calendars#calendar-columns
 
 
-1)모든 연산에 계정 유형 포함
+2)모든 연산에 계정 유형 포함 필수
 Calendars.ACCOUNT_NAME을 기준으로 쿼리할 경우, 반드시 Calendars.ACCOUNT_TYPE도 selection에 포함해야 합니다. 왜냐하면 ACCOUNT_NAME과 ACCOUNT_TYPE이 함께 사용될 때만 고유하게 구별되기 때문입니다. 
 ACCOUNT_TYPE는 계정이 AccountManager에 등록될 때 사용된 계정 인증자 문자열로 계정의 서비스 제공자를 구분합니다. 즉, 해당 계정이 Google인지 Microsoft인지 구별해줍니다. 또한, 디바이스 계정과 연결되지 않은 calendar를 위한 특별한 계정 유형인 ACCOUNT_TYPE_LOCAL이 존재합니다. ACCOUNT_TYPE_LOCAL 계정은 동기화되지 않습니다.
 
 
-2)Calendar 쿼리
-다음은 특정 사용자가 소유한 calendar를 가져오는 방법을 보여주는 예시입니다. 간단히 하기 위해 이 예시에서는 쿼리 작업이 사용자 인터페이스 스레드(메인 스레드)에 표시됩니다. 실제로는 메인 스레드가 아닌 비동기 스레드에서 수행되어야 합니다. 데이터를 읽는 것뿐만 아니라 수정하는 경우 AsyncQueryHandler를 참조해야합니다. 
+3)calendar 쿼리
+다음은 특정 사용자가 소유한 calendar를 가져오는 방법을 보여주는 예시입니다. 간단히 표현하기 위해 이 예시에서는 쿼리 작업을 UI 스레드에 실행합니다. 실제로는 메인 스레드가 아닌 비동기 스레드에서 수행되어야 합니다. 데이터를 읽는 것뿐만 아니라 수정하는 경우에는 AsyncQueryHandler를 참조해야합니다. ContentResolver를 비동기로 처리하기 위해 제공되는 헬퍼 클래스로 작업을 백그라운드에서 처리하여, UI 스레드가 차단되지 않도록 도와줍니다. onInsertComplete(), onUpdateComplete(), onDeleteComplete()를 제공하기 때문에 데이터 작업에 유용합니다. 이러한 이점으로 Loader와 달리 depcreated되지 않았습니다. Loader는 비동기적으로 데이터를 로드하는 클래스입니다. UI 관련 작업에 적합하여 list나 recyclerview에 자주 사용되었습니다. 
 
 // Projection 배열. 
-//동적 조회 대신 배열로 인덱스를 생성하면 성능이 향상
+//동적 조회 대신 배열 인덱스를 사용하면 성능이 향상
+//동적 조회는 cursor.getColumnIndex()처럼 
+//런타임에 데이터 이름이나 키 찾는 과정
 public static final String[] EVENT_PROJECTION = new String[] {
     Calendars._ID,                           // 0
     Calendars.ACCOUNT_NAME,                  // 1
@@ -77,15 +80,15 @@ public static final String[] EVENT_PROJECTION = new String[] {
     Calendars.OWNER_ACCOUNT                  // 3
 };
 
-//projection 배열에 대한 인덱스.
+//EVENT_PROJECTION 배열에 대한 인덱스.
 private static final int PROJECTION_ID_INDEX = 0;
 private static final int PROJECTION_ACCOUNT_NAME_INDEX = 1;
 private static final int PROJECTION_DISPLAY_NAME_INDEX = 2;
 private static final int PROJECTION_OWNER_ACCOUNT_INDEX = 3;
 
-이제 쿼리를 구성합니다. Selection는 쿼리에 대한 기준을 지정합니다. 이 예제에서 쿼리는 ACCOUNT_NAME "hera@example.com ", ACCOUNT_TYPE "com.example", OWNER_ACCOUNT "hera@example.com "를 포함하는 calendar를 찾고 있습니다. 사용자가 본 모든 캘린더를 보고 싶다면, OWNER_ACCOUNT를 생략하세요. 쿼리는 데이터베이스 쿼리가 반환한 결과 집합을 탐색하는 데 사용할 수 있는 Cursor 객체를 반환합니다.
+이제 쿼리를 구성합니다. Selection는 쿼리에 대한 기준을 지정합니다. 이 예제에서 쿼리는 ACCOUNT_NAME "hera@example.com ", ACCOUNT_TYPE "com.example", OWNER_ACCOUNT "hera@example.com "를 포함하는 calendar를 찾고 있습니다. 다른 사용자의 calendar를 보고 싶다면, OWNER_ACCOUNT를 생략하면 됩니다. 쿼리는 결과 데이터 탐색에 사용되는 Cursor 객체를 반환합니다.
 
-// 쿼리 실행
+// 쿼리 생성
 Cursor cur = null;
 ContentResolver cr = getContentResolver();
 Uri uri = Calendars.CONTENT_URI;
@@ -97,9 +100,9 @@ String[] selectionArgs = new String[] {"hera@example.com", "com.example",
 // 쿼리 실행 후 Cursor 객체 반환
 cur = cr.query(uri, EVENT_PROJECTION, selection, selectionArgs, null);
 
-커서를 사용하여 결과 집합을 단계별로 살펴봅니다. 예제의 시작 부분에 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
+다음은 결과로 얻은 cursor를 통해 데이터를 얻을 겁니다. 위에서 Projection 배열 인덱스로 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
 
-//커서를 사용하여 반환된 레코드 사용
+//Cursor를 사용하여 반환된 레코드 사용
 while (cur.moveToNext()) {
     long calID = 0;
     String displayName = null;
@@ -117,8 +120,8 @@ while (cur.moveToNext()) {
 }
 
 
-3)Calendar 수정
-Calender 업데이트하려면 withAppendId() 사용하여 캘린더의 _ID를 URI()에 추가된 ID로 제공하거나 첫 번째 selection 항목으로 제공할 수 있습니다. selection은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 calendar의 _ID여야 합니다. 또한 URI에서 ID를 인코딩하여 업데이트를 수행할 수도 있습니다. 이 예제에서는 (withAppendId()) 접근 방식을 사용하여 캘린더의 표시 이름을 변경합니다.
+4)calendar 수정
+Calender를 업데이트하려면 calendar의 _ID가 필요합니다. withAppendId() 사용하여 Uri에 ID를 추가하거나  selection의 첫 번째 항목으로 제공할 수 있습니다. selection은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 calendar의 _ID여야 합니다. 아래 예제에서는 withAppendId()을 사용하여 calendar의 표시 이름을 변경할 겁니다.
 
 private static final String DEBUG_TAG = "MyActivity";
 ...
@@ -131,8 +134,8 @@ int rows = getContentResolver().update(updateUri, values, null, null);
 Log.i(DEBUG_TAG, "Rows updated: " + rows);
 
 
-4) calendar 삽입
-Calendar는 주로 동기화 adapter로 관리되도록 설계되었으므로 새 캘린더를 동기화 adapter 삽입해야 합니다. 대부분의 경우 애플리케이션은 디스플레이 이름을 변경하는 등 겉보기에만 캘린더를 변경할 수 있습니다. 애플리케이션이 로컬 캘린더를 만들어야 하는 경우 ACCOUNT_TYPE_LOCAL을 사용하여 캘린더 삽입을 동기화 어댑터로 수행하여 이 작업을 수행할 수 있습니다. ACCOUNT_TYPE_LOCAL은 디바이스 계정과 연결되지 않은 캘린더를 위한 특수 계정 유형입니다. 이러한 유형의 캘린더는 서버에 동기화되지 않습니다.
+5)calendar 삽입
+Calendar는 주로 동기화 adapter에 의해 관리되도록 설계하였기에 새 calendar를 삽입해야 할 때는 동기화 adapter로 수행해야 합니다. 대부분의 경우 애플리케이션은 표시 이름을 변경하는 등 겉보기로만 calendar를 변경할 수 있습니다. 로컬 calendar를 만들어야 하는 경우에도 동기화 adapter를 사용해야 합니다. 계정 유형을 ACCOUNT_TYPE_LOCAL으로 설정하여 calendar 삽입을 동기화 adapter로 수행합니다. ACCOUNT_TYPE_LOCAL은 기기의 계정과 연결되지 않은 calendar를 위한 특수 계정 유형입니다. 이러한 유형의 calendar는 서버에 동기화되지 않습니다.
 
 
 
