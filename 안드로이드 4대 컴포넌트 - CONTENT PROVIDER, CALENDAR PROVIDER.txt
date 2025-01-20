@@ -139,56 +139,60 @@ Calendar는 주로 동기화 adapter에 의해 관리되도록 설계하였기�
 
 
 
-4.Events 테이블
-CalendarContract.Events 테이블에는 개별 이벤트에 대한 상세 정보를 포함하고 있습니다. 이벤트를 삽입, 삭제, 업데이트를 하기 위해서는 애플리케이션의 manifest에  WRITE_CALENDAR 권한을 반드시 포함해야합니다. 해당 열은 대표적으로 다음과 같습니다. 이때 애플리케이션과 동기화 adapter 모두에서 작성할 수 있습니다.
+4. Events 테이블
+1)테이블 열
+CalendarContract.Events 테이블에는 개별 events에 대한 상세 정보를 포함하고 있습니다. 삽입, 삭제, 업데이트를 하기 위해서는 애플리케이션의 manifest에  WRITE_CALENDAR 권한을 반드시 포함해야합니다. 해당 열은 대표적으로 다음과 같습니다. 이때 애플리케이션과 동기화 adapter 모두에서 작성할 수 있습니다.
 
 - CALENDAR_ID	
-이벤트가 속한 캘린더의 ID
+events가 속한 캘린더의 ID
 - ORGANIZER
-이벤트 주최자(소유자)의 이메일.
+events 주최자(소유자)의 이메일.
 - TITLE	
-이벤트 이름
+events 이름
 - EVENT_LOCATION	
-이벤트 열릴 장소
+events 열릴 장소
 - DESCRIPTION	
-이벤트 상세 정보
+events 상세 정보
 - DTSTART	
-이벤트가 시작되는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
+events가 시작되는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
 - DTEND	
-이벤트가 끝나는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
+events가 끝나는 시간을 UTC 기준으로 1970년 1월 1일 자정(Epoch Time)부터 경과된 시간을 밀리초로 나타낸 값
 - EVENT_TIMEZONE	
-이벤트의 time zone(동일한 로컬 시간을 따르는 지역)
+events의 time zone(동일한 로컬 시간을 따르는 지역)
 - EVENT_END_TIMEZONE
-이벤트 끝나는 시간의 timezone
+events 끝나는 시간의 time zone
 - DURATION	
-이벤트의 지속 시간을 RFC5545 포맷으로 나타냄. 예를 들어 PT1H는 1시간 동안 지속, P2W는 2주 동안 지속. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.5)
+events의 지속 시간을 RFC5545 포맷으로 나타냄. 예를 들어 PT1H는 1시간 동안 지속, P2W는 2주 동안 지속. 
++ 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.2.5)
 - ALL_DAY	
-값이 1일 경우, 로컬 시간대를 기준으로 하루 종일 이벤트 지속. 값이 0일 경우, 특정 시간에 시작하고 종료되는 일반 이벤트
+값이 1일 경우, 로컬 time zone를 기준으로 하루 종일 events 지속. 값이 0일 경우, 특정 시간에 시작하고 종료되는 일반 이벤트
 - RRULE	
-이벤트의 반복 규칙. 예를 들어 FREQ=WEEKLY;COUNT=10;WKST=SU 는매주 반복하며 총 10번 발생. 주의 시작일은 일요일. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.3)
+events의 반복 규칙. 예를 들어 FREQ=WEEKLY;COUNT=10;WKST=SU 는매주 반복하며 총 10번 발생. 주의 시작일은 일요일. 
++ 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.3)
 - RDATE	
-이벤트의 반복 날짜. 일반적으로 RDATE는 RRULE과 함께 사용되어 특정 날짜 집합으로 반복되는 이벤트를 정의. 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.2)
+events의 반복 날짜. 일반적으로 RDATE는 RRULE과 함께 사용. 특정 날짜로 반복되는 모든 events의 목록을 정의. 
++ 참고 사이트(https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.2)
 - AVAILABILITY	
-해당 이벤트가 바쁜 시간(다른 일정 추가가 불가)인지 여유시간(다른 일정 추가가 가능)인지를 나타냄
+해당 events가 바쁜 시간(다른 일정 추가가 불가)인지 여유시간(다른 일정 추가가 가능)인지를 나타냄
 - GUESTS_CAN_MODIFY	
-게스트가 이벤트 수정 가능 여부
+게스트가 events 수정 가능 여부
 - GUESTS_CAN_INVITE_OTHERS	
 게스트가 다른 게스트 초대 가능 여부
 - GUESTS_CAN_SEE_GUESTS	
-게스트가 참석자 목록 볼 수 있는 여부
+게스트가 attendees 목록 볼 수 있는 여부
 +전체 열
 https://developer.android.com/reference/android/provider/CalendarContract.Events#writing-to-events
 
 
-1)이벤트 추가
-애플리케이션에 새로운 이벤트를 추가할 때 INSERT intent 사용을 권장합니다. 하지만 원한다면 직접적으로 삽입이 가능합니다. 이벤트 삽입에는 다음과 같은 규칙이 있습니다.
+2)events 추가
+애플리케이션에 새로운 events를 추가할 때는 INSERT intent 사용을 권장합니다. 하지만 원한다면 직접 삽입할 수 있습니다. events 삽입에는 다음과 같은 규칙이 있습니다.
 
 - CALENDAR_ID 와 DTSTART가 포함 필수
-- EVENT_TIMEZONE 포함 필수. 시스템에 설치된 timezone ID 목록을 얻으려면 getAvailableIDs() 사용. INSERT intent를 통해 이벤트를 삽입하는 경우에는 불필요. 이때는 기본 timezone 제공
+- EVENT_TIMEZONE 포함 필수. 시스템에 설치된 timezone ID 목록을 얻으려면 getAvailableIDs() 사용. INSERT intent를 통해 이벤트를 삽입하는 경우에는 불필요. 이때는 기본 time zone 제공
 - 반복 이벤트가 아닌 경우, DTEND 포함 필수
-- 반복 이벤트인 경우, DURATION + RRUE 또는 DURATION +RDATE  포함 필수. INSERT intent를 통해 이벤트를 삽입하는 경우에는 불필요. 이때는 RRUE를 DTSTART 및 DTEND와 함께 사용 가능. 그럼 Calendar가 이를 바탕으로 자동으로 기간으로 변환해줌.
+- 반복 이벤트인 경우, DURATION + RRUE 또는 DURATION +RDATE  포함 필수. INSERT intent를 통한 삽입에는 불필요. 이때는 RRUE를 DTSTART와 DTEND 함께 사용 가능. 그럼 Calendar가 기간으로 자동 변환.
 
-다음은 이벤트 삽입 예시입니다. 이는 단순화를 위해 UI 스레드에서 수행되고 있습니다. 실제로는 작업을 백그라운드 스레드로 이동하기 위해 비동기 스레드에서 삽입 및 업데이트를 수행해야 합니다. 
+다음은 events 삽입 예시입니다. 단순화를 위해 UI 스레드에서 수행합니다. 실제로는 백그라운드 스레드에서 작업하기 위해 비동기 스레드에서 삽입 및 업데이트를 수행해야 합니다. 
 
 long calID = 3;
 long startMillis = 0;
@@ -211,18 +215,18 @@ values.put(Events.CALENDAR_ID, calID);
 values.put(Events.EVENT_TIMEZONE, "America/Los_Angeles");
 Uri uri = cr.insert(Events.CONTENT_URI, values);
 
-// URI의 마지막 요소에서 이벤트 ID 가져오기
+// URI의 마지막 요소에서 events ID 가져오기
 long eventID = Long.parseLong(uri.getLastPathSegment());
 //
-// 이벤트 ID 처리
+// events ID 처리
 //
 //
 
-이 예제는 이벤트가 생성된 후 이벤트 ID를 가져오는 방법을 확인합니다. 이것이 이벤트 ID를 얻는 가장 쉬운 방법입니다. 예를 들어 이벤트에 참석자 또는 알림을 추가하는 등 다른 캘린더 작업을 수행하려면 이벤트 ID가 필요한 경우가 많습니다.
+이 예제는 events가 생성된 후 events ID를 가져왔습니다. getLastPathSegment()을 통해 events ID를 얻는 방식이 가장 쉽습니다. events에 attendees 또는 reminders을 추가하는 등의 calendar 작업을 수행하려면 events ID가 필요합니다. 또한 필수 조건을 위해 CALENDAR_ID 와 EVENT_TIMEZONE, DTSTART가 포함되었습니다. 반복 이벤트가 아니기 때문에 DTEND가 추가되었습니다.
 
 
-2) 이벤트 업데이트
-애플리케이션에서 사용자가 이벤트를 편집할 수 있도록 허용하려면 EDIT Intent를 사용하는 것이 좋습니다. 그러나 필요한 경우 이벤트를 직접 편집할 수 있습니다. 이벤트 업데이트를 수행하려면 이벤트의 _ID를 제공하기 위해 withAppendId()를 통해  URI에 ID를 더하거나 첫 번째 selection 항목으로 제공할 수 있습니다. selection 은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 이벤트의 _ID여야 합니다. 또한 ID없이 selection을 사용하여 업데이트할 수도 있습니다. 다음은 이벤트 업데이트의 예입니다. withAppendId() 접근 방식을 사용하여 이벤트 제목을 변경합니다
+3) events 업데이트
+애플리케이션에서 사용자가 events를 편집할 때는 EDIT Intent 사용이 좋습니다. 그러나 필요한 경우에는 직접 편집할 수 있습니다. events 업데이트하려면 events의 _ID가 필요합니다. withAppendId() 사용하여 Uri에 ID를 추가하거나 selection의 첫 번째 항목으로 제공할 수 있습니다. selection은 "_id=?"로 시작해야 하며, 첫 번째 selectionArg는 events의 _ID여야 합니다. selection에서는 꼭 ID가 아니라도 조건을 사용하여 업데이트할 수도 있습니다. 다음은 events 업데이트의 예입니다. withAppendId()로 events 제목을 변경합니다.
 
 private static final String DEBUG_TAG = "MyActivity";
 ...
@@ -238,8 +242,8 @@ int rows = cr.update(updateUri, values, null, null);
 Log.i(DEBUG_TAG, "Rows updated: " + rows);
 
 
-3)이벤트 삭제
-이벤트를 _ID을 사용하려 삭제하려면 URI에 추가된 ID 사용하거나 표준 selection을 사용해야 합니다. 추가된 ID사용하는 경우 selection 필요없습니다. 삭제에는 애플리케이션과 동기화 어댑터의 두 가지 버전이 있습니다. 애플리케이션 삭제는 삭제된 열을 1로 설정합니다. 이 플래그는 동기화 어댑터에 의해 행이 삭제되었으며 이 삭제가 서버로 전파되어야 함을 알려줍니다. 동기화 어댑터 삭제는 이벤트와 관련된 모든 데이터를 데이터베이스에서 제거합니다. 다음은 애플리케이션이 _ID를 통해 이벤트를 삭제하는 예제입니다.
+4)events 삭제
+events를 ID로 삭제하려면 URI에 추가된 ID를 사용하거나 selection을 사용해야 합니다. 첫번째의 경우에는selection이 필요없습니다. 삭제에는 애플리케이션과 동기화 adapter의 두 가지 방식이 있습니다. 애플리케이션 삭제에서는 provider가 삭제된 열을 1로 설정하여 삭제 상태를 관리합니다. 이 플래그는 동기화 adapter에게 행이 삭제되었으며 이 변경 사항이 서버로 전파되어야 함을 알립니다. 반면, 동기화 adapter는 events와 관련된 모든 데이터를 데이터베이스에서 곧바로 제거합니다. 이 경우, 삭제 플래그를 사용하지 않습니다. 다음은 애플리케이션이 ID를 통해 event를 삭제하는 예제입니다.
 
 private static final String DEBUG_TAG = "MyActivity";
 ...
