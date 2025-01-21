@@ -135,7 +135,7 @@ Log.i(DEBUG_TAG, "Rows updated: " + rows);
 
 
 5)calendar 삽입
-Calendar는 주로 동기화 adapter에 의해 관리되도록 설계하였기에 새 calendar를 삽입해야 할 때는 동기화 adapter로 수행해야 합니다. 대부분의 경우 애플리케이션은 표시 이름을 변경하는 등 겉보기로만 calendar를 변경할 수 있습니다. 로컬 calendar를 만들어야 하는 경우에도 동기화 adapter를 사용해야 합니다. 계정 유형을 ACCOUNT_TYPE_LOCAL으로 설정하여 calendar 삽입을 동기화 adapter로 수행합니다. ACCOUNT_TYPE_LOCAL은 기기의 계정과 연결되지 않은 calendar를 위한 특수 계정 유형입니다. 이러한 유형의 calendar는 서버에 동기화되지 않습니다.
+Calendar는 주로 동기화 adapter에 의해 관리되도록 설계하였기에 새 calendar를 삽입해야 할 때는 동기화 adapter로 수행해야 합니다. 대부분의 경우 애플리케이션은 표시 이름을 변경하는 등 겉보기로만 calendar를 변경할 수 있습니다. 로컬 calendar를 만들어야 하는 경우에도 동기화 adapter를 사용해야 합니다. 계정 유형을 ACCOUNT_TYPE_LOCAL으로 설정하여 calendar 삽입을 동기화 adapter로 수행합니다. ACCOUNT_TYPE_LOCAL은 기기의 계정과 연결되지 않은 calendar를 위한 특수 계정 유형입니다. 이러한 유형의 calendar는 서버에 동기화되지 않습니다. calendar를 삽입하는 경우를 제외하고는 로컬에서 사용한다면 동기화 adapter는 필요하지 않습니다.
 
 
 
