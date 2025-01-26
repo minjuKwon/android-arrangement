@@ -33,7 +33,7 @@ public class CalendarManager {
         this.calendarId=calendarId;
     }
 
-    public void calendarQuery(){
+    public void queryCalendar(){
         String selection= CalendarContract.Calendars._ID+"=?";
         String [] selectionArgs=new String[]{String.valueOf(calendarId)};
 
@@ -54,7 +54,7 @@ public class CalendarManager {
         }
     }
 
-    public void calendarUpdate(){
+    public void updateCalendar(){
         ContentValues values = new ContentValues();
         values.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, "my local calendar");
 
