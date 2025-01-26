@@ -125,4 +125,43 @@ public class CalendarManager {
         context.startActivity(intent);
     }
 
+    public long insertAttendee(
+            long eventId, String name, String email,
+            int relationship, int type, int status
+    ){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.EVENT_ID,eventId);
+        values.put(CalendarContract.Attendees.ATTENDEE_NAME,name);
+        values.put(CalendarContract.Attendees.ATTENDEE_EMAIL,email);
+        values.put(CalendarContract.Attendees.ATTENDEE_RELATIONSHIP,relationship);
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE,type);
+        values.put(CalendarContract.Attendees.ATTENDEE_STATUS,status);
+
+        Uri uri= context.getContentResolver()
+                .insert(CalendarContract.Attendees.CONTENT_URI, values);
+
+        long attendeeId=0;
+        if(uri!=null){
+            attendeeId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return attendeeId;
+    }
+
+    public void updateAttendee(long attendeeId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE, CalendarContract.Attendees.TYPE_REQUIRED);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.i(LOG_TAG, "업데이트된 참석자 열: " + row);
+    }
+
+    public void deleteAttendee(long attendeeId){
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().delete(uri,null,null);
+        Log.i(LOG_TAG, "삭제된 참석자 열: " + row);
+    }
+
 }
