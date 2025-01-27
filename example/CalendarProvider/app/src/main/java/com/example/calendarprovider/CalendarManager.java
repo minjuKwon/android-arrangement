@@ -164,4 +164,31 @@ public class CalendarManager {
         Log.i(LOG_TAG, "삭제된 참석자 열: " + row);
     }
 
+    public long insertReminder(long eventId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.EVENT_ID,eventId);
+        values.put(CalendarContract.Reminders.MINUTES,15);
+        values.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
+
+        Uri uri=context.getContentResolver()
+                .insert(CalendarContract.Reminders.CONTENT_URI,values);
+
+        long reminderId=0;
+        if(uri!=null){
+            reminderId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return reminderId;
+    }
+
+    public void updateReminder(long reminderId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.MINUTES,20);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Reminders.CONTENT_URI,reminderId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.i(LOG_TAG, "업데이트된 알림 열: " + row);
+    }
+    
 }
