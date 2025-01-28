@@ -28,6 +28,22 @@ public class CalendarManager {
     private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=1;
     private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=2;
 
+    private static final String [] INSTANCE_PROJECTION = new String[]{
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.START_DAY,
+            CalendarContract.Instances.START_MINUTE,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.END_DAY,
+            CalendarContract.Instances.END_MINUTE
+    };
+
+    private static final int INSTANCE_PROJECTION_BEGIN_IDX=0;
+    private static final int INSTANCE_PROJECTION_START_DAY_IDX=1;
+    private static final int INSTANCE_PROJECTION_START_MINUTE_IDX=2;
+    private static final int INSTANCE_PROJECTION_END_IDX=3;
+    private static final int INSTANCE_PROJECTION_END_DAY_IDX=4;
+    private static final int INSTANCE_PROJECTION_END_MINUTE_IDX=5;
+
     public CalendarManager(Context context, long calendarId){
         this.context=context;
         this.calendarId=calendarId;
@@ -191,4 +207,48 @@ public class CalendarManager {
         Log.i(LOG_TAG, "업데이트된 알림 열: " + row);
     }
     
+    public void queryInstance(long eventId){
+        Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        long startMillis = beginTime.getTimeInMillis();
+
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025,Calendar.MAY,2,10,30);
+        long endMillis = endTime.getTimeInMillis();
+
+        Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
+        ContentUris.appendId(builder, startMillis);
+        ContentUris.appendId(builder, endMillis);
+
+        String selection= CalendarContract.Instances.EVENT_ID+"=?";
+        String [] selectionArgs=new String[]{String.valueOf(eventId)};
+
+        Cursor cursor=context.getContentResolver().query(
+                builder.build(),
+                INSTANCE_PROJECTION,
+                selection,
+                selectionArgs,
+                null
+        );
+
+        if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.i(LOG_TAG, "begin: "+
+                        cursor.getString(INSTANCE_PROJECTION_BEGIN_IDX));
+                Log.i(LOG_TAG, "start day: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_DAY_IDX));
+                Log.i(LOG_TAG, "start minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_MINUTE_IDX));
+                Log.i(LOG_TAG, "end: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_IDX));
+                Log.i(LOG_TAG, "end day: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_DAY_IDX));
+                Log.i(LOG_TAG, "end minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_MINUTE_IDX));
+                Log.i(LOG_TAG,"========================================");
+            }
+            cursor.close();
+        }
+    }
+
 }
