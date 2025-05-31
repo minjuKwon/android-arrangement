@@ -19,9 +19,9 @@ public class CalendarManager {
     private static final String LOG_TAG="CALENDAR";
 
     private static final String[] CALENDAR_PROJECTION = new String[] {
-            CalendarContract.Calendars.ACCOUNT_NAME,                  // 0
-            CalendarContract.Calendars.ACCOUNT_TYPE,                  // 1
-            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME          // 2
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.ACCOUNT_TYPE,
+            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
     };
 
     private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=0;
@@ -63,9 +63,10 @@ public class CalendarManager {
 
         if(cursor!=null){
             cursor.moveToNext();
-            Log.i(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
-            Log.i(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
-            Log.i(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+            Log.d(LOG_TAG,"===========================================================");
             cursor.close();
         }
     }
@@ -79,7 +80,8 @@ public class CalendarManager {
         int rows = context.getContentResolver()
                 .update(uriUpdated, values, null, null);
 
-        Log.i(LOG_TAG, "업데이트된 열: " + rows);
+        Log.d(LOG_TAG, "업데이트된 열: " + rows);
+        Log.d(LOG_TAG,"===========================================================");
     }
 
     public long insertEvent(){
@@ -117,7 +119,8 @@ public class CalendarManager {
         int row=context.getContentResolver()
                 .update(uri,values,null,null);
 
-        Log.i(LOG_TAG, "업데이트된 이벤트 열: " + row);
+        Log.d(LOG_TAG, "업데이트된 이벤트 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
     }
 
     public void viewEvent(long eventId){
@@ -171,13 +174,15 @@ public class CalendarManager {
         Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
         int row=context.getContentResolver().update(uri,values,null,null);
 
-        Log.i(LOG_TAG, "업데이트된 참석자 열: " + row);
+        Log.d(LOG_TAG, "업데이트된 참석자 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
     }
 
     public void deleteAttendee(long attendeeId){
         Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
         int row=context.getContentResolver().delete(uri,null,null);
-        Log.i(LOG_TAG, "삭제된 참석자 열: " + row);
+        Log.d(LOG_TAG, "삭제된 참석자 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
     }
 
     public long insertReminder(long eventId){
@@ -204,9 +209,10 @@ public class CalendarManager {
         Uri uri=ContentUris.withAppendedId(CalendarContract.Reminders.CONTENT_URI,reminderId);
         int row=context.getContentResolver().update(uri,values,null,null);
 
-        Log.i(LOG_TAG, "업데이트된 알림 열: " + row);
+        Log.d(LOG_TAG, "업데이트된 알림 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
     }
-    
+
     public void queryInstance(long eventId){
         Calendar beginTime = Calendar.getInstance();
         beginTime.set(2025,Calendar.APRIL,2,10,30);
@@ -233,19 +239,19 @@ public class CalendarManager {
 
         if(cursor!=null){
             while(cursor.moveToNext()){
-                Log.i(LOG_TAG, "begin: "+
+                Log.d(LOG_TAG, "begin: "+
                         cursor.getString(INSTANCE_PROJECTION_BEGIN_IDX));
-                Log.i(LOG_TAG, "start day: "+
+                Log.d(LOG_TAG, "start day: "+
                         cursor.getString(INSTANCE_PROJECTION_START_DAY_IDX));
-                Log.i(LOG_TAG, "start minute: "+
+                Log.d(LOG_TAG, "start minute: "+
                         cursor.getString(INSTANCE_PROJECTION_START_MINUTE_IDX));
-                Log.i(LOG_TAG, "end: "+
+                Log.d(LOG_TAG, "end: "+
                         cursor.getString(INSTANCE_PROJECTION_END_IDX));
-                Log.i(LOG_TAG, "end day: "+
+                Log.d(LOG_TAG, "end day: "+
                         cursor.getString(INSTANCE_PROJECTION_END_DAY_IDX));
-                Log.i(LOG_TAG, "end minute: "+
+                Log.d(LOG_TAG, "end minute: "+
                         cursor.getString(INSTANCE_PROJECTION_END_MINUTE_IDX));
-                Log.i(LOG_TAG,"========================================");
+                Log.d(LOG_TAG,"------------------------------------------");
             }
             cursor.close();
         }
