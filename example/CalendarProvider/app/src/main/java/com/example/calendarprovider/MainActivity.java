@@ -44,6 +44,9 @@ public class MainActivity extends AppCompatActivity {
 
             //instance
             manager.queryInstance(eventId);
+
+            //intent
+            manager.insertEventUsingIntent();
         });
 
         thread.start();

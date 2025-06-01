@@ -111,6 +111,23 @@ public class CalendarManager {
         return eventId;
     }
 
+    public void insertEventUsingIntent(){
+        Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025, 6, 1, 7, 30);
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025, 6, 1, 8, 30);
+        Intent intent = new Intent(Intent.ACTION_INSERT)
+                .setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginTime.getTimeInMillis())
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime.getTimeInMillis())
+                .putExtra(CalendarContract.Events.TITLE, "Yoga")
+                .putExtra(CalendarContract.Events.DESCRIPTION, "Group class")
+                .putExtra(CalendarContract.Events.EVENT_LOCATION, "The gym")
+                .putExtra(CalendarContract.Events.AVAILABILITY,
+                        CalendarContract.Events.AVAILABILITY_BUSY);
+        context.startActivity(intent);
+    }
+
     public void updateEvent(long eventId){
         ContentValues values=new ContentValues();
         values.put(CalendarContract.Events.EVENT_LOCATION,"A-room304");
