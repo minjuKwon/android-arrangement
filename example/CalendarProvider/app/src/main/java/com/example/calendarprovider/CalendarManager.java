@@ -19,14 +19,16 @@ public class CalendarManager {
     private static final String LOG_TAG="CALENDAR";
 
     private static final String[] CALENDAR_PROJECTION = new String[] {
+            CalendarContract.Calendars._ID,
             CalendarContract.Calendars.ACCOUNT_NAME,
             CalendarContract.Calendars.ACCOUNT_TYPE,
             CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
     };
 
-    private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=0;
-    private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=1;
-    private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=2;
+    private static final int CALENDAR_PROJECTION_CALENDAR_ID_IDX=0;
+    private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=1;
+    private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=2;
+    private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=3;
 
     private static final String [] INSTANCE_PROJECTION = new String[]{
             CalendarContract.Instances.BEGIN,
@@ -48,6 +50,28 @@ public class CalendarManager {
         this.context=context;
         this.calendarId=calendarId;
     }
+
+    public void queryAllCalendar(){
+        Cursor cursor=context.getContentResolver().query(
+                CalendarContract.Calendars.CONTENT_URI,
+                CALENDAR_PROJECTION,
+                null,
+                null,
+                null
+        );
+
+        if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_CALENDAR_ID_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+                Log.d(LOG_TAG,"------------------------------------------");
+            }
+            Log.d(LOG_TAG,"===========================================================");
+            cursor.close();
+        }
+     }
 
     public void queryCalendar(){
         String selection= CalendarContract.Calendars._ID+"=?";

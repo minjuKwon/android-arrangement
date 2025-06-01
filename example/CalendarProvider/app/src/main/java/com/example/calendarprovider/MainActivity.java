@@ -15,8 +15,10 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
 
         CalendarManager manager=new CalendarManager(this, 1);
+
         Thread thread=new Thread(() -> {
             //calendar
+            manager.queryAllCalendar();
             manager.queryCalendar();
             manager.updateCalendar();
             manager.queryCalendar();
@@ -28,13 +30,18 @@ public class MainActivity extends AppCompatActivity {
             manager.viewSpecifiedEvent();
 
             //attendee
-            long attendeeAId=manager
-                    .insertAttendee(eventId,"A","a@mail.com",
-                            CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,CalendarContract.Attendees.TYPE_OPTIONAL,
-                            CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED);
-            manager.insertAttendee(eventId,"b","a@mail.com",
-                    CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,CalendarContract.Attendees.TYPE_OPTIONAL,
-                    CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED);
+            long attendeeAId=manager.insertAttendee(
+                            eventId,"A","a@mail.com",
+                            CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,
+                            CalendarContract.Attendees.TYPE_OPTIONAL,
+                            CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED
+                    );
+            manager.insertAttendee(
+                    eventId,"b","a@mail.com",
+                    CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,
+                    CalendarContract.Attendees.TYPE_OPTIONAL,
+                    CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED
+            );
             manager.updateAttendee(attendeeAId);
             manager.deleteAttendee(attendeeAId);
 
