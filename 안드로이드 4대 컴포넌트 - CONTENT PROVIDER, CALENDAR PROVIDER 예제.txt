@@ -1,0 +1,148 @@
+Calendar provider 간단한 예제를 진행하겠습니다. Provider는 비동기로 실행되어야 합니다. Calendar provider 사용에 집중하기 위해 간단히 thread에서 진행할 겁니다. 로컬 calendar의 여러 데이터 모델를 읽거나 쓸 겁니다.
+
+1. Manifest
+사용자 권한을 추가해야합니다. Calendar의 데이터를 읽기 위해서는 READ_CALENDAR, 삭제하거나 삽입 및 업데이트일 때는 WRITE_CALENDAR가 필수로 있어야 합니다. 저희는 읽기와 쓰기 모두 필요하기 때문에 2가지 모두 추가해줍니다.
+
+- AndroidManifest.xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"...>
+
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    ...
+</manifest>
+
+
+
+2. CalendarManager
+1)Calendar
+Provider 관련된 코드는 CalendarManager 클래스에서 작성한 후 MainActivity에서 호출할겁니다. Provider 사용에 필요한 context는 생성자를 통해 받습니다. 
+
+ⅰ) query
+특정 Calendar에 대해 쿼리하기 위해서는 이를 구별할 수 있는 조건이 필요합니다. 로컬 calendar에 대해서만 읽고 싶은데 어떤 값들을 가지는지 모르니 조건을 설정하기 어렵습니다. 이를 해결하는 가장 쉬운 방법은 전체 calendar 정보를 가져와 확인하는 겁니다. 우선 가져올 정보(필드명)를 담는 배열과 해당 배열의 인덱스를 의미하는 변수를 선언합니다.
+
+private static final String[] CALENDAR_PROJECTION = new String[] {
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.ACCOUNT_TYPE,
+            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
+};
+
+private static final int CALENDAR_PROJECTION_CALENDAR_ID_IDX=0;
+private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=1;
+private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=2;
+private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=3;
+
+전체 calendar 정보를 가져오기 때문에 calendar 정보를 의미하는 Uri와 calendar의 특정 필드를 의미하는 Projection만 전달하면 됩니다.
+
+Cursor cursor=context.getContentResolver().query(
+                CalendarContract.Calendars.CONTENT_URI,
+                CALENDAR_PROJECTION,
+                null,
+                null,
+                null
+        );
+
+다음은 결과로 얻은 cursor를 통해 데이터를 얻을 겁니다. 위에서 Projection 배열 인덱스로 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
+
+if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_CALENDAR_ID_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+                Log.d(LOG_TAG,"------------------------------------------");
+            }
+            Log.d(LOG_TAG,"===========================================================");
+            cursor.close();
+        }
+cursor가 가리키는 행이 끝날 때까지 while문으로 반복하며 출력합니다.
+
+로그 출력 내용을 보면 저희가 찾는 로컬 calendar의 id는 1인 걸 확인할 수 있습니다.
+
+이제 이 id를 통해 로컬 calendar의 정보를 출력할 수 있습니다. 전체적 로직은 위에서 진행된 쿼리와 비슷합니다. Id가 1인 특정 calendar에 대해 쿼리할 것이기에 조건만 추가하면 됩니다. 쿼리의 기준이 되는 selection에는 calendar ID 컬럼 이름과 함께 =?를 사용합니다. 여기서 ?는 실제 값으로 대체되는 매개변수 자리 표시자이며, 해당 값은 selectionArgs 배열에 전달됩니다.
+
+String selection= CalendarContract.Calendars._ID+"=?";
+        String [] selectionArgs=new String[]{String.valueOf(calendarId)};
+
+        Cursor cursor=context.getContentResolver().query(
+                CalendarContract.Calendars.CONTENT_URI,
+                CALENDAR_PROJECTION,
+                selection,
+                selectionArgs,
+                null
+        );
+
+        if(cursor!=null){
+            cursor.moveToNext();
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+            Log.d(LOG_TAG,"===========================================================");
+            cursor.close();
+        }
+
+ⅱ) update
+Calendar의 정보를 변경할 수도 있습니다. 이번 코드에서는 display name을 변경할 겁니다. ContentValues를 사용해 열 이름과 변경할 값을 지정합니다. withAppendedId()를 이용해 calendar Uri에 calendar id를 추가하면 로컬 calendar를 가리키는 전체 URI가 생성됩니다. 이 URI와 ContentValues를 update()에 전달하면 됩니다. 이때 update()는 변경된 열의 수를 반환합니다.
+
+ContentValues values = new ContentValues();
+        values.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, "my local calendar");
+
+        Uri uriUpdated = ContentUris.withAppendedId(
+                CalendarContract.Calendars.CONTENT_URI, calendarId);
+        int rows = context.getContentResolver()
+                .update(uriUpdated, values, null, null);
+
+        Log.d(LOG_TAG, "업데이트된 열: " + rows);
+        Log.d(LOG_TAG,"===========================================================");
+
+
+2)Events
+ⅰ) insert
+이제 event를 추가할 겁니다. 저희는 2025년 4월 2일 부터 2025년 7월 2일까지 A-room302에서 10:30~11:30까지 회의를 진행한다고 가정하겠습니다.
+
+event 추가에는 CALENDAR_ID, DTSTART, EVENT_TIMEZONE가 필수로 포함되어야 합니다. 반복 event이기 때문에 DURATION + RRUE 또는 DURATION +RDATE가 필수로 포함되어야 하는데 DURATION + RRUE으로 진행하겠습니다. DTSTART의 경우 Calendar의 set()으로 쉽게 시작 날짜 및 시간을 설정할 수 있습니다. 하지만 DURATION과 RRUE는 해당 문법에 맞게 작성해야합니다. 우선 지속 시간을 의미하는 DURATION의 경우 RFC5545에 따라 다음과 같은 형식을 가집니다.
+
+P[n]Y[n]M[n]W[n]DT[n]H[n]M[n]S
+
+P는 맨 앞에 두는 접두사이며 Y,M,W,D는 각각 연, 월, 주, 일을 의미합니다. T는 시간을 추가할 경우 구분을 위해 사용됩니다. T이후의 H,M,S는 시, 분, 초를 의미합니다. 저희는 1시간 동안 지속되기 때문에 PT1H가 됩니다.
+
+반복 규칙을 의미하는 RULE의 경우 다음의 형식을 가집니다.
+
+FREQ=<빈도>;INTERVAL=<간격>;[BYxxx=...];[UNTIL=...];[COUNT=...]
+필드	설명	예시
+FREQ	반복 주기 (DAILY, WEEKLY, MONTHLY, YEARLY)	FREQ=DAILY
+INTERVAL	반복 간격 (기본값 1)	INTERVAL=2 → 2일마다
+UNTIL	반복 종료 시점 (YYYYMMDD'T'HHMMSS'Z')	UNTIL=20250701T000000Z
+COUNT	반복 횟수	COUNT=10 → 총 10회 반복
+BYDAY	요일 조건 (MO, TU, WE, TH, FR, SA, SU)	BYDAY=MO,WE,FR
+BYMONTHDAY	특정 월의 일자	BYMONTHDAY=15
+BYMONTH	반복되는 월	BYMONTH=1,7 → 1월과 7월에 반복
+
+저희는 매주 진행되며 7월 2일 11:30까지 지속되기 때문에 FREQ=WEEKLY;UNTIL=20250702T113000Z가 됩니다.
+
+long startMillis;
+        Calendar beginTime=Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        startMillis=beginTime.getTimeInMillis();
+
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Events.CALENDAR_ID, calendarId);
+        values.put(CalendarContract.Events.ORGANIZER,"organizer@mail.com");
+        values.put(CalendarContract.Events.TITLE,"meetingA");
+        values.put(CalendarContract.Events.EVENT_LOCATION,"A-room302");
+        values.put(CalendarContract.Events.EVENT_TIMEZONE,"Asia/Seoul");
+        values.put(CalendarContract.Events.DTSTART,startMillis);
+        values.put(CalendarContract.Events.DURATION, "PT1H");
+        values.put(CalendarContract.Events.RRULE, "FREQ=WEEKLY;UNTIL=20250702T113000Z");
+
+        Uri uri=context.getContentResolver()
+                .insert(CalendarContract.Events.CONTENT_URI,values);
+
+        long eventId=0;
+        if(uri!=null){
+            eventId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return eventId;
+
+로컬 calendar 전체 uri를 얻기 위해 calendar uri에 id를 추가한거처럼 event id를 얻으려면 uri의 마지막 요소를 가져오면 됩니다. 해당 id를 통해 event에 attendee 또는 reminder을 추가하는 등의 calendar 작업을 수행할 수 있습니다.
