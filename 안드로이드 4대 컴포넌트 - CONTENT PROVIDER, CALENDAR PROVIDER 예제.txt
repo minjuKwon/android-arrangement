@@ -32,7 +32,7 @@ private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=1;
 private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=2;
 private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=3;
 
-전체 calendar 정보를 가져오기 때문에 calendar 정보를 의미하는 Uri와 calendar의 특정 필드를 의미하는 Projection만 전달하면 됩니다.
+전체 calendar 정보를 가져오면 되기에 calendar의 Uri와 calendar의 특정 필드를 의미하는 Projection만 전달하면 됩니다.
 
 Cursor cursor=context.getContentResolver().query(
                 CalendarContract.Calendars.CONTENT_URI,
@@ -42,7 +42,7 @@ Cursor cursor=context.getContentResolver().query(
                 null
         );
 
-다음은 결과로 얻은 cursor를 통해 데이터를 얻을 겁니다. 위에서 Projection 배열 인덱스로 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
+다음은 결과로 받은 cursor를 통해 데이터를 얻을 겁니다. 위에서 본 Projection 배열 인덱스로 설정된 상수를 사용하여 각 필드의 값을 반환합니다.
 
 if(cursor!=null){
             while(cursor.moveToNext()){
@@ -55,6 +55,7 @@ if(cursor!=null){
             Log.d(LOG_TAG,"===========================================================");
             cursor.close();
         }
+
 cursor가 가리키는 행이 끝날 때까지 while문으로 반복하며 출력합니다.
 
 로그 출력 내용을 보면 저희가 찾는 로컬 calendar의 id는 1인 걸 확인할 수 있습니다.
@@ -95,12 +96,14 @@ ContentValues values = new ContentValues();
         Log.d(LOG_TAG, "업데이트된 열: " + rows);
         Log.d(LOG_TAG,"===========================================================");
 
+반환된 열의 수와 실제로 수정한 열의 수가 일치하므로 정상적으로 작동되었음을 확인할 수 있습니다.
+
 
 2)Events
 ⅰ) insert
 이제 event를 추가할 겁니다. 저희는 2025년 4월 2일 부터 2025년 7월 2일까지 A-room302에서 10:30~11:30까지 회의를 진행한다고 가정하겠습니다.
 
-event 추가에는 CALENDAR_ID, DTSTART, EVENT_TIMEZONE가 필수로 포함되어야 합니다. 반복 event이기 때문에 DURATION + RRUE 또는 DURATION +RDATE가 필수로 포함되어야 하는데 DURATION + RRUE으로 진행하겠습니다. DTSTART의 경우 Calendar의 set()으로 쉽게 시작 날짜 및 시간을 설정할 수 있습니다. 하지만 DURATION과 RRUE는 해당 문법에 맞게 작성해야합니다. 우선 지속 시간을 의미하는 DURATION의 경우 RFC5545에 따라 다음과 같은 형식을 가집니다.
+event 추가에는 CALENDAR_ID, DTSTART, EVENT_TIMEZONE가 필수로 포함되어야 합니다. 반복 event이기 때문에 추가적으로 DURATION + RRUE 또는 DURATION +RDATE가 필수로 포함되어야 하는데 DURATION + RRUE으로 진행하겠습니다. DTSTART의 경우 Calendar의 set()으로 쉽게 시작 날짜 및 시간을 설정할 수 있습니다. 하지만 DURATION과 RRUE는 해당 문법에 맞게 작성해야합니다. 우선 지속 시간을 의미하는 DURATION의 경우 RFC5545에 따라 다음과 같은 형식을 가집니다.
 
 P[n]Y[n]M[n]W[n]DT[n]H[n]M[n]S
 
