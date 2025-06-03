@@ -146,3 +146,548 @@ long startMillis;
         return eventId;
 
 로컬 calendar 전체 uri를 얻기 위해 calendar uri에 id를 추가한거처럼 event id를 얻으려면 uri의 마지막 요소를 가져오면 됩니다. 해당 id를 통해 event에 attendee 또는 reminder을 추가하는 등의 calendar 작업을 수행할 수 있습니다.
+
+ⅱ) update
+Event의 장소를 변경할겁니다. 회의실이 A-room302에서 A-room304으로 변경되었습니다. 전체 로직은 calendar에서의 update와 유사합니다. 위에서 얻은 event id를 event Uri에 추가하여 저희가 추가한 event의 전체 Uri를 구합니다.
+
+ContentValues values=new ContentValues();
+        values.put(CalendarContract.Events.EVENT_LOCATION,"A-room304");
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI,eventId);
+        int row=context.getContentResolver()
+                .update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 이벤트 열: " + row);
+
+ⅲ) view
+Calendar Provider는 VIEW intent를 통해 event를 볼 수 있는 두 가지 방식이 있습니다.특정 event 보기와 특정 날짜의 calendar 열기입니다. 특정 event를 보려면 event의 Uri에 event id를 더하여 특정 event의 전체 Uri를 구합니다. Intent에 View action과 해당 uri를 전달해주면 끝입니다.
+
+Uri uri=ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI,eventId);
+        Intent intent=new Intent(Intent.ACTION_VIEW).setData(uri);
+        context.startActivity(intent);
+
+특정 날짜를 보려면 확인하고 싶은 시간을 설정하고 Uri에 전달하면 됩니다. Calendar의 Uri에 buildUpon() 호출하여 URI를 조작할 수 있는 Uri.Builder를 생성합니다. 그럼 해당 Uri에 time 경로를 추가하고 확인할 시간을 더해줍니다. 최종 URI는 content://com.android.calendar/time/<startMillis> 형태가 됩니다.
+
+long startMillis;
+        Calendar beginTime=Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        startMillis=beginTime.getTimeInMillis();
+
+        Uri.Builder builder=CalendarContract.CONTENT_URI.buildUpon();
+        builder.appendPath("time");
+        ContentUris.appendId(builder, startMillis);
+
+        Intent intent=new Intent(Intent.ACTION_VIEW)
+                .setData(builder.build());
+        context.startActivity(intent);
+
+
+3)Attendees
+ⅰ) insert
+Attendee는 ATEUNTEE_NAME를 제외한 모든 필드를 필수로 포함해야 합니다. 즉 EVENT_ID, ATTENDEE_EMAIL, ATTENDEE_RELATIONSHIP, ATTENDEE_TYPE, ATTENDEE_STATUS 모두 포함해야합니다. 또한 event의 id를 Uri에 추가하는 것이 아닌 값으로 전달해야합니다.
+
+ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.EVENT_ID,eventId);
+        values.put(CalendarContract.Attendees.ATTENDEE_NAME,name);
+        values.put(CalendarContract.Attendees.ATTENDEE_EMAIL,email);
+        values.put(CalendarContract.Attendees.ATTENDEE_RELATIONSHIP,relationship);
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE,type);
+        values.put(CalendarContract.Attendees.ATTENDEE_STATUS,status);
+
+        Uri uri= context.getContentResolver()
+                .insert(CalendarContract.Attendees.CONTENT_URI, values);
+
+        long attendeeId=0;
+        if(uri!=null){
+            attendeeId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return attendeeId;
+
+ATTENDEE_RELATIONSHIP, ATTENDEE_TYPE, ATTENDEE_STATUS가 가질 수 있는 값들은 다음을 참고하세요. insert() 결과로 얻은 attendee id는 attendee 수정이나 삭제에 사용됩니다. 
+
+ⅱ) update
+Attendee type를 변경하겠습니다. 수정 로직은 큰 변경 없이 비슷하게 진행됩니다.
+
+ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE, CalendarContract.Attendees.TYPE_REQUIRED);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 참석자 열: " + row);
+
+ⅲ) delete
+삭제의 경우 해당 id를 전달해주기만 하면 됩니다.
+
+Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().delete(uri,null,null);
+        Log.d(LOG_TAG, "삭제된 참석자 열: " + row);
+
+4)Reminders
+ⅰ) insert
+Reminder의 경우 모든 필드를 포함해야합니다. EVENT_ID, MINUTES, METHOD입니다. METHOD가 가질 수 있는 값들은 다음을 참고하세요. 메서드에 reminder의 Uri과 추가할 값들을 추가해주면 됩니다.
+
+ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.EVENT_ID,eventId);
+        values.put(CalendarContract.Reminders.MINUTES,15);
+        values.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
+
+        Uri uri=context.getContentResolver()
+                .insert(CalendarContract.Reminders.CONTENT_URI,values);
+
+        long reminderId=0;
+        if(uri!=null){
+            reminderId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return reminderId;
+
+ⅱ) update
+위에서 얻은 reminder의 id를 통해 특정 reminder의 전체 Uri를 구하고 수정할 값을 전달하면 됩니다.
+
+ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.MINUTES,20);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Reminders.CONTENT_URI,reminderId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 알림 열: " + row);
+
+
+5)Instance
+Instance는 특정 데이터의 유형이 아닌 event에 대한 단일의 시작과 종료 시간를 의미합니다. 정보 조회용으로 사용되는 데이터입니다. 검색할 event에 대한 시간은 event view때 처럼 Uri에 추가하여 설정해줍니다. 나머지는 calendar에서의 query처럼 검색할 필드 명을 담은 배열과 특정 event의 값을 가져올 수 있도록 조건을 전달해주면 됩니다.
+
+private static final String [] INSTANCE_PROJECTION = new String[]{
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.START_DAY,
+            CalendarContract.Instances.START_MINUTE,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.END_DAY,
+            CalendarContract.Instances.END_MINUTE
+    };
+
+    private static final int INSTANCE_PROJECTION_BEGIN_IDX=0;
+    private static final int INSTANCE_PROJECTION_START_DAY_IDX=1;
+    private static final int INSTANCE_PROJECTION_START_MINUTE_IDX=2;
+    private static final int INSTANCE_PROJECTION_END_IDX=3;
+    private static final int INSTANCE_PROJECTION_END_DAY_IDX=4;
+    private static final int INSTANCE_PROJECTION_END_MINUTE_IDX=5;
+
+Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        long startMillis = beginTime.getTimeInMillis();
+
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025,Calendar.MAY,2,10,30);
+        long endMillis = endTime.getTimeInMillis();
+
+        Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
+        ContentUris.appendId(builder, startMillis);
+        ContentUris.appendId(builder, endMillis);
+
+        String selection= CalendarContract.Instances.EVENT_ID+"=?";
+        String [] selectionArgs=new String[]{String.valueOf(eventId)};
+
+        Cursor cursor=context.getContentResolver().query(
+                builder.build(),
+                INSTANCE_PROJECTION,
+                selection,
+                selectionArgs,
+                null
+        );
+
+        if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.d(LOG_TAG, "begin: "+
+                        cursor.getString(INSTANCE_PROJECTION_BEGIN_IDX));
+                Log.d(LOG_TAG, "start day: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_DAY_IDX));
+                Log.d(LOG_TAG, "start minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_MINUTE_IDX));
+                Log.d(LOG_TAG, "end: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_IDX));
+                Log.d(LOG_TAG, "end day: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_DAY_IDX));
+                Log.d(LOG_TAG, "end minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_MINUTE_IDX));
+                Log.d(LOG_TAG,"------------------------------------------");
+            }
+            cursor.close();
+        }
+
+저희는 반복 event였기에 while문으로 반복하며 출력해줍니다.
+
+
+6)Intent 사용
+ⅰ) insert
+Intent를 사용하면 권한 permission이 필요하지 않다는 장점이 있지만 설정할 수 있는 값들이 매우 제한적입니다. 그렇기에 저희는 삽입 예시만 간단히 진행해보겠습니다. 해당 제한은 다음을 참고하세요
+
+기존에서는 ContentValues를 통해 값을 전달하였지만 intent에서는 setData()으로 Uri, putExtra()를 통해 실제 값을 전달합니다. 실행하게 되면 전달한 값들이 포함된 calendar 편집 화면으로 이동하게 됩니다. 사용자가 이를 편집, 저장할 수 있는데 취소 또한 할 수 있기 때문에 해당 event의 id를 얻을 수 없습니다. 2025년 6월 1일에 7:30~8:30 요가 그룹 클래스를 체육관에서 하는 단일 event를 추가하겠습니다. 이때 일정에 여유가 있지 않기에 event에 다른 일정을 추가하지 못합니다.
+
+Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025, 6, 1, 7, 30);
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025, 6, 1, 8, 30);
+        Intent intent = new Intent(Intent.ACTION_INSERT)
+                .setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginTime.getTimeInMillis())
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime.getTimeInMillis())
+                .putExtra(CalendarContract.Events.TITLE, "Yoga")
+                .putExtra(CalendarContract.Events.DESCRIPTION, "Group class")
+                .putExtra(CalendarContract.Events.EVENT_LOCATION, "The gym")
+                .putExtra(CalendarContract.Events.AVAILABILITY,
+                        CalendarContract.Events.AVAILABILITY_BUSY);
+        context.startActivity(intent);
+
+사용자에 의해 추가 입력을 받을 수 있기 때문에 contentResolver으로 추가하던 경우와 달리 EVENT_TIMEZONE가 포함되지 않아도 코드가 실행이 됩니다.
+
+7)CalendarManager.java(전체코드)
+public class CalendarManager {
+
+    private final Context context;
+    private final long calendarId;
+    private static final String LOG_TAG="CALENDAR";
+
+    private static final String[] CALENDAR_PROJECTION = new String[] {
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.ACCOUNT_TYPE,
+            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME
+    };
+
+    private static final int CALENDAR_PROJECTION_CALENDAR_ID_IDX=0;
+    private static final int CALENDAR_PROJECTION_ACCOUNT_NAME_IDX=1;
+    private static final int CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX=2;
+    private static final int CALENDAR_PROJECTION_DISPLAY_NAME_IDX=3;
+
+    private static final String [] INSTANCE_PROJECTION = new String[]{
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.START_DAY,
+            CalendarContract.Instances.START_MINUTE,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.END_DAY,
+            CalendarContract.Instances.END_MINUTE
+    };
+
+    private static final int INSTANCE_PROJECTION_BEGIN_IDX=0;
+    private static final int INSTANCE_PROJECTION_START_DAY_IDX=1;
+    private static final int INSTANCE_PROJECTION_START_MINUTE_IDX=2;
+    private static final int INSTANCE_PROJECTION_END_IDX=3;
+    private static final int INSTANCE_PROJECTION_END_DAY_IDX=4;
+    private static final int INSTANCE_PROJECTION_END_MINUTE_IDX=5;
+
+    public CalendarManager(Context context, long calendarId){
+        this.context=context;
+        this.calendarId=calendarId;
+    }
+
+    public void queryAllCalendar(){
+        Cursor cursor=context.getContentResolver().query(
+                CalendarContract.Calendars.CONTENT_URI,
+                CALENDAR_PROJECTION,
+                null,
+                null,
+                null
+        );
+
+        if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_CALENDAR_ID_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+                Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+                Log.d(LOG_TAG,"------------------------------------------");
+            }
+            Log.d(LOG_TAG,"===========================================================");
+            cursor.close();
+        }
+     }
+
+    public void queryCalendar(){
+        String selection= CalendarContract.Calendars._ID+"=?";
+        String [] selectionArgs=new String[]{String.valueOf(calendarId)};
+
+        Cursor cursor=context.getContentResolver().query(
+                CalendarContract.Calendars.CONTENT_URI,
+                CALENDAR_PROJECTION,
+                selection,
+                selectionArgs,
+                null
+        );
+
+        if(cursor!=null){
+            cursor.moveToNext();
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_NAME_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_ACCOUNT_TYPE_IDX));
+            Log.d(LOG_TAG, cursor.getString(CALENDAR_PROJECTION_DISPLAY_NAME_IDX));
+            Log.d(LOG_TAG,"===========================================================");
+            cursor.close();
+        }
+    }
+
+    public void updateCalendar(){
+        ContentValues values = new ContentValues();
+        values.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, "my local calendar");
+
+        Uri uriUpdated = ContentUris.withAppendedId(
+                CalendarContract.Calendars.CONTENT_URI, calendarId);
+        int rows = context.getContentResolver()
+                .update(uriUpdated, values, null, null);
+
+        Log.d(LOG_TAG, "업데이트된 열: " + rows);
+        Log.d(LOG_TAG,"===========================================================");
+    }
+
+    public long insertEvent(){
+        long startMillis;
+        Calendar beginTime=Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        startMillis=beginTime.getTimeInMillis();
+
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Events.CALENDAR_ID, calendarId);
+        values.put(CalendarContract.Events.ORGANIZER,"organizer@mail.com");
+        values.put(CalendarContract.Events.TITLE,"meetingA");
+        values.put(CalendarContract.Events.EVENT_LOCATION,"A-room302");
+        values.put(CalendarContract.Events.EVENT_TIMEZONE,"Asia/Seoul");
+        values.put(CalendarContract.Events.DTSTART,startMillis);
+        values.put(CalendarContract.Events.DURATION, "PT1H");
+        values.put(CalendarContract.Events.RRULE, "FREQ=WEEKLY;UNTIL=20250702T113000Z");
+
+        Uri uri=context.getContentResolver()
+                .insert(CalendarContract.Events.CONTENT_URI,values);
+
+        long eventId=0;
+        if(uri!=null){
+            eventId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return eventId;
+    }
+
+    public void insertEventUsingIntent(){
+        Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025, 6, 1, 7, 30);
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025, 6, 1, 8, 30);
+        Intent intent = new Intent(Intent.ACTION_INSERT)
+                .setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, beginTime.getTimeInMillis())
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTime.getTimeInMillis())
+                .putExtra(CalendarContract.Events.TITLE, "Yoga")
+                .putExtra(CalendarContract.Events.DESCRIPTION, "Group class")
+                .putExtra(CalendarContract.Events.EVENT_LOCATION, "The gym")
+                .putExtra(CalendarContract.Events.AVAILABILITY,
+                        CalendarContract.Events.AVAILABILITY_BUSY);
+        context.startActivity(intent);
+    }
+
+    public void updateEvent(long eventId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Events.EVENT_LOCATION,"A-room304");
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI,eventId);
+        int row=context.getContentResolver()
+                .update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 이벤트 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
+    }
+
+    public void viewEvent(long eventId){
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI,eventId);
+        Intent intent=new Intent(Intent.ACTION_VIEW).setData(uri);
+        context.startActivity(intent);
+    }
+
+    public void viewSpecifiedEvent(){
+        long startMillis;
+        Calendar beginTime=Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        startMillis=beginTime.getTimeInMillis();
+
+        Uri.Builder builder=CalendarContract.CONTENT_URI.buildUpon();
+        builder.appendPath("time");
+        ContentUris.appendId(builder, startMillis);
+
+        Intent intent=new Intent(Intent.ACTION_VIEW)
+                .setData(builder.build());
+        context.startActivity(intent);
+    }
+
+    public long insertAttendee(
+            long eventId, String name, String email,
+            int relationship, int type, int status
+    ){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.EVENT_ID,eventId);
+        values.put(CalendarContract.Attendees.ATTENDEE_NAME,name);
+        values.put(CalendarContract.Attendees.ATTENDEE_EMAIL,email);
+        values.put(CalendarContract.Attendees.ATTENDEE_RELATIONSHIP,relationship);
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE,type);
+        values.put(CalendarContract.Attendees.ATTENDEE_STATUS,status);
+
+        Uri uri= context.getContentResolver()
+                .insert(CalendarContract.Attendees.CONTENT_URI, values);
+
+        long attendeeId=0;
+        if(uri!=null){
+            attendeeId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return attendeeId;
+    }
+
+    public void updateAttendee(long attendeeId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Attendees.ATTENDEE_TYPE, CalendarContract.Attendees.TYPE_REQUIRED);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 참석자 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
+    }
+
+    public void deleteAttendee(long attendeeId){
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Attendees.CONTENT_URI,attendeeId);
+        int row=context.getContentResolver().delete(uri,null,null);
+        Log.d(LOG_TAG, "삭제된 참석자 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
+    }
+
+    public long insertReminder(long eventId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.EVENT_ID,eventId);
+        values.put(CalendarContract.Reminders.MINUTES,15);
+        values.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
+
+        Uri uri=context.getContentResolver()
+                .insert(CalendarContract.Reminders.CONTENT_URI,values);
+
+        long reminderId=0;
+        if(uri!=null){
+            reminderId=Long.parseLong(Objects.requireNonNull(uri.getLastPathSegment()));
+        }
+
+        return reminderId;
+    }
+
+    public void updateReminder(long reminderId){
+        ContentValues values=new ContentValues();
+        values.put(CalendarContract.Reminders.MINUTES,20);
+
+        Uri uri=ContentUris.withAppendedId(CalendarContract.Reminders.CONTENT_URI,reminderId);
+        int row=context.getContentResolver().update(uri,values,null,null);
+
+        Log.d(LOG_TAG, "업데이트된 알림 열: " + row);
+        Log.d(LOG_TAG,"===========================================================");
+    }
+
+    public void queryInstance(long eventId){
+        Calendar beginTime = Calendar.getInstance();
+        beginTime.set(2025,Calendar.APRIL,2,10,30);
+        long startMillis = beginTime.getTimeInMillis();
+
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(2025,Calendar.MAY,2,10,30);
+        long endMillis = endTime.getTimeInMillis();
+
+        Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
+        ContentUris.appendId(builder, startMillis);
+        ContentUris.appendId(builder, endMillis);
+
+        String selection= CalendarContract.Instances.EVENT_ID+"=?";
+        String [] selectionArgs=new String[]{String.valueOf(eventId)};
+
+        Cursor cursor=context.getContentResolver().query(
+                builder.build(),
+                INSTANCE_PROJECTION,
+                selection,
+                selectionArgs,
+                null
+        );
+
+        if(cursor!=null){
+            while(cursor.moveToNext()){
+                Log.d(LOG_TAG, "begin: "+
+                        cursor.getString(INSTANCE_PROJECTION_BEGIN_IDX));
+                Log.d(LOG_TAG, "start day: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_DAY_IDX));
+                Log.d(LOG_TAG, "start minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_START_MINUTE_IDX));
+                Log.d(LOG_TAG, "end: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_IDX));
+                Log.d(LOG_TAG, "end day: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_DAY_IDX));
+                Log.d(LOG_TAG, "end minute: "+
+                        cursor.getString(INSTANCE_PROJECTION_END_MINUTE_IDX));
+                Log.d(LOG_TAG,"------------------------------------------");
+            }
+            cursor.close();
+        }
+    }
+
+}
+
+
+
+3. MainActivity
+CalendarManager를 생성하고 해당 메서드를 호출하기만 하면 됩니다. 단지 메서드를 실행할 때는 UI 스레드가 차단되지 않게 비동기로 실행되어야 합니다.
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        EdgeToEdge.enable(this);
+
+        CalendarManager manager=new CalendarManager(this, 1);
+
+        Thread thread=new Thread(() -> {
+            //calendar
+            manager.queryAllCalendar();
+            manager.queryCalendar();
+            manager.updateCalendar();
+            manager.queryCalendar();
+
+            //event
+            long eventId=manager.insertEvent();
+            manager.updateEvent(eventId);
+            manager.viewEvent(eventId);
+            manager.viewSpecifiedEvent();
+
+            //attendee
+            long attendeeAId=manager.insertAttendee(
+                            eventId,"A","a@mail.com",
+                            CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,
+                            CalendarContract.Attendees.TYPE_OPTIONAL,
+                            CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED
+                    );
+            manager.insertAttendee(
+                    eventId,"b","a@mail.com",
+                    CalendarContract.Attendees.RELATIONSHIP_ATTENDEE,
+                    CalendarContract.Attendees.TYPE_OPTIONAL,
+                    CalendarContract.Attendees.ATTENDEE_STATUS_ACCEPTED
+            );
+            manager.updateAttendee(attendeeAId);
+            manager.deleteAttendee(attendeeAId);
+
+            //reminder
+            long reminderId=manager.insertReminder(eventId);
+            manager.updateReminder(reminderId);
+
+            //instance
+            manager.queryInstance(eventId);
+
+            //intent
+            manager.insertEventUsingIntent();
+        });
+
+        thread.start();
+
+    }
+
+}
