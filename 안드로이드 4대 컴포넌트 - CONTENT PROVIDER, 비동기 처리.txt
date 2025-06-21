@@ -1,8 +1,15 @@
-안드로이드의 provider는 비동기로 실행해야 합니다. 그렇다보니 여러 자료를 보다보면 다양한 비동기 처리 방식이 나오죠. 오늘은 provider을 중점으로 한 비동기 처리 방식을 정리하겠습니다. 
+안드로이드의 content provider는 비동기로 실행해야 합니다. 그렇다보니 여러 자료를 보다보면 다양한 비동기 처리 방식이 나오죠. 오늘은 provider을 중점으로 한 비동기 처리 방식을 정리하겠습니다. 
 
 1. Thread/HandlerThread
-API 1부터 사용된 기본 비동기 처리 방식입니다. Thread는 하나의 실행 단위로, content provider 관련 작업을 별도의 thread에서 비동기적으로 실행할 수 있습니다. HandlerThread는 Looper를 갖는 thread이며, 이를 통해 자신만의 handler를 생성하고 메시지를 처리할 수 있습니다. UI thread의 Looper를 전달한 handler를 통해 UI thread에 접근할 수도 있습니다. 백그라운드 작업(content provider)이 UI와 통신이 필요한 경우 이 방식을 사용할 수 있습니다. 기본 방식인 만큼 구조가 단순하고 커스터마이징이 가능합니다. 현재도 간단한 비동기 작업에 사용되지만 생명주기 관리나 콜백, UI 업데이트는 직접 처리해야 합니다. 또한 content provider에 특화된 구조는 아닙니다.
+1)개념
+API 1부터 사용된 기본 비동기 처리 방식입니다. Thread는 하나의 실행 단위로, content provider 관련 작업을 별도의 thread에서 비동기적으로 실행할 수 있습니다. HandlerThread는 Looper를 갖는 thread이며, 이를 통해 자신만의 handler를 생성하고 메시지를 처리할 수 있습니다. UI thread의 looper를 전달한 handler를 통해 UI thread에 접근할 수도 있습니다. 
 
+
+2)특징
+백그라운드 작업(content provider)이 UI와 통신이 필요한 경우 이 방식을 사용할 수 있습니다. 기본 방식인 만큼 구조가 단순하고 커스터마이징이 가능합니다. 현재도 간단한 비동기 작업에 사용되지만 생명주기 관리나 콜백, UI 업데이트는 직접 처리해야 합니다. 또한 content provider에 특화된 구조는 아닙니다.
+
+
+3)예제코드
 HandlerThread thread = new HandlerThread("MyHandlerThread");
 thread.start();
 Handler handler = new Handler(thread.getLooper());
@@ -13,8 +20,15 @@ handler.post(() -> {
 
 
 2. AsyncQueryHandler
-AsyncQueryHandler 역시 API 1부터 사용되었으며 ContentProvider에 특화된 방식입니다. 이름을 보면 알 수 있듯이 내부적으로 Handler를 사용하고 있습니다. Content provider의 질의, 삽입, 삭제, 업데이트를 간단히 할 수 있도록 도와줍니다. 각 연산에 대한 콜백 메서드를 제공하기 때문에 오버라이드를 통해 작업을 진행할 수 있습니다. ListView 같이 간단한 목록 데이터 처리에는 적합하지만 단순히 Cursor를 반환하기에 Recyclerviewr 같은 동적 업데이트가 필요한 경우에는 사용이 어렵습니다. 또한 단순한 CRUD 쿼리를 비동기로 처리하는 데 초점이 맞춰져 있고 콜백 구조가 고정되어 있어 커스터마이징과 복잡한 쿼리에는 부적합하다는 단점을 가지고 있습니다.
+1)개념
+AsyncQueryHandler 역시 API 1부터 사용되었으며 content provider에 특화된 방식입니다. 이름을 보면 알 수 있듯이 내부적으로 Handler를 사용하고 있습니다. Content provider의 질의, 삽입, 삭제, 업데이트를 간단히 할 수 있도록 도와줍니다. 각 연산에 대한 콜백 메서드를 제공하기 때문에 오버라이드를 통해 작업을 진행할 수 있습니다. 
 
+
+2)특징
+ListView 같이 간단한 목록 데이터 처리에는 적합하지만 단순히 Cursor를 반환하기에 Recyclerviewr 같은 동적 업데이트가 필요한 경우에는 사용이 어렵습니다. 또한 단순한 CRUD 쿼리를 비동기로 처리하는 데 초점이 맞춰져 있고 콜백 구조가 고정되어 있어 커스터마이징과 복잡한 쿼리에는 부적합하다는 단점을 가지고 있습니다.
+
+
+3)예제코드
 public class MyQueryHandler extends AsyncQueryHandler {
     public MyQueryHandler(ContentResolver cr) {
         super(cr);
@@ -50,8 +64,17 @@ handler.startUpdate(0, null, uri, values, null, null);
 
 
 3. AbstractThreadedSyncAdapter
-API 5부터 도입된 동기화 어댑터로, 계정 및 데이터 동기화를 위해 사용됩니다. SyncAdapter의 추상 클래스이며 동기화 작업 시 자동으로 별도의 스레드를 생성하여 해당 작업을 수행할 수 있도록 도와줍니다. 기존 작업이 없으면 새로운 스레드가 생성하고, 기존 작업이 있다면 새로운 요청은 오류로 반환하고 기존 요청 진행합니다. 해당 클래스는 비동기 처리도 아니고 content provider 특화 구조도 아니지만 content provider에 사용되는 비동기 관련 adapter이기 때문에 추가하였습니다. 다만 현재 추천되는 방식은 아닙니다. 클래스가 deprecated되지는 않았지만 SyncAdapter, Account, SyncService, XML 및 AndroidManifest의 설정과 관리가 복잡합니다. 그렇기에 현재는 JobScheduler, WorkManager 사용을 권장합니다.
+1)개념
+API 5부터 도입된 동기화 어댑터로, 계정 및 데이터 동기화를 위해 사용됩니다. SyncAdapter의 추상 클래스이며 동기화 작업 시 자동으로 별도의 thread를 생성하여 해당 작업을 수행할 수 있도록 도와줍니다. 
 
+
+2)특징
+기존 작업이 없으면 새로운 thread가 생성하고, 기존 작업이 있다면 새로운 요청은 오류로 반환하고 기존 요청 진행합니다. 해당 클래스는 비동기 처리도 아니고 content provider 특화 구조도 아니지만 content provider에 사용되는 비동기 관련 adapter이기 때문에 추가하였습니다. 
+
+다만 현재 추천되는 방식은 아닙니다. 클래스가 deprecated되지는 않았지만 SyncAdapter, Account, SyncService, XML, AndroidManifest의 설정과 관리가 복잡하기 때문입니다. 그렇기에 현재는 JobScheduler, WorkManager 사용을 권장합니다.
+
+
+3)예제코드
 public class MySyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(Account account, Bundle extras, String authority,
@@ -63,8 +86,17 @@ public class MySyncAdapter extends AbstractThreadedSyncAdapter {
 
 
 4. CursorLoader
-API 11부터 도입된 cursor를 반환하는 Loader의 서브클래스입니다. AsyncTaskLoader를 기반으로 cursor를 쿼리하기 위한 표준 Loader 프로토콜를 구현하였습니다. 이때 AsyncTask는 코드가 간결한데 UI 쓰레드에 직접 접근할 수 있는 클래스입니다. CursorLoader는 앱의 UI를 차단하지 않도록 백그라운드 스레드에서 실행되어 비동기적으로 cursor 반환됩니다. LoaderManager와 결합으로 기존의 Thread/Handler 기반 처리 방식과 달리 자동으로 activity/fragment 생명주기 연동되어 쉬운 관리가 가능해졌습니다. LoaderManager 인터페이스를 통해 loader 인스턴스가 관리되고 이를 통해 자동 재쿼리 및 커서 갱신됩니다. 다만 기반이 된 AsyncTask와 Loader 자체가 depcreated되어 권장된 방식이 아닙니다. AsyncTask는 오직 한 번만 실행되어 재사용이 불가능하다는 점, 종료를 직접 해주지 않으면 종료가 되지 않아 메모리 누수가 발생한다는 점, 항상 UI 쓰레드 상에서 호출해야 한다는 점 등에서 dpcreated되었습니다. Loader의 경우 Activity 및 Fragment 수명 주기를 처리하면서 데이터 로드를 가능하게 만들었지만 Jetpack 구성요소(ViewModel, LiveData)의 등장으로 그 역할이 대체되었으며, 보다 안정적이고 수명 주기 친화적인 방식으로 바뀌었습니다. 따라서 현재는 JobScheduler, WorkManager, 또는 ViewModel + LiveData 조합이 권장됩니다.
+1)개념
+API 11부터 도입된 cursor를 반환하는 Loader의 서브클래스입니다. AsyncTaskLoader를 기반으로 cursor를 쿼리하기 위한 표준 Loader 프로토콜를 구현하였습니다. 이때 AsyncTask는 코드가 간결한데 UI thread에 직접 접근할 수 있는 클래스입니다. 
 
+
+2)특징
+CursorLoader는 앱의 UI를 차단하지 않도록 백그라운드 thread에서 실행되어 비동기적으로 cursor 반환됩니다. LoaderManager와 결합으로 기존의 thread/handler 기반 처리 방식과 달리 자동으로 activity/fragment 생명주기 연동되어 쉬운 관리가 가능해졌습니다. LoaderManager 인터페이스를 통해 loader 인스턴스가 관리되고 이를 통해 자동 재쿼리 및 커서 갱신됩니다. 
+
+다만 기반이 된 asyncTask와 Loader 자체가 deprecated되어 권장된 방식이 아닙니다. AsyncTask는 재사용 불가능, 자동 종료가 되지 않아 메모리 누수 위험성, 항상 UI thread에서 호출 필요 등에서 deprecated되었습니다. Loader의 경우 activity 및 fragment 수명 주기를 처리하면서 데이터 로드를 가능하게 만들었지만 jetpack 구성요소(viewModel, liveData)의 등장으로 그 역할이 대체되었으며, 보다 안정적이고 수명 주기 친화적인 방식으로 바뀌었습니다. 따라서 현재는 JobScheduler, WorkManager, 또는 ViewModel + LiveData 조합이 권장됩니다.
+
+
+3)예제코드
 getLoaderManager().initLoader(0, null, new LoaderManager.LoaderCallbacks<Cursor>() {
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         return new CursorLoader(context, uri, projection, null, null, null);
@@ -79,13 +111,21 @@ getLoaderManager().initLoader(0, null, new LoaderManager.LoaderCallbacks<Cursor>
     }
 });
 
-+CursorAdapter는 Cursor의 데이터를 ListView에 표시하는걸 도와주는 Adapter. 비동기와 상관X
++CursorLoader vs CursorAdapter
+CursorAdapter는 cursor의 데이터를 listView에 표시하는걸 도와주는 adapter. 비동기와 상관X
 
 
 
 5. JobScheduler
-작업을 스케쥴링을 해주는 API입니다. 이 프레임워크는 언제 job을 실행하는지 파악하고 최대한 배치 또는 지연하려고 합니다. JobInfo으로 선언된 조건이 충족되면 시스템은 응용 프로그램의 JobService에서 해당 job을 실행합니다. JobInfo는 네트워크의 연결 상태나 충전 여부 등 JobService가 실행되어야 하는 조건을 관리합니다. 이 조건은 하나일 수도 여러 개일 수도 있습니다. JobService라는 service를 사용하고 이를 통해 시작 및 종료 시의 동작 을처리할 수 있으며 onStartJob()과 onStopJob() 콜백 메소드를 제공합니다. 다만 즉시 실행 보장이 되지 않고 API 21 이상에서만 사용 가능가능합니다. 위에 언급 되었듯이 (AbstractThreaded)SyncAdapter, CursorLoader 대신 사용할 수 있습니다.
+1)개념
+Job을 스케쥴링을 해주는 API입니다. 이 프레임워크는 언제 job을 실행하는지 파악하고 최대한 배치 또는 지연하려고 합니다. JobInfo으로 선언된 조건이 충족되면 시스템은 응용 프로그램의 jobService에서 해당 job을 실행합니다. JobInfo는 네트워크의 연결 상태나 충전 여부 등 JobService가 실행되어야 하는 조건을 관리합니다. 이 조건은 하나일 수도 여러 개일 수도 있습니다. JobService라는 service를 사용하고 이를 통해 시작 및 종료 시의 동작을 처리할 수 있으며 onStartJob()과 onStopJob() 콜백 메소드를 제공합니다. 
 
+
+2)특징
+즉시 실행 보장이 되지 않고 API 21 이상에서만 사용 가능가능합니다. 위에 언급 되었듯이 (AbstractThreaded)SyncAdapter, CursorLoader 대신 사용할 수 있습니다.
+
+
+3)예제코드
 JobScheduler scheduler = (JobScheduler) context.getSystemService(JOB_SCHEDULER_SERVICE);
 JobInfo jobInfo = new JobInfo.Builder(1, new ComponentName(context, MyJobService.class))
     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -106,9 +146,16 @@ public class MyJobService extends JobService {
 
 
 
-6. workmanager
- Jetpack 라이브러리이며 백그라운드 처리에 권장하는 기본 API입니다. 대부분의 백그라운드 처리는 지속적인 작업으로 처리되는데 WorkManager는 지속적인 작업에 권장되는 솔루션이기 때문입니다. 앱이 다시 시작되거나 시스템이 재부팅될 때 작업이 예약된 채로 남아 있으면 그 작업은 지속됩니다. WorkManager는 사용자가 화면을 벗어나 이동하거나, 앱이 종료되거나, 기기가 다시 시작되더라도 안정적으로 실행되어야 하는 작업을 대상으로 설계되었습니다. ContentProvider 연동은 직접적이진 않지만 커스텀 트리거로 처리 가능합니다.
+6. Workmanager
+1)개념
+ Jetpack 라이브러리이며 백그라운드 처리에 권장하는 기본 API입니다. 대부분의 백그라운드 처리는 지속적인 작업으로 처리되는데 WorkManager는 지속적인 작업에 권장되는 솔루션이기 때문입니다. 앱이 다시 시작되거나 시스템이 재부팅될 때 작업이 예약된 채로 남아 있으면 그 작업은 지속됩니다. 
 
+
+2)특징
+WorkManager는 사용자가 화면을 벗어나 이동하거나, 앱이 종료되거나, 기기가 다시 시작되더라도 안정적으로 실행되어야 하는 작업을 대상으로 설계되었습니다. Content provider 연동은 직접적이진 않지만 커스텀 트리거로 처리 가능합니다.
+
+
+3)예제코드
 // 1. Work 정의
 class SyncWorker(appContext: Context, workerParams: WorkerParameters)
     : Worker(appContext, workerParams) {
