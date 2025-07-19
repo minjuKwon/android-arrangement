@@ -1,0 +1,84 @@
+1. State
+1)제공처	 
+- Jetpack Compose
+
+
+2)초기화	
+- mutableStateOf(value)
+
+
+3)주 사용처	
+- Composable 내부의 로컬 상태
+
+
+4)비동기 스트림	
+- 비동기 처리에는 부적합
+- State 자체가 Flow가 아니므로 비동기 스트림 처리가 불가능
+
+
+5)재구성 트리거	
+- 값이 변경되면 자동으로 Composable 재구성
+
+
+6)단일/복합 데이터	
+- 단일 값 관리에 적합
+- 여러 필드를 동시에 관리하려고 하면 상태가 분산, 수동 관리가 많아짐
+
+
+7)속성 위임(by)	
+- by 키워드로 사용 가능 
+- var count by mutableStateOf(0)
+
+
+8)스레드 안전성
+- Compose 내부에서만 동작하기에 UI 스레드에서만 사용 가능
+- UI 스레드 외에서 값 변경 시 예외 발생 가능
+
+
+9)초기 값 유지 
+- Composable이 재구성되면 값 유지 가능
+
+
+
+2. StateFlow
+1)제공처	
+- Kotlin Coroutines의 Flow API
+
+
+2)초기화	
+- MutableStateFlow(value)
+
+
+3)주 사용처	
+- ViewModel 등에서 UI와 상태 공유
+
+
+4)비동기 스트림	
+- 비동기 상태 흐름에 적합
+- Flow 기반 스트림
+
+
+5)재구성 트리거	
+- 기본적으로 재구성X. Compose는 StateFlow를 직접 관찰하지 않음
+- collectAsState()로 구독하면 State으로 값이 변경. 이후 값이 변경될 때 재구성
+- 비동기적으로 작동하기 때문에 재구성이 곧바로 적용되지 않을 수 있음
+
+
+6)단일/복합 데이터	   
+- Flow 기반 스트림으로, 내부 값이 변경될 때마다 구독자에게 emit하고 UI가 collect하는 구조
+- 상태를 한 곳에서 단방향으로 흐르게 만들기 때문에 복합 데이터(data class등) 관리에 유리
+
+
+
+7)속성 위임(by)	
+- by 사용 불가능. 내부적으로 위임 인터페이스 구현 X
+- collectAsState() 사용하여 State형태로 바꾼 후 위임 사용 가능
+
+
+8)스레드 안전성
+- Coroutine 기반이기에 스레드 안전
+- 여러 coroutine에서 사용 가능
+
+
+9)초기 값 유지 
+- ViewModel 등과 함께 사용 시 상태 보존 용이
