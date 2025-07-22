@@ -1,0 +1,26 @@
+- 사용 이유
+    -Edge to Edge이 기본 ui 설정으로 변경됨.
+    - Edge-to-Edge 디자인 구현 위해 사용. 투명/생략으로 앱의 콘텐츠가 화면 전체를 차지
+    - 상태바, 내비게이션 바, 키보드 등 시스템 UI와 앱의 콘텐츠가 자연스런 연결위해 도움
+- EdgeToEdge.enable(this)
+    - API 29 이상 (Android 10 이상) 시스템바(상태바, 내비게이션 바) 투명화.
+    - 콘텐츠가 화면 끝까지 확장되도록 설정 위해 사용
+- ViewCompat.setOnApplyWindowInsetsListener
+    - WindowInsets(창 삽입) 활용하여 시스템 UI 요소(예: 상태바, 내비게이션 바, 키보드 등)가 차지하는 영역을 감지하고, 그 영역을 기반으로 뷰에 패딩을 동적으로 적용하는 로직
+    - insets이란 Android에서 시스템 UI 요소가 차지하는 화면 영역을 의미
+    - 투명화로 콘텐츠의 배경을 보이게하여 확장감을 주고 패딩으로 실질적 콘텐츠의 UI 요소와 시스템과 시각적 겹침과 터치 영역 문제 방식
+    - insets 리턴하는 이유는 하위 뷰나 다른 뷰는 Insets 정보를 받을 수 없기 때문. 특정 뷰에서  소비하고 반환하지 않으면, 시스템은 이를 완전히 소비(consumed)했다고 간주. 즉, 다른 뷰에서 더이상 insets 정보를 못 받음
+
+//화면 회전같이 insets 변경마다 호출
+ViewCompat.setOnApplyWindowInsetsListener(
+    findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars =
+                //insets 정보(크기) 가져오기
+                insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(
+                systemBars.left, systemBars.top, 
+                systemBars.right, systemBars.bottom
+                );
+            //추가 처리를 위한 insets 리턴   
+            return insets;
+}
