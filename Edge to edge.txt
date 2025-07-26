@@ -24,3 +24,74 @@ ViewCompat.setOnApplyWindowInsetsListener(
             //추가 처리를 위한 insets 리턴   
             return insets;
 }
+
+
+
+Inset?
+안드로이드는 상태 표시줄, 탐색 메뉴와 같은 시스템 UI를 그립니다. 이 시스템 UI는 사용자가 어떤 앱을 사용하고 있는지와 관계없이 표시됩니다. WindowInsets는 앱이 올바른 영역에 표시되고 시스템 UI에 의해 UI가 가려지지 않도록 시스템 UI에 관한 정보를 제공합니다. Android 14 (API 수준 34) 이하에서는 기본적으로 앱의 UI가 시스템 표시줄과 디스플레이 컷아웃 아래에 그려지지 않습니다. Android 15 (API 수준 35) 이상에서는 앱이 SDK 35를 타겟팅하면 앱이 시스템 표시줄과 디스플레이 컷아웃 아래에 그려집니다. 따라서 사용자 환경이 더욱 원활해지고 앱에서 사용할 수 있는 창 공간을 최대한 활용할 수 있습니다.
+시스템 UI 뒤에 콘텐츠를 표시하는 것을 더 넓은 화면을 활용한다고 합니다(edge-to-edge). 만약 edge-to-edge의 처리를 하지 않는 경우 앱의 일부가 시스템 UI에 의해 가려질 수 있습니다. Material 3의 Scaffold 구성요소를 사용하면 edge-to-edge 처리를 쉽게 대응 할 수 있습니다.
+
+앱이 더 넓은 화면에 콘텐츠를 표시하는 경우 중요한 콘텐츠와 상호작용이 시스템 UI에 가려지지 않도록 해야 합니다. 예를 들어 버튼이 탐색 메뉴 뒤에 배치되면 사용자가 버튼을 클릭하지 못할 수 있습니다. 시스템 UI의 크기와 위치에 관한 정보는 inset을 통해 지정됩니다. 시스템 UI의 각 부분과 대응되는 inset 유형이 있습니다. 예를 들어 상태 표시줄 inset은 상태 표시줄의 크기와 위치를 제공하는 반면 탐색 메뉴 inset은 탐색 메뉴의 크기와 위치를 제공합니다. 각 inset 유형은 상단, 왼쪽, 오른쪽, 하단의 네 가지 픽셀 크기로 구성됩니다. 이러한 수치들은 시스템 UI가 앱 창의 각 측면으로 얼마나 들어와서 UI가 겹쳐져 있는지 나타냅니다. 따라서 시스템 UI와 겹치지 않도록 앱 UI를 해당 양만큼 여백을 주어 inset의 처리를 해야 합니다.
+
+이러한 기본 제공 Android inset 유형은 WindowInsets을 통해 사용할 수 있습니다.
+WindowInsets.statusBars
+상태 표시줄을 설명하는 inset입니다. 알림 아이콘과 기타 표시기가 포함된 상단 시스템 UI 표시줄입니다.
+
+WindowInsets.statusBarsIgnoringVisibility
+statusBars는 상태바가 보여질 때의 inset을 의미합니다. 몰입형 전체화면 모드로 상태 표시줄이 숨겨져 있으면 비어있는 값을 반환하지만 statusBarsIgnoringVisibility는 비어있지 않는, 상태바가 보여질 때의 inset을 여전히 반환합니다
+
+WindowInsets.navigationBars
+탐색 메뉴를 설명하는 inset입니다. 작업 표시줄이나 탐색 아이콘을 설명하는 기기의 왼쪽, 오른쪽 또는 하단에 있는 시스템 UI 표시줄입니다. 이러한 값은 사용자가 선호하는 탐색 방법과 작업 표시줄과의 상호작용에 따라 런타임에 변경될 수 있습니다.
+
+WindowInsets.navigationBarsIgnoringVisibility
+navigationBars는 탐색 메뉴가 보여질 때의 inset을 의미합니다. 몰입형 전체화면 모드로 탐색 메뉴가 숨겨져 있으면 비어있는 값을 반환하지만 navigationBarsIgnoringVisibility는 비어있지 않는, 탐색 메뉴가 보여질 때의 inset을 여전히 반환합니다
+
+WindowInsets.captionBar
+앱 창의 상단에 표시되는 시스템 타이틀 바 영역의 inset입니다. 이는 freeform 창 모드에서 적용되며, freeform 모드는 PC의 프로그램 창처럼 앱 창의 크기나 위치를 자유롭게 조절할 수 있는 환경을 말합니다. 이 모드에서는 앱이 독립된 창처럼 표시되기 때문에 상단에 시스템 타이틀 바가 생성됩니다
+
+WindowInsets.captionBarIgnoringVisibility
+caption bar가 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+WindowInsets.systemBars
+상태 표시줄, 탐색 메뉴, caption bar을 포함하는 시스템 표시줄 inset의 합집합입니다.
+
+WindowInsets.systemBarsIgnoringVisibility
+시스템 표시줄이 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+WindowInsets.ime
+소프트 키보드가 화면 하단에서 차지하는 높이만큼의 공간 크기를 설명하는 inset입니다.
+
+WindowInsets.imeAnimationSource
+현재 키보드 애니메이션이 시작되기 직전에 소프트 키보드가 차지하고 있던 공간의 inset입니다. 키보드가 사라지고 있는 중이면 키보드가 완전히 올라와 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 숨겨져 있을 때의 공간 영역을 의미합니다
+
+WindowInsets.imeAnimationTarget
+현재 키보드 애니메이션이 시작되기 직후에 소프트 키보드가 차지하고 있던 공간의 inset입니다. 키보드가 사라지고 있는 중이면 키보드가 완전히 사라져 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 올라와 있을 때의 공간 영역을 의미합니다
+
+WindowInsets.tappableElement
+탐색 UI에 대한 더 구체적인 정보를 제공하는 inset 유형으로, 앱이 아닌 시스템이 '탭'을 처리하는 영역의 크기를 나타냅니다. 제스처로 navigation을 하는 투명한 탐색 바의 경우, 시스템 탐색 UI 위로 앱 요소가 보일 수 있지만, 이 영역에서 발생하는 터치는 시스템이 처리하므로 앱 UI와 겹치지 않도록 주의해야 합니다
+
+WindowInsets.tappableElementIgnoringVisibility
+탭할 수 있는 요소가 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+WindowInsets.systemGestures
+이 inset은 시스템이 제스처 탐색(예: 뒤로가기 스와이프)을 처리하는 화면 영역을 의미. 기본적으로 이 영역 내의 제스처는 시스템에서 처리하지만 앱은 Modifier.systemGestureExclusion를 통해 일부 영역을 예외로 지정해 직접 제스처를 처리하게 할 수 있습니다.
+
+WindowInsets.mandatorySystemGestures
+시스템 제스처 중에서도 무조건 시스템이 처리해야 하는 제스처 영역. 이 영역에 대해서는 앱이 제스처 처리 우선권을 가질 수 없습니다.  Modifier.systemGestureExclusion을 통해 예외 지정할 수 없습니다.
+
+WindowInsets.displayCutout
+디스플레이 컷아웃 (노치 또는 핀홀)과의 중복을 방지하는 데 필요한 간격의 양을 나타내는 inset입니다.
+
+WindowInsets.waterfall
+waterfall 디스플레이의 곡선 영역을 나타내는 inset입니다. 화면의 좌우 또는 상하 가장자리가 둥글게 말려있는 디스플레이를 뜻합니다. 이 inset은 화면 가장자리의 곡면 부분 때문에 앱 UI가 가려지거나 터치 불가 영역이 생길 수 있어, UI 배치 시 고려해야 하는 영역입니다.
+
+
+이러한 유형은 콘텐츠가 가려지지 않도록 하는 세 가지 '안전한' inset 유형으로 요약됩니다.
+WindowInsets.safeDrawing
+WindowInsets.safeGestures
+WindowInsets.safeContent
+이러한 '안전한' inset 유형은 기본 플랫폼 인셋에 따라 다양한 방식으로 콘텐츠를 보호합니다.
+
+WindowInsets.safeDrawing을 사용하여 시스템 UI 아래에 그려지면 안 되는 콘텐츠를 보호하세요. 이는 inset을 사용하는 가장 일반적인 방법으로, 시스템 UI에 의해 일부 또는 완전히 가려지는 콘텐츠가 그려지지 않도록 방지합니다.
+WindowInsets.safeGestures를 사용해 제스처 충돌을 방지하며 콘텐츠를 보호하세요. 이는 시스템 제스처와 앱 내 제스처(예: 바텀 시트, 캐러셀(슬라이드 쇼 형태의 UI), 게임 내 제스처)가 겹치지 않도록 합니다.
+WindowInsets.safeContent는 safeDrawing과 safeGestures를 결합한 것으로, 시각적 겹침과 제스처 충돌 모두 없도록 콘텐츠를 보호합니다.
