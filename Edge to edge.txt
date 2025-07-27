@@ -95,3 +95,200 @@ WindowInsets.safeContent
 WindowInsets.safeDrawing을 사용하여 시스템 UI 아래에 그려지면 안 되는 콘텐츠를 보호하세요. 이는 inset을 사용하는 가장 일반적인 방법으로, 시스템 UI에 의해 일부 또는 완전히 가려지는 콘텐츠가 그려지지 않도록 방지합니다.
 WindowInsets.safeGestures를 사용해 제스처 충돌을 방지하며 콘텐츠를 보호하세요. 이는 시스템 제스처와 앱 내 제스처(예: 바텀 시트, 캐러셀(슬라이드 쇼 형태의 UI), 게임 내 제스처)가 겹치지 않도록 합니다.
 WindowInsets.safeContent는 safeDrawing과 safeGestures를 결합한 것으로, 시각적 겹침과 제스처 충돌 모두 없도록 콘텐츠를 보호합니다.
+
+
+
+inset 사용법
+앱의 UI를 제대로 배치되도록 제어하기 위해서는 다음 단계를 따라야 합니다. 그렇지 않으면 앱이 시스템 UI 뒤에 검은색이나 단색을 그리거나 소프트웨어 키보드와 동기화되지 않을 수 있습니다.
+1. Android 15 이상에서 edge to edge를 적용하려면 Android 15 (API 수준 35) 이상을 타겟팅해야합니다. 앱이 시스템 UI 뒤에 표시됩니다. inset을 처리하여 앱의 UI를 조정할 수 있습니다.
+2. 원하는 경우 Activity.onCreate()에서 enableEdgeToEdge()를 호출하여 이전 Android 버전에서도 앱이 edge to edge를 사용할 있습니다.
+3. AndroidManifest.xml 항목에서 android:windowSoftInputMode="adjustResize"을 설정합니다.이 설정을 하면 앱이 소프트웨어 키보드(IME)의 크기를 inset으로 받을 수 있게 되고, 키보드가 나타나거나 사라질 때 전체 레이아웃의 크기가 자동으로 조정됩니다. 이를 통해 적절한 레이아웃과 패딩을 적용할 수 있게 됩니다
+<activity
+  android:name=".ui.MainActivity"
+  android:label="@string/app_name"
+  android:windowSoftInputMode="adjustResize"
+  android:theme="@style/Theme.MyApplication"
+  android:exported="true">
+
+개발자가 activity에서 모든 inset 처리를 직접 제어하고 싶으면 Compose API를 활용하면 됩니다. 콘텐츠가 시스템 UI에 가려지지 않도록 하고, 인터랙션 가능한 요소들이 시스템 UI와 겹치지 않도록 할 수 있습니다. 이러한 API는 앱의 레이아웃이 inset 변경에 맞춰 동기화되도록 도와줍니다. 예를 들어 전체 앱의 콘텐츠에 inset을 적용하는 가장 기본적인 방법은 다음과 같습니다.
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    enableEdgeToEdge()
+    setContent {
+        Box(Modifier.safeDrawingPadding()) {
+            // the rest of the app
+        }
+    }
+}
+
+위의 예제는 safeDrawing window inset을 앱 전체 콘텐츠의 패딩으로 적용합니다. 이렇게 하면 인터랙션 가능한 요소가 시스템 UI와 겹치지 않도록 보장되지만, 앱이 시스템 UI 아래로 그려지는 edge-to-edge 효과를 내는 것은 불가능해집니다. 전체 창을 온전히 활용하려면, inset을 화면 단위 또는 컴포넌트 단위로 정밀하게 적용할 필요가 있습니다. 이러한 모든 inset 유형은 IME 애니메이션이 API 21이상 사용될 수 있도록 자동으로 처리합니다. 따라서 이러한 inset을 사용하는 레이아웃도 inset 값 변화에 따라 자동으로 애니메이션됩니다. inset 값을 Composable 레이아웃에 적용하는 주요 방법은 두 가지입니다. 패딩 modifier와 inset 크기 modifier입니다.
+
+Modifier.windowInsetsPadding(windowInsets: WindowInsets)는 지정된 창 inset을 패딩으로 적용하여 Modifier.padding과 똑같이 작동합니다. 예를 들어 Modifier.windowInsetsPadding(WindowInsets.safeDrawing)는 safeDrawing inset을 4면 모두에 패딩으로 적용합니다. 가장 일반적인 inset 유형을 위한 여러 내장 유틸리티 메서드도 있습니다. Modifier.safeDrawingPadding()은 Modifier.windowInsetsPadding(WindowInsets.safeDrawing)와 동일한 이러한 메서드 중 하나입니다. 다른 inset 유형에도 유사한 modifier가 있습니다.
+
+다음 modifier는 inset 크기로 구성요소의 크기를 설정하여 inset 양을 적용합니다.
+Modifier.windowInsetsStartWidth(windowInsets: WindowInsets)
+windowInsets의 시작 측면을 너비로 적용합니다 (예: Modifier.width).
+
+Modifier.windowInsetsEndWidth(windowInsets: WindowInsets)
+windowInsets의 끝쪽을 너비로 적용합니다 (예: Modifier.width).
+
+Modifier.windowInsetsTopHeight(windowInsets: WindowInsets)
+windowInsets의 상단이 높이로 적용됩니다 (예: Modifier.height).
+
+Modifier.windowInsetsBottomHeight(windowInsets: WindowInsets)
+windowInsets의 하단이 높이로 적용됩니다 (예: Modifier.height).
+
+이러한 modifier는 inset의 공간을 차지하는 Spacer의 크기를 조정하는 데 특히 유용합니다.
+LazyColumn(
+    Modifier.imePadding()
+) {
+    // Other content
+    item {
+        Spacer(
+            Modifier.windowInsetsBottomHeight(
+                WindowInsets.systemBars
+            )
+        )
+    }
+}
+
+inset 패딩 modifier(windowInsetsPadding 및 safeDrawingPadding 같은 헬퍼들)는 일반 패딩 modifier과 달리, 적용된 inset 영역을 자동으로 소비(consume)합니다. 컴포지션 트리의 더 깊은 위치로 내려갈수록, 중첩된 inset 패딩 modifier나 inset 크기 modifier는 바깥쪽에서 일부 inset이 이미 소비되었음을 인식하고, 동일한 inset 영역을 중복으로 적용하지 않도록 처리합니다. 그렇지 않으면 불필요하게 공간이 많이 생길 수 있기 때문입니다. inset 크기 modifier들도, inset이 이미 소비된 경우 중복 적용을 피하도록 동작합니다. 하지만 이들은 크기를 직접 조절할 뿐이므로 자체적으로 inset을 consume하지는 않습니다. 그렇기에 해당 inset 정보를 다른 컴포저블에도 사용할 수 있습니다. 이러한 동작 결과로 인해, 중첩된 padding modifier는 각 Composable에 적용되는 패딩 양을 자동으로 조절합니다.
+
+이전과 동일한 LazyColumn 예제를 보면, imePadding modifier에 의해 LazyColumn이 크기가 조정되고, LazyColumn 내부에서 마지막 아이템은 시스템 바의 하단 높이에 맞춰 크기가 조정됩니다. IME가 닫히면 IME에 높이가 없으므로 imePadding() modifier는 패딩을 적용하지 않습니다. imePadding() modifier는 패딩을 적용하지 않으므로 inset이 사용되지 않으며 Spacer의 높이는 시스템 표시줄의 하단 크기가 됩니다. IME가 열리면 IME inset이 IME 크기에 맞게 애니메이션으로 표시되고 imePadding() modifier가 IME가 열릴 때 LazyColumn의 크기를 조절하기 위해 하단 패딩을 적용하기 시작합니다. imePadding() modifier가 하단 패딩을 적용하기 시작하면 해당 양의 inset도 사용하기 시작합니다. 따라서 시스템 표시줄의 간격 중 일부가 이미 imePadding() modifier에 의해 적용되었으므로 Spacer의 높이가 감소하기 시작합니다. imePadding() modifier가 시스템 표시줄보다 큰 하단 패딩을 적용하면 Spacer의 높이는 0입니다. IME가 닫히면 변경사항이 반대로 적용됩니다. imePadding()이 시스템 표시줄의 하단보다 적게 적용되면 Spacer이 높이 0에서 확장되기 시작하여 IME가 완전히 애니메이션으로 표시되지 않을 때까지 Spacer이 시스템 표시줄의 하단 높이와 일치합니다. 만약 시스템 표시줄 위의 LazyColumn에서 마지막 TextField를 그리려면 contentPadding 대신 Spacer를 사용해야합니다. 그렇지 않으면 IME가 TextField를 숨길 수 있습니다
+
+이 동작은 모든 windowInsetsPadding modifier 간의 inset 소비 상태 소통을 통해 이뤄지며, 다른 방법들로도 조정될 수 있습니다. Modifier.consumeWindowInsets(WindowInsets)는 windowInsetsPadding처럼 inset을 소비하지만, padding을 적용하지는 않습니다. 이건 inset size modifier와 함께 사용할 때 유용합니다. 즉, 형제 컴포넌트에게 "일정 inset이 이미 처리됐다는 걸 알려주는 용도입니다. 시각적으로 padding은 없지만 논리적으로는 inset을 처리한 것으로 취급됩니다
+
+Column(Modifier.verticalScroll(rememberScrollState())) {
+    Spacer(Modifier.windowInsetsTopHeight(WindowInsets.systemBars))
+
+    Column(
+        Modifier.consumeWindowInsets(
+            WindowInsets.systemBars.only(WindowInsetsSides.Vertical)
+        )
+    ) {
+        // content
+        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.ime))
+    }
+
+    Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
+}
+
+PaddingValues를 받는 consumeWindowInsets()는 위와 거의 동일하게 동작하지만,
+임의의 PaddingValues 을 inset처럼 소비합니다. Modifier.padding이나 Spacer 같은 일반 padding 방식으로 여백을 줬을 때, 하위 컴포넌트에 "이 여백은 inset으로 간주해" 라고 알려줄 때 유용합니다.
+
+Column(Modifier.padding(16.dp).consumeWindowInsets(PaddingValues(16.dp))) {
+    // content
+    Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.ime))
+}
+
+inset 값을 소비하지 않고 직접 사용하려면 WindowInsets 자체를 사용하거나,
+WindowInsets.asPaddingValues()를 써서 소비되지 않은 상태의 패딩 값을 얻으면 됩니다.
+다만 명확한 제어를 위해 가능하면 windowInsetsPadding이나 size modifier를 사용하는 것을 권장합니다.
+
+Compose는 AndroidX core API를 기반으로 inset을 업데이트하고 애니메이션 처리하며, 이 AndroidX core API는 다시 플랫폼의 inset 관리 API를 사용합니다.inset 값은 composition 단계 이후, layout 단계 이전에 업데이트됩니다.  즉, composition 중에 inset 값을 읽으면 한 프레임 이전의 값을 읽게 되는 경우가 많습니다. 위에서 설명한 내장 modifier들은 inset 값을 layout 단계까지 지연시켜 사용하도록 설계되어, inset 값이 업데이트된 것과 같은 프레임에서 사용되도록 보장합니다.
+
+사용 편의성을 위해 많은 내장 Material 3 컴포저블(androidx.compose.material3)은 Material 사양에 따라 앱에 컴포저블이 배치되는 방식을 기반으로 inset을 자체적으로 처리합니다. Material 2 구성요소(androidx.compose.material)는 inset 자체를 자동으로 처리하지 않습니다. 하지만 inset에 액세스하여 수동으로 적용할 수 있습니다. androidx.compose.material 1.6.0 이상에서 windowInsets 매개변수를 사용하여 BottomAppBar, TopAppBar, BottomNavigation, NavigationRail에 inset을 수동으로 적용합니다. 마찬가지로 Scaffold에는 contentWindowInsets 매개변수를 사용합니다. 그 외에는 수동으로 inset을 패딩으로 적용합니다.
+
+다음은 inset을 자동으로 처리하는 Material 구성요소 목록입니다.
+앱 바
+TopAppBar/ SmallTopAppBar/ CenterAlignedTopAppBar/ MediumTopAppBar/ LargeTopAppBar: 창 상단에 사용되므로 시스템 표시줄의 상단 및 horizontal 측면을 패딩으로 적용합니다.
+BottomAppBar: 시스템 표시줄의 하단 및 horizontal 측면을 패딩으로 적용합니다.
+콘텐츠 컨테이너
+ModalDrawerSheet / DismissibleDrawerSheet / PermanentDrawerSheet (modal navigation drawer 내부의 콘텐츠): 콘텐츠에 vertical 및 start inset을 적용합니다.
+ModalBottomSheet: 하단 inset을 적용합니다.
+NavigationBar : 하단 및 horizontal inset을 적용합니다.
+NavigationRail: vertical 및 start inset을 적용합니다.
+Scaffold
+기본적으로 Scaffold는 삽입을 매개변수 paddingValues로 제공하여 소비하고 사용할 수 있게 합니다. 하지만 Scaffold는 이 inset 값을 content에 자동으로 직접 적용하지 않으며 inset 값을 사용하는 것은 개발자의 책임입니다. 예를 들어 Scaffold 내에서 LazyColumn로 이러한 inset을 사용하려면 다음을 실행합니다.
+
+Scaffold { innerPadding ->
+    // 사용하고 적용할 수 있는 inset정보가 포함된 innerPadding 
+    LazyColumn(
+        // 기본적으로 scaffold insets 자동 적용X
+        modifier = Modifier.consumeWindowInsets(innerPadding),
+        contentPadding = innerPadding
+    ) {
+        // ..
+    }
+}
+
+컴포저블에 전달된 windowInsets 매개변수를 변경하여 컴포저블의 동작을 구성할 수 있습니다. 이 매개변수는 다른 종류의 window inset일 수 있고 빈 인스턴스 WindowInsets(0, 0, 0, 0)를 전달하여 사용 중지할 수도 있습니다. 예를 들어 LargeTopAppBar에서 inset 처리를 사용 중지하려면 windowInsets 매개변수를 빈 인스턴스로 설정합니다
+
+LargeTopAppBar(
+    windowInsets = WindowInsets(0, 0, 0, 0),
+    title = {
+        Text("Hi")
+    }
+)
+
+앱에 Compose 코드와 뷰 코드가 모두 포함된 경우 각 코드가 사용할 시스템 inset을 명시하고 inset이 형제 뷰에 디스패치되도록 해야 할 수 있습니다. 화면에 동일한 계층 구조에 뷰와 Compose 코드가 모두 있는 경우 기본 inset을 재정의해야 할 수 있습니다. 이 경우 inset을 사용해야 하는 항목과 무시해야 하는 항목을 명시해야 합니다. 예를 들어 가장 바깥쪽 레이아웃이 Android View 레이아웃인 경우 View 시스템에서 inset을 사용하고 Compose에서는 무시해야 합니다. 가장 바깥쪽 레이아웃이 컴포저블인 경우 Compose에서 inset을 사용하고 AndroidView 컴포저블을 적절히 패딩해야 합니다. 기본적으로 각 ComposeView는 WindowInsetsCompat 수준의 소비에서 모든 inset을 소비합니다. 이 기본 동작을 변경하려면 AbstractComposeView.consumeWindowInsets을 false로 설정합니다. 앱에 Views 코드가 포함된 경우 Android 10 (API 수준 29) 이하를 실행하는 기기에서 inset이 형제 뷰에 디스패치되는지 확인해야 할 수 있습니다. 
+
+enableEdgeToEdge를 호출하면 기기 테마가 변경될 때 시스템 표시줄 아이콘 색상이 업데이트됩니다. 더 넓은 화면으로 전환하는 동안 앱의 배경과 대비되도록 시스템 표시줄 아이콘 색상을 수동으로 업데이트해야 할 수 있습니다. 예를 들어 밝은 상태 표시줄 아이콘을 만들려면 다음을 실행합니다.
+
+//kotlin
+WindowCompat.getInsetsController(window, window.decorView)
+    .isAppearanceLightStatusBars = false
+//java
+WindowCompat.getInsetsController(window, window.getDecorView())
+    .setAppearanceLightStatusBars(false);
+
+
+edge to edge으로 인해 시스템 상태 표시줄과 gesture 탐색 메뉴는 투명하지만 3버튼 탐색 메뉴는 반투명합니다. enableEdgeToEdge를 호출하여 이전 버전에서도 동일한 효과를 적용할 수 있습니다.
+
+투명한 시스템 표시줄을 만드는 경우 Android 15 이상을 타겟하거나, 하위 버전(Android 14 이하)에서는 enableEdgeToEdge()를 기본 인자로 호출하여 제스처 내비게이션 바를 투명하게 만들 수 있습니다.  3버튼 내비게이션 바를 사용하는 경우, Window.setNavigationBarContrastEnforced를 false로 설정해야 합니다. 그렇지 않으면 반투명 scrim, 어두운 오버레이가 적용됩니다.
+
+반투면 시스템 표시줄을 만드는 경우 기본 콘텐츠와 겹치게 만들고 인셋으로 덮인 영역에는 그라데이션의 맞춤 컴포저블을 만드세요. 적응형 앱의 경우 edge to edge 화면 디자인에 표시된 대로 각 창의 색상과 일치하는 맞춤 컴포저블을 삽입합니다. 반투명 탐색 메뉴를 만들려면 Window.setNavigationBarContrastEnforced를 true로 설정합니다.
+
+class SystemBarProtectionSnippets : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // window.isNavigationBarContrastEnforced = true하는 메서드
+        //  3버튼 내비게이션 바에 어두운 오버레이가 적용
+        enableEdgeToEdge()
+
+        setContent {
+            MyTheme {
+                // Main content
+                MyContent()
+
+                // After drawing main content, draw status bar protection
+                StatusBarProtection()
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusBarProtection(
+    color: Color = MaterialTheme.colorScheme.surfaceContainer,
+    heightProvider: () -> Float = calculateGradientHeight(),
+) {
+
+    Canvas(Modifier.fillMaxSize()) {
+        val calculatedHeight = heightProvider()
+        val gradient = Brush.verticalGradient(
+            colors = listOf(
+                color.copy(alpha = 1f),
+                color.copy(alpha = .8f),
+                Color.Transparent
+            ),
+            startY = 0f,
+            endY = calculatedHeight
+        )
+        drawRect(
+            brush = gradient,
+            size = Size(size.width, calculatedHeight),
+        )
+    }
+}
+
+@Composable
+fun calculateGradientHeight(): () -> Float {
+    val statusBars = WindowInsets.statusBars
+    val density = LocalDensity.current
+    return { statusBars.getTop(density).times(1.2f) }
+}
+
+edge to edge design: https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge
