@@ -553,3 +553,572 @@ class MyAlertDialogFragment : DialogFragment() {
     }
     ...
 }
+
+
+
+Android 12(API 레벨 31)부터 RoundedCorner와 WindowInsets.getRoundedCorner(int position)을 사용하여 기기 화면의 둥근 모서리에 대한 반지름과 중심점을 가져올 수 있습니다. 이 API들은 둥근 모서리가 있는 화면에서 앱의 UI 요소가 잘리는 것을 방지합니다. 프레임워크는 getPrivacyIndicatorBounds() API도 제공하는데, 이는 표시 중인 마이크 및 카메라 표시기의 경계 사각형을 반환합니다. 이 API들은 둥근 모서리가 없는 기기에서는 아무런 효과를 주지 않습니다.
+
+이 기능을 구현하려면 WindowInsets.getRoundedCorner(int position)을 사용하여 앱의 영역 기준으로 RoundedCorner 정보를 가져옵니다. 앱이 전체 화면을 차지하지 않는 경우, API는 앱의 창 경계를 기준으로 둥근 모서리의 중심점을 계산해 적용합니다. 다음 코드는 RoundedCorner에서 가져온 정보를 기반으로 뷰에 여백(margin)을 설정하여 UI가 잘리지 않도록 하는 방법을 보여줍니다. 여기서는 오른쪽 상단의 둥근 모서리에 대해 처리하는 예시입니다.
+//java
+//상단 오른쪽 모서리 WindowInsets 얻기
+val insets = rootWindowInsets
+val topRight = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT) ?: return
+
+// 창에서 닫기 버튼 위치 좌표 얻기
+val location = IntArray(2)
+closeButton!!.getLocationInWindow(location)
+val buttonRightInWindow = location[0] + closeButton.width
+val buttonTopInWindow = location[1]
+
+// 45도 지점의 원호 경계 계산
+val offset = (topRight.radius * Math.sin(Math.toRadians(45.0))).toInt()
+val topBoundary = topRight.center.y - offset
+val rightBoundary = topRight.center.x + offset
+
+// 버튼이 경계를 벗어났는지 확인
+if (buttonRightInWindow < rightBoundary << buttonTopInWindow > topBoundary) {
+   return
+}
+
+//겹치지 않도록 마진 설정
+val parentLocation = IntArray(2)
+getLocationInWindow(parentLocation)
+val lp = closeButton.layoutParams as FrameLayout.LayoutParams
+lp.rightMargin = Math.max(buttonRightInWindow - rightBoundary, 0)
+lp.topMargin = Math.max(topBoundary - buttonTopInWindow, 0)
+closeButton.layoutParams = lp
+
+//kotlin
+//상단 오른쪽 모서리 WindowInsets 얻기
+val insets = rootWindowInsets
+val topRight = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT) ?: return
+
+// 창에서 닫기 버튼 위치 좌표 얻기
+val location = IntArray(2)
+closeButton!!.getLocationInWindow(location)
+val buttonRightInWindow = location[0] + closeButton.width
+val buttonTopInWindow = location[1]
+
+// 45도 지점의 원호 경계 계산
+val offset = (topRight.radius * Math.sin(Math.toRadians(45.0))).toInt()
+val topBoundary = topRight.center.y - offset
+val rightBoundary = topRight.center.x + offset
+
+// 버튼이 경계를 벗어났는지 확인
+if (buttonRightInWindow < rightBoundary << buttonTopInWindow > topBoundary) {
+   return
+}
+
+//겹치지 않도록 마진 설정
+val parentLocation = IntArray(2)
+getLocationInWindow(parentLocation)
+val lp = closeButton.layoutParams as FrameLayout.LayoutParams
+lp.rightMargin = Math.max(buttonRightInWindow - rightBoundary, 0)
+lp.topMargin = Math.max(topBoundary - buttonTopInWindow, 0)
+closeButton.layoutParams = lp
+
+
+디스플레이 전체를 채우는 UI의 경우, 둥근 모서리때문에 콘텐츠가 잘리는(clipping) 문제가 발생할 수 있습니다. 예를 들어, 그림 2는 시스템 바 뒤에 레이아웃이 그려진 상태에서 화면 구석에 아이콘이 위치해 있고, 이 아이콘이 둥근 모서리에 의해 일부 가려지는 경우를 보여줍니다.
+이 문제를 피하려면, 둥근 모서리가 있는지 확인하고, 앱 콘텐츠가 기기 모서리를 침범하지 않도록 패딩을 적용해야 합니다.
+//java
+public class InsetsLayout extends FrameLayout {
+    public InsetsLayout(@NonNull Context context) {
+        super(context);
+    }
+
+    public InsetsLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        WindowInsets insets = getRootWindowInsets();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && insets != null) {
+            applyRoundedCornerPadding(insets);
+        }
+        super.onLayout(changed, left, top, right, bottom);
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private void applyRoundedCornerPadding(WindowInsets insets) {
+        RoundedCorner topLeft = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT);
+        RoundedCorner topRight = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT);
+        RoundedCorner bottomLeft = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT);
+        RoundedCorner bottomRight = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT);
+        int radiusTopLeft = 0;
+        int radiusTopRight = 0;
+        int radiusBottomLeft = 0;
+        int radiusBottomRight = 0;
+        if (topLeft != null) radiusTopLeft = topLeft.getRadius();
+        if (topRight != null) radiusTopRight = topRight.getRadius();
+        if (bottomLeft != null) radiusBottomLeft = bottomLeft.getRadius();
+        if (bottomRight != null) radiusBottomRight = bottomRight.getRadius();
+
+        int leftRadius = Math.max(radiusTopLeft, radiusBottomLeft);
+        int topRadius = Math.max(radiusTopLeft, radiusTopRight);
+        int rightRadius = Math.max(radiusTopRight, radiusBottomRight);
+        int bottomRadius = Math.max(radiusBottomLeft, radiusBottomRight);
+
+        WindowManager windowManager =
+                (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+        Rect windowBounds = windowManager.getCurrentWindowMetrics().getBounds();
+        Rect safeArea = new Rect(
+                windowBounds.left + leftRadius,
+                windowBounds.top + topRadius,
+                windowBounds.right - rightRadius,
+                windowBounds.bottom - bottomRadius
+        );
+        int[] location = {0, 0};
+        getLocationInWindow(location);
+
+        int leftMargin = location[0] - windowBounds.left;
+        int topMargin = location[1] - windowBounds.top;
+        int rightMargin = windowBounds.right - getRight() - location[0];
+        int bottomMargin = windowBounds.bottom - getBottom() - location[1];
+
+        Rect layoutBounds = new Rect(
+                location[0] + getPaddingLeft(),
+                location[1] + getPaddingTop(),
+                location[0] + getWidth() - getPaddingRight(),
+                location[1] + getHeight() - getPaddingBottom()
+        );
+
+        if (!layoutBounds.equals(safeArea) && layoutBounds.contains(safeArea)) {
+            setPadding(
+                    calculatePadding(radiusTopLeft, radiusBottomLeft,
+                                         leftMargin, getPaddingLeft()),
+                    calculatePadding(radiusTopLeft, radiusTopRight,
+                                         topMargin, getPaddingTop()),
+                    calculatePadding(radiusTopRight, radiusBottomRight,
+                                         rightMargin, getPaddingRight()),
+                    calculatePadding(radiusBottomLeft, radiusBottomRight,
+                                         bottomMargin, getPaddingBottom())
+            );
+        }
+    }
+
+    private int calculatePadding(int radius1, int radius2, int margin, int padding) {
+        return Math.max(Math.max(radius1, radius2) - margin - padding, 0);
+    }
+}
+//kotlin
+class InsetsLayout(context: Context, attrs: AttributeSet) : FrameLayout(context, attrs) {
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        val insets = rootWindowInsets
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && insets != null) {
+            applyRoundedCornerPadding(insets)
+        }
+        super.onLayout(changed, left, top, right, bottom)
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun applyRoundedCornerPadding(insets: WindowInsets) {
+        val topLeft = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)
+        val topRight = insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)
+        val bottomLeft = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)
+        val bottomRight = insets.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)
+
+        val leftRadius = max(topLeft?.radius ?: 0, bottomLeft?.radius ?: 0)
+        val topRadius = max(topLeft?.radius ?: 0, topRight?.radius ?: 0)
+        val rightRadius = max(topRight?.radius ?: 0, bottomRight?.radius ?: 0)
+        val bottomRadius = max(bottomLeft?.radius ?: 0, bottomRight?.radius ?: 0)
+
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val windowBounds = windowManager.currentWindowMetrics.bounds
+        val safeArea = Rect(
+            windowBounds.left + leftRadius,
+            windowBounds.top + topRadius,
+            windowBounds.right - rightRadius,
+            windowBounds.bottom - bottomRadius
+        )
+
+        val location = intArrayOf(0, 0)
+        getLocationInWindow(location)
+
+        val leftMargin = location[0] - windowBounds.left
+        val topMargin = location[1] - windowBounds.top
+        val rightMargin = windowBounds.right - right - location[0]
+        val bottomMargin = windowBounds.bottom - bottom - location[1]
+
+        val layoutBounds = Rect(
+            location[0] + paddingLeft,
+            location[1] + paddingTop,
+            location[0] + width - paddingRight,
+            location[1] + height - paddingBottom
+        )
+
+        if (layoutBounds != safeArea && layoutBounds.contains(safeArea)) {
+            setPadding(
+                calculatePadding(leftRadius, leftMargin, paddingLeft),
+                calculatePadding(topRadius, topMargin, paddingTop),
+                calculatePadding(rightRadius, rightMargin, paddingRight),
+                calculatePadding(bottomRadius, bottomMargin, paddingBottom)
+            )
+        }
+    }
+
+    private fun calculatePadding(radius1: Int?, radius2: Int?, margin: Int, padding: Int): Int =
+        (max(radius1 ?: 0, radius2 ?: 0) - margin - padding).coerceAtLeast(0)
+}
+예시 코드에서는 UI가 둥근 모서리 영역까지 확장되었는지 판단하고, 확장된 경우 해당 위치에 패딩을 추가합니다. 그림 3에서는 "Show layout bounds(레이아웃 경계 표시)" 개발자 옵션을 활성화해서 실제 패딩이 적용된 상태를 더 명확히 보여줍니다.
+
+이 기능을 구현하려면 두 개의 사각형 영역을 계산해야 합니다:
+safeArea: 둥근 모서리의 반지름(radii) 안쪽에 위치한 안전한 영역
+layoutBounds: 레이아웃의 크기에서 패딩을 제외한 실제 콘텐츠 영역
+layoutBounds가 safeArea를 완전히 포함하면, 콘텐츠가 잘릴 수 있기 때문에 패딩을 추가해야 합니다.
+반대로, 레이아웃이 화면 가장자리까지 확장되지 않아서 둥근 모서리 영역에 닿지 않는다면, 굳이 패딩을 추가하지 않아도 됩니다. 그림 4는 레이아웃이 내비게이션 바 뒤로 그려지지 않는 경우를 보여주며, 이 경우에는 둥근 모서리도 내비게이션 바 영역 안에 있어서 추가적인 패딩이 필요하지 않습니다
+
+
+몰입형 모드
+동영상, 게임, 이미지 갤러리, 책, 프레젠테이션 슬라이드 등은 상태 표시줄이나 탐색 메뉴의 표시기 없이 전체 화면으로 이용하는 것이 좋습니다. 이를 몰입형 모드라고 합니다. 몰입형 모드를 사용하면 게임 중에 실수로 종료하는 것을 방지하고 이미지, 동영상, 도서를 즐길 수 있는 몰입형 환경을 제공합니다. 하지만 사용자가 알림을 확인하거나, 즉흥적인 검색을 실행하거나, 다른 작업을 수행하기 위해 얼마나 자주 앱을 시작하고 종료하는지 고려해야 합니다. 몰입형 모드를 사용하면 사용자가 시스템 탐색에 쉽게 액세스할 수 없으므로 사용자 환경에 미치는 이점이 단순히 추가 화면 공간을 사용하는 것 이상인 경우에만 몰입형 모드를 사용하세요. WindowInsetsControllerCompat.hide()을 사용하여 시스템 표시줄을 숨기고 WindowInsetsControllerCompat.show()을 사용하여 다시 표시합니다. 다음 코드는 시스템 표시줄을 숨기고 표시하는 버튼을 구성하는 예를 보여줍니다. 선택적으로 숨길 시스템 표시줄의 유형을 지정하고 사용자가 시스템 표시줄과 상호작용할 때의 동작을 결정할 수 있습니다.
+//java
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    ...
+
+    WindowInsetsControllerCompat windowInsetsController =
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+    // 시스템 바 숨기기 동작 구성
+    windowInsetsController.setSystemBarsBehavior(
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    );
+    // 시스템 바 숨기거나 보여줄 때 전체화면에 대한 토글 버튼의 동작 listener 추가
+    ViewCompat.setOnApplyWindowInsetsListener(
+        getWindow().getDecorView(),
+        (view, windowInsets) -> {
+        //다른 시스템바는 보이고 캡션 바만 숨길 수 있습니다
+        // 이를 위해, systemBars()의 가시성을 확인하는 대신
+        //navigationBars()와 statusBars()의 가시성을 명시적으로 확인
+        if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+                || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
+            binding.toggleFullscreenButton.setOnClickListener(v -> {
+                // 상태바와 네비게이션 바 모두 숨기기
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+            });
+        } else {
+            binding.toggleFullscreenButton.setOnClickListener(v -> {
+                /// 상태바와 네비게이션 바 모두 보여주기
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+            });
+        }
+        return ViewCompat.onApplyWindowInsets(view, windowInsets);
+    });
+}
+//kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    ...
+
+    val windowInsetsController =
+        WindowCompat.getInsetsController(window, window.decorView)
+    // 시스템 바 숨기기 동작 구성
+    windowInsetsController.systemBarsBehavior =
+        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+   // 시스템 바 숨기거나 보여줄 때 전체화면에 대한 토글 버튼의 동작 listener 추가
+    ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
+        //다른 시스템바는 보이고 캡션 바만 숨길 수 있습니다
+        // 이를 위해, systemBars()의 가시성을 확인하는 대신
+        //navigationBars()와 statusBars()의 가시성을 명시적으로 확인
+        if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+            || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
+            binding.toggleFullscreenButton.setOnClickListener {
+                // 상태바와 네비게이션 바 모두 숨기기
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            }
+        } else {
+            binding.toggleFullscreenButton.setOnClickListener {
+                // 상태바와 네비게이션 바 모두 보여주기
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        ViewCompat.onApplyWindowInsets(view, windowInsets)
+    }
+}
+
+숨길 시스템 표시줄의 유형을 지정하려면 다음 매개변수 중 하나를 WindowInsetsControllerCompat.hide()에 전달하세요.
+WindowInsetsCompat.Type.systemBars()를 사용하여 시스템 표시줄을 모두 숨깁니다.
+WindowInsetsCompat.Type.statusBars()을 사용하여 상태 표시줄만 숨깁니다.
+WindowInsetsCompat.Type.navigationBars()를 사용하여 탐색 메뉴만 숨깁니다.
+
+WindowInsetsControllerCompat.setSystemBarsBehavior()를 사용하여 사용자가 숨겨진 시스템 표시줄과 상호작용할 때 시스템 표시줄이 어떻게 작동하는지 지정합니다.
+WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_TOUCH를 사용하여 해당 디스플레이에서 모든 사용자 상호작용 시 숨겨진 시스템 표시줄을 표시합니다.
+WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_SWIPE를 사용하여 시스템 표시줄이 숨겨진 화면 가장자리에서 스와이프하는 등 시스템 동작에서 숨겨진 시스템 표시줄을 표시합니다.
+WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE를 사용하여 시스템 동작으로 숨겨진 시스템 표시줄을 일시적으로 표시합니다(예: 표시줄이 숨겨진 화면 가장자리에서 스와이프). 이러한 일시적인 시스템 표시줄은 앱 콘텐츠에 오버레이되고 어느 정도 투명할 수 있으며 짧은 제한 시간이 지나면 자동으로 숨겨집니다.
+
+
+
+디스플레이 컷아웃(display cutout)은 일부 기기에서 화면 영역 안으로 파고든 부분을 말합니다. 이는 화면 가장자리까지 콘텐츠를 표시하는 edge-to-edge 경험을 제공하면서도, 전면 카메라나 센서 같은 중요한 하드웨어를 위한 공간을 확보하기 위한 구조입니다. 그렇기에 컷아웃 영역에 앱 콘텐츠를 표시하기 전에, 앱이 edge-to-edge 콘텐츠 표시를 지원하도록 구성되어 있는지 확인해야 합니다. Android는 Android 9(API 레벨 28) 이상에서 디스플레이 컷아웃을 기본 지원합니다. 하지만 일부 제조사는 Android 8.1 이하에서도 컷아웃을 지원할 수 있습니다.
+
+컷아웃 영역에 콘텐츠를 렌더링하려는 경우, WindowInsetsCompat.getDisplayCutout()을 사용해 DisplayCutout 객체를 가져올 수 있습니다. 이 객체는 각 컷아웃의 안전 인셋(safe insets)과 경계 상자(bounding box)를 제공합니다. 이 API를 통해 콘텐츠가 컷아웃과 겹치는지 확인하고, 필요 시 위치를 조정할 수 있습니다. 또한 콘텐츠가 컷아웃 뒤에 배치되었는지도 확인할 수 있습니다. layoutInDisplayCutoutMode 속성은 콘텐츠가 컷아웃 영역에 어떻게 그려지는지를 제어하는 윈도우 속성입니다. 이 속성에는 다음과 같은 값 중 하나를 설정할 수 있습니다:
+
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+컷아웃이 시스템 바 안에 있을 때만 콘텐츠가 컷아웃 영역에 렌더링됩니다.
+그렇지 않으면 컷아웃과 겹치지 않도록 콘텐츠가 제한되어 앱은 그 영역을 피해서 콘텐츠를 가운데 좁은 영역에만 표시하게 됩니다. 예를 들어 가로 모드에서는, 콘텐츠가 좌우로 꽉 차지 못하고 좌우에 검은 여백의 빈 공간, 레터박스가 생길 수 있습니다. 앱이 SDK 35을 타깃하면, 비-플로팅(non-floating) 윈도우의 경우 ALWAYS로 해석됩니다.
+
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+콘텐츠가 항상 컷아웃 영역까지 확장되어 표시됩니다.
+앱이 SDK 35을 타깃하고 Android 15에서 실행 중이라면, 비-플로팅 윈도우에 대해 유일하게 허용되는 모드입니다 (edge-to-edge 보장을 위해).
+
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+세로 및 가로 모드 모두에서 짧은 변(short edge)에 위치한 컷아웃까지 콘텐츠를 그립니다.
+플로팅 윈도우에는 사용하지 말 것.
+SDK 35을 타깃하면 ALWAYS로 해석됩니다.
+
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+콘텐츠가 컷아웃 영역에 절대 렌더링되지 않도록 합니다.
+SDK 35 타깃의 경우, 이 설정도 비-플로팅 윈도우에서는 ALWAYS로 간주됩니다.
+
+이 컷아웃 모드는 코드에서 프로그래밍적으로 설정할 수도 있고, Activity에 적용할 스타일 속성으로도 지정할 수 있습니다. 예시는 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES 속성을 Activity에 스타일로 지정하는 방법을 보여줍니다.
+
+<style name="ActivityTheme">
+  <item name="android:windowLayoutInDisplayCutoutMode">
+    shortEdges <!-- default, shortEdges, or never -->
+  </item>
+</style>
+
+
+
+기본 동작
+앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이라면,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS가 기본 동작이며,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT도 사실상 ALWAYS로 해석됨 (단, non-floating window일 경우). 그렇지 않다면, 즉 SDK 35 미만이거나 Android 15 미만인 경우,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT는 기존 기본값으로 작동함.
+
+짧은 변(short edge) 컷아웃 영역에 콘텐츠 렌더링
+앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES도 사실상 ALWAYS로 해석됨 (non-floating window 기준).
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES 모드에서는,
+세로 및 가로 모드 모두에서 디스플레이의 짧은 변에 있는 컷아웃 영역까지 콘텐츠가 확장됨.
+시스템 바가 숨겨졌든 보이든 관계없이 확장됨. 단, 이 모드를 사용할 경우 중요한 콘텐츠가 컷아웃과 겹치지 않도록 주의해야 함. 화면의 긴 변(long edge) 에 있는 컷아웃 영역에는 절대 콘텐츠가 확장되지 않음.
+다음 이미지는 세로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예입니다.
+다음 이미지는 가로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예입니다.  
+이 모드에서 창은 디스플레이의 짧은 가장자리에 있는 컷아웃 아래로 확장됩니다. 창이 가로 방향으로 놓여 있는지와 상관없이 가로 및 세로 방향 모두 시스템 표시줄 모서리의 컷아웃은 짧은 가장자리에 있는 것으로 간주됩니다.
+
+ChatGPT의 말:
+디스플레이 컷아웃 영역에 절대 콘텐츠를 렌더링하지 않기
+앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER는 non-floating 윈도우에 대해 ALWAYS로 해석됨. 즉, 실질적으로 컷아웃 영역까지 콘텐츠가 확장됨 (기존 의미와 다르게 작동).
+
+원래 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER의 의미는,
+윈도우가 컷아웃 영역과 절대 겹치지 않도록 하는 것임.
+
+아래는 세로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
+아래는 가로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
+
+
+
+컷아웃 정보를 수동으로 처리하기
+컷아웃 영역이 중요한 텍스트, 컨트롤, 혹은 정밀한 터치 인식이 필요한 인터랙티브 요소를 가리지 않도록 직접 컷아웃 정보를 처리해야 함. 컷아웃 영역은 터치 감도가 낮을 수 있으므로 주의해야 함. 아웃을 처리할 때 status bar 높이를 하드코딩하지 말 것. 이렇게 하면 콘텐츠가 겹치거나 잘릴 수 있음. 대신, 아래 방법 중 하나를 통해 컷아웃을 처리할 것
+WindowInsets.displayCutout, WindowInsets.safeContent, WindowInsets.safeDrawing 사용
+LocalView.current.rootWindowInsets.displayCutout로 컷아웃 Path 객체 접근
+
+Jetpack Compose에서는 다음을 권장함. displayCutout, safeContent, 또는 safeDrawing을 이용해 컷아웃 인셋을 처리. 컷아웃 패딩이 필요한 곳에는 이를 존중하고, 필요 없는 곳은 무시할 수 있음.
+
+
+컷아웃을 다룰 때 다음 사항을 고려할 것:
+UI의 핵심 요소 배치에 주의
+컷아웃 영역이 중요한 텍스트, 컨트롤, 기타 정보를 가리지 않도록 할 것.
+
+정밀한 터치가 필요한 인터랙션 요소는 컷아웃 영역에 두지 말 것
+컷아웃 영역은 터치 민감도가 낮을 수 있음.
+
+WindowInsetsCompat를 사용해 status bar 높이를 가져와 콘텐츠에 적절한 padding 적용
+status bar 높이를 하드코딩하지 말 것 .겹치거나 잘리는 문제가 생길 수 있음.
+
+앱이 차지하는 실제 window 영역을 확인할 때는 View.getLocationInWindow() 사용
+전체 window를 사용한다고 가정하지 말고, getLocationOnScreen()은 사용하지 말 것.
+
+immersive mode 전환이 필요한 경우 always, shortEdges, never 모드를 명시적으로 설정
+default 모드는 시스템 바가 표시될 때는 컷아웃에 콘텐츠가 그려지지만, immersive mode에서는 그려지지 않음 이로 인해 전환 중 콘텐츠가 위아래로 움직이는 현상 발생.
+
+immersive mode에서는 window 좌표와 screen 좌표를 주의해서 사용해야 함
+letterbox(레터박스) 상태에서는 전체 화면을 쓰지 않으므로
+화면 원점(screen origin) 기준 좌표 ≠ window origin 기준 좌표
+필요 시 getLocationOnScreen()을 사용해 screen 좌표를 뷰 좌표로 변환할 것.
+
+MotionEvent 처리 시 getX() / getY() 사용
+getRawX() / getRawY()는 위 좌표 이슈로 인해 사용하지 말 것.
+
+
+앱의 모든 화면과 사용자 경험을 테스트하세요. 가능하다면 다양한 형태의 컷아웃이 있는 기기에서 테스트하세요. 컷아웃이 있는 실제 기기가 없다면, Android 9 이상이 실행되는 기기나 에뮬레이터에서 일반적인 컷아웃 구성을 다음 방법으로 시뮬레이션할 수 있습니다:
+1.개발자 옵션(Developer options)을 활성화합니다.
+2.개발자 옵션 화면에서 Drawing 섹션으로 스크롤합니다.
+3.Simulate a display with a cutout(컷아웃이 있는 디스플레이 시뮬레이션) 항목을 선택합니다.
+4.원하는 컷아웃 유형을 선택합니다.
+
+
+WindowInsetsCompat를 사용하면 앱이 시스템 표시줄과 상호작용하는 방식과 유사하게 터치 키보드 (IME)를 쿼리하고 제어할 수 있습니다. 앱은 WindowInsetsAnimationCompat을 사용하여 소프트 키보드가 열리거나 닫힐 때 원활한 전환을 만들 수도 있습니다.
+
+WindowInsets을 사용하여 소프트웨어 키보드 공개 상태를 확인합니다.
+//java
+WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(view);
+boolean imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+int imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+//kotlin
+val insets = ViewCompat.getRootWindowInsets(view) ?: return
+val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+
+또는 ViewCompat.setOnApplyWindowInsetsListener를 사용하여 소프트 키보드 표시 상태의 변경사항을 관찰할 수 있습니다.
+//java
+ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+  boolean imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+  int imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+  return insets;
+});
+//kotlin
+ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets ->
+  val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+  val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+  insets
+}
+ AndroidX 구현과의 최상의 하위 호환성을 달성하려면 AndroidManifest.xml 파일에서 android:windowSoftInputMode="adjustResize"을 활동으로 설정하세요.
+
+사용자가 텍스트 입력란을 탭하면 다음 예와 같이 키보드가 화면 하단에서 슬라이드되어 제자리에 배치됩니다. 그림 2의 '동기화되지 않음'이라는 라벨이 지정된 예에서는 Android 10 (API 수준 29)의 기본 동작을 보여줍니다. 여기서는 텍스트 필드와 앱 콘텐츠가 키보드의 애니메이션과 동기화되지 않고 제자리에 스냅됩니다. 이 동작은 시각적으로 거슬릴 수 있습니다. Android 11 (API 수준 30) 이상에서는 WindowInsetsAnimationCompat를 사용하여 화면 하단에서 키보드가 위아래로 슬라이드하는 것과 앱의 전환을 동기화할 수 있습니다. 그림 2의 '동기화됨' 라벨이 지정된 예와 같이 더 부드럽게 표시됩니다.
+Android 10 이하에서 상위 ViewGroup 객체에 setWindowInsetsApplyListener에서 WindowInsets를 직접 사용하지 마세요. 대신  WindowInsetsAnimatorCompat를 사용하세요
+
+키보드 애니메이션과 동기화할 뷰를 사용하여 WindowInsetsAnimationCompat.Callback를 구성합니다.
+//java
+ViewCompat.setWindowInsetsAnimationCallback(
+    view,
+    new WindowInsetsAnimationCompat.Callback(
+        WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_STOP
+    ) {
+      // Override methods.
+    });
+//kotlin
+ViewCompat.setWindowInsetsAnimationCallback(
+    view,
+    new WindowInsetsAnimationCompat.Callback(
+        WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_STOP
+    ) {
+      // Override methods.
+    });
+
+WindowInsetsAnimationCompat.Callback에는 onPrepare(), onStart(), onProgress(), onEnd() 등 재정의할 메서드가 여러 개 있습니다. 레이아웃을 변경하기 전에 onPrepare()를 호출하는 것으로 시작합니다. onPrepare는 인셋 애니메이션이 시작될 때, 애니메이션으로 인해 뷰가 다시 배치되기 전에 호출됩니다. 이를 사용하여 시작 상태(이 경우 뷰의 하단 좌표)를 저장할 수 있습니다. 다음 스니펫은 onPrepare 호출의 예를 보여줍니다.
+//java
+float startBottom;
+
+@Override
+public void onPrepare(
+    @NonNull WindowInsetsAnimationCompat animation
+) {
+  startBottom = view.getBottom();
+}
+//kotlin
+var startBottom = 0f
+
+override fun onPrepare(
+  animation: WindowInsetsAnimationCompat
+) {
+  startBottom = view.bottom.toFloat()
+}
+인셋 애니메이션이 시작되면 onStart가 호출됩니다. 이를 사용하여 모든 뷰 속성을 레이아웃 변경의 최종 상태로 설정할 수 있습니다. OnApplyWindowInsetsListener 콜백이 뷰 중 하나로 설정되어 있으면 이 시점에서 이미 호출됩니다. 이때 뷰 속성의 최종 상태를 저장하는 것이 좋습니다. 다음 스니펫은 onStart 호출의 예를 보여줍니다.
+//java
+float endBottom;
+
+@NonNull
+@Override
+public WindowInsetsAnimationCompat.BoundsCompat onStart(
+    @NonNull WindowInsetsAnimationCompat animation,
+    @NonNull WindowInsetsAnimationCompat.BoundsCompat bounds
+) {
+  endBottom = view.getBottom();
+  return bounds;
+}
+//kotlin
+var endBottom = 0f
+
+override fun onStart(
+  animation: WindowInsetsAnimationCompat,
+  bounds: WindowInsetsAnimationCompat.BoundsCompat
+): WindowInsetsAnimationCompat.BoundsCompat {
+  // IME 전환 후 뷰의 위치 기록
+  endBottom = view.bottom.toFloat()
+
+  return bounds
+}
+onProgress는 애니메이션을 실행하는 과정에서 인셋이 변경될 때 호출되므로 이를 재정의하여 키보드 애니메이션 중에 모든 프레임에서 알림을 받을 수 있습니다. 키보드와 동기화되어 뷰가 애니메이션으로 표시되도록 뷰 속성을 업데이트합니다. 이 시점에서 모든 레이아웃 변경이 완료됩니다. 예를 들어 View.translationY를 사용하여 뷰를 이동하면 이 메서드를 호출할 때마다 값이 점차 감소하여 결국 원래 레이아웃 위치인 0에 도달합니다. 다음 스니펫은 onProgress 호출의 예를 보여줍니다.
+//java
+@NonNull
+@Override
+public WindowInsetsCompat onProgress(
+    @NonNull WindowInsetsCompat insets,
+    @NonNull List<WindowInsetsAnimationCompat> runningAnimations
+) {
+  // IME 애니메이션 찾기
+  WindowInsetsAnimationCompat imeAnimation = null;
+  for (WindowInsetsAnimationCompat animation : runningAnimations) {
+    if ((animation.getTypeMask() & WindowInsetsCompat.Type.ime()) != 0) {
+      imeAnimation = animation;
+      break;
+    }
+  }
+  if (imeAnimation != null) {
+    // 애니메이션의 보간된 비율에 따라 뷰를 이동
+    view.setTranslationY((startBottom - endBottom)
+
+        *   (1 - imeAnimation.getInterpolatedFraction()));
+  }
+  return insets;
+}
+//kotlin
+override fun onProgress(
+  insets: WindowInsetsCompat,
+  runningAnimations: MutableList<WindowInsetsAnimationCompat>
+): WindowInsetsCompat {
+ // IME 애니메이션 찾기
+  val imeAnimation = runningAnimations.find {
+    it.typeMask and WindowInsetsCompat.Type.ime() != 0
+  } ?: return insets
+
+   // 애니메이션의 보간된 비율에 따라 뷰를 이동
+  view.translationY =
+    (startBottom - endBottom) * (1 - imeAnimation.interpolatedFraction)
+
+  return insets
+}
+
+선택적으로 onEnd를 재정의할 수 있습니다. 이 메서드는 애니메이션이 끝난 후 호출됩니다. 이때 임시 변경사항을 정리하는 것이 좋습니다.
+
+compose에서는 스크롤 컨테이너에 Modifier.imeNestedScroll()를 적용하여 컨테이너 하단으로 스크롤할 때 IME를 자동으로 열고 닫을 수 있습니다.
+class WindowInsetsExampleActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        setContent {
+            MaterialTheme {
+                MyScreen()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MyScreen() {
+    Box {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize() // 전체 창 채우기
+                .imePadding() // IME 하단 padding
+                .imeNestedScroll(), // 하단으로 IME 스크롤 
+            content = { }
+        )
+        FloatingActionButton(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp) // normal 16dp of padding for FABs
+                .navigationBarsPadding() // 네비게이션바 패딩
+                .imePadding(), // IME이 나타났을 때 패딩
+            onClick = { }
+        ) {
+            Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
+        }
+    }
+}
