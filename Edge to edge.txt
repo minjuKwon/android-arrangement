@@ -1,108 +1,196 @@
-- 사용 이유
-    -Edge to Edge이 기본 ui 설정으로 변경됨.
-    - Edge-to-Edge 디자인 구현 위해 사용. 투명/생략으로 앱의 콘텐츠가 화면 전체를 차지
-    - 상태바, 내비게이션 바, 키보드 등 시스템 UI와 앱의 콘텐츠가 자연스런 연결위해 도움
-- EdgeToEdge.enable(this)
-    - API 29 이상 (Android 10 이상) 시스템바(상태바, 내비게이션 바) 투명화.
-    - 콘텐츠가 화면 끝까지 확장되도록 설정 위해 사용
-- ViewCompat.setOnApplyWindowInsetsListener
-    - WindowInsets(창 삽입) 활용하여 시스템 UI 요소(예: 상태바, 내비게이션 바, 키보드 등)가 차지하는 영역을 감지하고, 그 영역을 기반으로 뷰에 패딩을 동적으로 적용하는 로직
-    - insets이란 Android에서 시스템 UI 요소가 차지하는 화면 영역을 의미
-    - 투명화로 콘텐츠의 배경을 보이게하여 확장감을 주고 패딩으로 실질적 콘텐츠의 UI 요소와 시스템과 시각적 겹침과 터치 영역 문제 방식
-    - insets 리턴하는 이유는 하위 뷰나 다른 뷰는 Insets 정보를 받을 수 없기 때문. 특정 뷰에서  소비하고 반환하지 않으면, 시스템은 이를 완전히 소비(consumed)했다고 간주. 즉, 다른 뷰에서 더이상 insets 정보를 못 받음
+1.Inset
+1)개념
+안드로이드는 상태 표시줄, 탐색 메뉴와 같은 시스템 UI를 그립니다. 이 시스템 UI는 사용자가 어떤 앱을 사용하고 있는지와 관계없이 표시됩니다. WindowInsets는 앱이 시스템 UI와 겹칠 수 있는 화면 부분을 나타냅니다. 앱이 올바른 영역에 표시되고 시스템 UI에 의해 UI가 가려지지 않도록 시스템 UI에 관한 정보를 제공합니다. Android 14 (API 수준 34) 이하에서는 기본적으로 앱의 UI가 시스템 표시줄과 디스플레이 컷아웃 아래에 그려지지 않습니다. Android 15(API 수준 35)부터 앱의 상단 및 하단 영역이 상태 표시줄과 탐색 메뉴 뒤에, 디스플레이 컷아웃 아래 배치됩니다. 상태 표시줄과 탐색 메뉴를 합쳐 시스템 표시줄이라고 합니다. 시스템 표시줄은 일반적으로 알림 표시, 기기 상태 전달, 기기 탐색에 전용으로 사용되는 영역입니다. 디스플레이 컷아웃은 휴대폰의 노치를 의미합니다. 따라서 사용자 환경이 더욱 원활해지고 앱에서 사용할 수 있는 창 공간을 최대한 활용할 수 있습니다.
 
-//화면 회전같이 insets 변경마다 호출
-ViewCompat.setOnApplyWindowInsetsListener(
-    findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars =
-                //insets 정보(크기) 가져오기
-                insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(
-                systemBars.left, systemBars.top, 
-                systemBars.right, systemBars.bottom
-                );
-            //추가 처리를 위한 insets 리턴   
-            return insets;
+시스템 UI 뒤에 콘텐츠를 표시하는 것을 더 넓은 화면을 활용한다고 합니다(edge-to-edge). 만약 edge-to-edge의 처리를 하지 않는 경우 앱의 일부가 시스템 UI에 의해 가려질 수 있습니다. Material 3의 Scaffold 구성요소를 사용하면 edge-to-edge 처리를 쉽게 대응 할 수 있습니다. 
+
+앱이 더 넓은 화면에 콘텐츠를 표시하는 경우 중요한 콘텐츠와 상호작용이 시스템 UI에 가려지지 않도록 해야 합니다. 예를 들어 버튼이 탐색 메뉴 뒤에 배치되면 사용자가 버튼을 클릭하지 못할 수 있습니다. 시스템 UI의 크기와 위치에 관한 정보는 inset을 통해 지정됩니다. 이러한 UI 영역과 겹친다는 것은 시스템 UI 위에 앱 콘텐츠가 표시된다는 의미일 수도 있고, 시스템이 제스처에 대한 정보를 앱에 제공한다는 의미일 수도 있습니다. 
+ 
+
+2)Insets 사용 종류
+기본적으로, 앱 창을 전체 화면에 걸쳐 확장하고 시스템 바 뒤까지 앱 콘텐츠를 그리는 edge-to-edge 방식이 활성화됩니다. 이때 시스템 바 뒤에 중요한 콘텐츠나 터치 대상이 표시되지 않도록 여백을 사용해야 합니다.
+
+- 영화나 이미지와 같은 콘텐츠를 표시하는 앱은 몰입도 높은 환경을 위해 시스템 표시줄을 숨김. 시스템 표시줄은 기기를 탐색하고 기기 상태를 확인하는 일반적인 방법. 시스템 표시줄을 숨기는게 사용자 요구와 기대에 맞는지 고려
+
+- Display cutout은 일부 장치에서 디스플레이 표면으로 확장되어 장치 전면에 센서 공간을 제공하는 영역. 앱은 중요한 콘텐츠가 컷아웃 영역과 겹치지 않도록 위치를 쿼리하여 display cutout을 지원.
+
+- 키보드 전환은 window inset이 동적으로 업데이트되는 일반적인 예. 앱은 현재 키보드 상태를 관찰, 프로그래매틱 방식으로 상태를 전환, window inset의 애니메이션을 지원, 키보드 전환 간에 앱 콘텐츠가 원활하게 애니메이션 처리
+
+
+3)Compose
+ⅰ)insets 유형
+Compose에서는 시스템 UI의 각 부분과 대응되는 inset 유형이 있습니다. 예를 들어 상태 표시줄 inset은 상태 표시줄의 크기와 위치를 제공하는 반면 탐색 메뉴 inset은 탐색 메뉴의 크기와 위치를 제공합니다. 각 inset 유형은 상단, 왼쪽, 오른쪽, 하단의 네 가지 픽셀 크기로 구성됩니다. 이러한 수치들은 시스템 UI가 앱 창의 각 측면으로 얼마나 들어와서 UI가 겹쳐져 있는지 나타냅니다. 따라서 시스템 UI와 겹치지 않도록 앱 UI를 해당 양만큼 여백을 주어 inset의 처리를 해야 합니다.이러한 기본 제공 Android inset 유형은 WindowInsets을 통해 사용할 수 있습니다.
+
+- WindowInsets.statusBars
+상태 표시줄을 설명하는 inset. 알림 아이콘과 기타 표시기가 포함된 상단 시스템 UI 표시줄.
+
+- WindowInsets.statusBarsIgnoringVisibility
+statusBars는 상태바가 보여질 때의 inset. 몰입형, 전체화면 모드로 상태 표시줄이 숨겨져 있으면 비어있는 값을 반환하지만 statusBarsIgnoringVisibility는 비어있지 않는, 상태바가 보여질 때의 inset을 여전히 반환
+
+- WindowInsets.navigationBars
+탐색 메뉴를 설명하는 inset. 작업 표시줄이나 탐색 아이콘을 설명하는 기기의 왼쪽, 오른쪽 또는 하단에 있는 시스템 UI 표시줄. 이러한 값은 사용자가 선호하는 탐색 방법과 작업 표시줄과의 상호작용에 따라 런타임에 변경.
+
+- WindowInsets.navigationBarsIgnoringVisibility
+navigationBars는 탐색 메뉴가 보여질 때의 inset. 몰입형 전체화면 모드로 탐색 메뉴가 숨겨져 있으면 비어있는 값을 반환하지만 navigationBarsIgnoringVisibility는 비어있지 않는, 탐색 메뉴가 보여질 때의 inset을 여전히 반환.
+
+- WindowInsets.captionBar
+앱 창의 상단에 표시되는 시스템 타이틀 바 영역의 inset. 이는 freeform 창 모드에서 적용되며, freeform 모드는 PC의 프로그램 창처럼 앱 창의 크기나 위치를 자유롭게 조절할 수 있는 환경. 이 모드에서는 앱이 독립된 창처럼 표시되기 때문에 상단에 시스템 타이틀 바가 생성.
+
+- WindowInsets.captionBarIgnoringVisibility
+caption bar가 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+- WindowInsets.systemBars
+상태 표시줄, 탐색 메뉴, caption bar을 포함하는 시스템 표시줄 inset의 합집합
+
+- WindowInsets.systemBarsIgnoringVisibility
+시스템 표시줄이 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+- WindowInsets.ime
+소프트 키보드가 화면 하단에서 차지하는 높이만큼의 공간 크기를 설명하는 inset
+
+- WindowInsets.imeAnimationSource
+현재 키보드 애니메이션이 시작되기 직전에 소프트 키보드가 차지하고 있던 공간의 inset. 키보드가 사라지고 있는 중이면 키보드가 완전히 올라와 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 숨겨져 있을 때의 공간 영역 의미
+
+- WindowInsets.imeAnimationTarget
+현재 키보드 애니메이션이 시작되기 직후에 소프트 키보드가 차지하고 있던 공간의 inset. 키보드가 사라지고 있는 중이면 키보드가 완전히 사라져 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 올라와 있을 때의 공간 영역 의미
+
+- WindowInsets.tappableElement
+탐색 UI에 대한 더 구체적인 정보를 제공하는 inset. 앱이 아닌 시스템이 '탭'을 처리하는 영역의 크기를 의미. 제스처로 navigation을 하는 투명한 탐색 바의 경우, 시스템 탐색 UI 위로 앱 요소가 보일 수 있지만, 이 영역에서 발생하는 터치는 시스템이 처리하므로 앱 UI와 겹치지 않도록 주의 필요
+
+- WindowInsets.tappableElementIgnoringVisibility
+탭할 수 있는 요소가 보여지든 숨겨지든 상관없이 반환하는 inset 값
+
+- WindowInsets.systemGestures
+이 inset은 시스템이 제스처 탐색(예: 뒤로가기 스와이프)을 처리하는 화면 영역을 의미. 기본적으로 이 영역 내의 제스처는 시스템에서 처리하지만 앱은 Modifier.systemGestureExclusion를 통해 일부 영역을 예외로 지정해 직접 제스처를 처리 가능
+
+- WindowInsets.mandatorySystemGestures
+시스템 제스처 중에서도 무조건 시스템이 처리해야 하는 제스처 영역. 이 영역에 대해서는 앱이 제스처 처리 우선권을 가질 수 없음.  Modifier.systemGestureExclusion을 통해 예외 지정 불가능
+
+- WindowInsets.displayCutout
+디스플레이 컷아웃 (노치 또는 핀홀)과의 중복을 방지하는 데 필요한 간격의 양을 나타내는 inset
+
+- WindowInsets.waterfall
+waterfall 디스플레이의 곡선 영역을 나타내는 inset. 화면의 좌우 또는 상하 가장자리가 둥글게 말려있는 디스플레이 의미. 화면 가장자리의 곡면 부분 때문에 앱 UI가 가려지거나 터치 불가 영역이 생길 수 있어, UI 배치 시 고려해야 하는 영역
+
+ⅱ)safe insets 유형
+콘텐츠가 가려지지 않도록 하는 세 가지 safe inset 유형 존재. 이러한 safe inset 유형은 기본 플랫폼 인셋에 따라 다양한 방식으로 콘텐츠를 보호합니다.
+
+- WindowInsets.safeDrawing
+시스템 UI 아래에 그려지면 안 되는 콘텐츠를 보호. inset을 사용하는 가장 일반적인 방법으로, 시스템 UI에 의해 일부 또는 완전히 가려지는 콘텐츠가 그려지지 않도록 방지.
+
+- WindowInsets.safeGestures
+제스처 충돌을 방지하며 콘텐츠를 보호. 시스템 제스처와 앱 내 제스처(예: 바텀 시트, 캐러셀(슬라이드 쇼 형태의 UI), 게임 내 제스처)가 겹치지 않도록 보장.
+
+- WindowInsets.safeContent
+safeDrawing과 safeGestures를 결합. 시각적 겹침과 제스처 충돌 모두 없도록 콘텐츠를 보호
+
+
+
+2. Edge to edge 사용법
+1)개념
+많은 앱에 상단 앱 바가 있습니다. 상단 앱 바는 화면의 상단 가장자리까지 늘어나 상태 표시줄 뒤에 표시되어야 합니다. 선택적으로 콘텐츠가 스크롤될 때 상단 앱 바가 상태 표시줄 높이로 축소될 수 있습니다.
+하단 앱 바 또는 하단 탐색 메뉴도 있습니다. 이러한 막대는 화면 하단 가장자리까지 늘어나 탐색 메뉴 뒤에 표시되어야 합니다. 그렇지 않으면 앱은 탐색 메뉴 뒤에 스크롤 콘텐츠를 표시해야 합니다. 앱에서edge-to-edge 레이아웃을 구현할 때는 edge-to-edge 화면 표시 사용 설정, 시각적 중복을 처리, 시스템 바 뒤의 스크림 표시에 유의해야합니다.
+
+앱이 SDK 35 이상을 타겟팅하는 경우 Android 15 이상 기기에서 더 넓은 화면이 자동으로 사용 설정됩니다. 이전 Android 버전에서 더 넓은 화면을 사용 설정하려면 Activity의 onCreate에서 enableEdgeToEdge를 수동으로 호출하면 됩니다. 기본적으로 enableEdgeToEdge()는 시스템 표시줄을 투명하게 만듭니다. 단, 상태 표시줄에 반투명 스크림이 적용되는 3버튼 탐색 모드는 예외입니다. 시스템 아이콘과 스크림의 색상은 시스템 밝은 테마 또는 어두운 테마에 따라 조정됩니다.
+
+//java
+ @Override
+      protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        WindowCompat.enableEdgeToEdge(getWindow());
+        ...
+      }
+//kotlin
+ override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         WindowCompat.enableEdgeToEdge(window)
+        ...
+      }
+
+앱의 일부 뷰는 그림 3과 같이 시스템 표시줄 뒤에 그려질 수 있습니다. inset을 이용하면 겹쳐진 영역을해결할 수 있습니다. 앱을 edge-to-edge 화면으로 표시하는 데 적용되는 inset 유형은 다음과 같습니다.
+
+- 시스템 동작 인셋: 앱보다 우선순위가 높은 시스템에서 사용하는 동작 탐색 영역
+- 시스템 표시줄 인셋: 탭할 수 있고 시스템 표시줄에 의해 시각적으로 가려서는 안 되는 뷰에 가장 적합
+- 디스플레이 컷아웃 인셋: 기기 모양으로 인해 화면 컷아웃이 있을 수 있는 영역
+
+
+2)시스템 동작
+시스템 동작 인셋은 시스템 동작이 앱보다 우선하는 창 영역을 나타냅니다. 그림 6에 주황색으로 표시된 영역입니다. 시스템 바 인셋과 마찬가지로 WindowInsetsCompat.Type.systemGestures()와 함께 getInsets(int)를 사용하여 시스템 동작 인셋이 겹치지 않도록 할 수 있습니다. 이러한 인셋을 사용하여 스와이프 가능한 뷰의 위치 자체를 가장자리로부터 멀리 이동하거나 패딩을 줍니다. 일반적인 사용 사례로는 하단 시트, 게임에서의 스와이프, ViewPager2를 사용하여 구현된 캐러셀이 있습니다. Android 10 이상에서 시스템 동작 인셋에는 홈 동작의 하단 인셋과 뒤로 동작의 왼쪽 및 오른쪽 인셋이 포함됩니다. 다음 코드 예에서는 시스템 동작 인셋을 구현하는 방법을 보여줍니다.
+
+//java
+ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+    Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
+    // view에 padding으로 inset 적용Here, set all the dimensions
+    // 원하는 수치 적용 가능
+   //원할 경우 margin으로 적용 가능
+    view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+
+    // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
+    return WindowInsetsCompat.CONSUMED;
+});
+//kotlin
+ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+    Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
+   // view에 padding으로 inset 적용Here, set all the dimensions
+    // 원하는 수치 적용 가능
+   //원할 경우 margin으로 적용 가능
+    view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+
+    // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
+    return WindowInsetsCompat.CONSUMED;
+});
+
+
+3)하휘 호환 디스패치
+인셋이 하위 뷰로 디스패치되는 것을 중지하고 과도한 패딩을 방지하려면 WindowInsetsCompat.CONSUMED 상수를 사용하여 인셋을 사용하면 됩니다. 하지만 Android 10 (API 수준 29 이하)을 실행하는 기기에서는 WindowInsetsCompat.CONSUMED를 호출한 후 인셋이 형제 요소에 디스패치되지 않아 의도하지 않은 시각적 중복이 발생할 수 있습니다. 지원되는 모든 Android 버전에서 인셋이 형제 요소에 디스패치되는지 확인하려면 AndroidX Core 및 Core-ktx 1.16.0-alpha01 이상에서 사용할 수 있는 인셋을 사용하기 전에 ViewGroupCompat#installCompatInsetsDispatch를 사용하세요.
+//java
+// R.id.main처럼 루트 view의 레이아웃 적용
+LinearLayout rootView = findViewById(R.id.main);
+// inset 소비하기 전에 호출
+ViewGroupCompat.installCompatInsetsDispatch(rootView);
+//kotlin
+// R.id.main처럼 루트 view의 레이아웃 적용
+val rootView = findViewById(R.id.main)
+// inset 소비하기 전에 호출
+ViewGroupCompat.installCompatInsetsDispatch(rootView)
+
+
+4)스크롤과 대화상자
+인셋을 처리하고 clipToPadding을 false로 설정하면 마지막 목록 항목이 RecyclerView 또는 NestedScrollView의 시스템 표시줄에 가려지지 않습니다. 다음 동영상은 가장자리부터 가장자리까지 디스플레이가 사용 중지된 RecyclerView(왼쪽)와 사용 설정된 RecyclerView (오른쪽)를 보여줍니다. 전체 화면 대화상자를 더 넓게 만들려면 대화상자에서 enableEdgeToEdge을 호출합니다.
+
+//java
+public class MyAlertDialogFragment extends DialogFragment {
+    @Override
+    public void onStart() {
+        super.onStart();
+        Dialog dialog = getDialog();
+        if (dialog != null) {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                WindowCompat.enableEdgeToEdge(window);
+            }
+        }
+    }
+    ...
+}
+//kotlin
+class MyAlertDialogFragment : DialogFragment() {
+    override fun onStart(){
+        super.onStart()
+        dialog?.window?.let { WindowCompat.enableEdgeToEdge(it) }
+    }
+    ...
 }
 
 
-
-Inset?
-안드로이드는 상태 표시줄, 탐색 메뉴와 같은 시스템 UI를 그립니다. 이 시스템 UI는 사용자가 어떤 앱을 사용하고 있는지와 관계없이 표시됩니다. WindowInsets는 앱이 올바른 영역에 표시되고 시스템 UI에 의해 UI가 가려지지 않도록 시스템 UI에 관한 정보를 제공합니다. Android 14 (API 수준 34) 이하에서는 기본적으로 앱의 UI가 시스템 표시줄과 디스플레이 컷아웃 아래에 그려지지 않습니다. Android 15 (API 수준 35) 이상에서는 앱이 SDK 35를 타겟팅하면 앱이 시스템 표시줄과 디스플레이 컷아웃 아래에 그려집니다. 따라서 사용자 환경이 더욱 원활해지고 앱에서 사용할 수 있는 창 공간을 최대한 활용할 수 있습니다.
-시스템 UI 뒤에 콘텐츠를 표시하는 것을 더 넓은 화면을 활용한다고 합니다(edge-to-edge). 만약 edge-to-edge의 처리를 하지 않는 경우 앱의 일부가 시스템 UI에 의해 가려질 수 있습니다. Material 3의 Scaffold 구성요소를 사용하면 edge-to-edge 처리를 쉽게 대응 할 수 있습니다.
-
-앱이 더 넓은 화면에 콘텐츠를 표시하는 경우 중요한 콘텐츠와 상호작용이 시스템 UI에 가려지지 않도록 해야 합니다. 예를 들어 버튼이 탐색 메뉴 뒤에 배치되면 사용자가 버튼을 클릭하지 못할 수 있습니다. 시스템 UI의 크기와 위치에 관한 정보는 inset을 통해 지정됩니다. 시스템 UI의 각 부분과 대응되는 inset 유형이 있습니다. 예를 들어 상태 표시줄 inset은 상태 표시줄의 크기와 위치를 제공하는 반면 탐색 메뉴 inset은 탐색 메뉴의 크기와 위치를 제공합니다. 각 inset 유형은 상단, 왼쪽, 오른쪽, 하단의 네 가지 픽셀 크기로 구성됩니다. 이러한 수치들은 시스템 UI가 앱 창의 각 측면으로 얼마나 들어와서 UI가 겹쳐져 있는지 나타냅니다. 따라서 시스템 UI와 겹치지 않도록 앱 UI를 해당 양만큼 여백을 주어 inset의 처리를 해야 합니다.
-
-이러한 기본 제공 Android inset 유형은 WindowInsets을 통해 사용할 수 있습니다.
-WindowInsets.statusBars
-상태 표시줄을 설명하는 inset입니다. 알림 아이콘과 기타 표시기가 포함된 상단 시스템 UI 표시줄입니다.
-
-WindowInsets.statusBarsIgnoringVisibility
-statusBars는 상태바가 보여질 때의 inset을 의미합니다. 몰입형 전체화면 모드로 상태 표시줄이 숨겨져 있으면 비어있는 값을 반환하지만 statusBarsIgnoringVisibility는 비어있지 않는, 상태바가 보여질 때의 inset을 여전히 반환합니다
-
-WindowInsets.navigationBars
-탐색 메뉴를 설명하는 inset입니다. 작업 표시줄이나 탐색 아이콘을 설명하는 기기의 왼쪽, 오른쪽 또는 하단에 있는 시스템 UI 표시줄입니다. 이러한 값은 사용자가 선호하는 탐색 방법과 작업 표시줄과의 상호작용에 따라 런타임에 변경될 수 있습니다.
-
-WindowInsets.navigationBarsIgnoringVisibility
-navigationBars는 탐색 메뉴가 보여질 때의 inset을 의미합니다. 몰입형 전체화면 모드로 탐색 메뉴가 숨겨져 있으면 비어있는 값을 반환하지만 navigationBarsIgnoringVisibility는 비어있지 않는, 탐색 메뉴가 보여질 때의 inset을 여전히 반환합니다
-
-WindowInsets.captionBar
-앱 창의 상단에 표시되는 시스템 타이틀 바 영역의 inset입니다. 이는 freeform 창 모드에서 적용되며, freeform 모드는 PC의 프로그램 창처럼 앱 창의 크기나 위치를 자유롭게 조절할 수 있는 환경을 말합니다. 이 모드에서는 앱이 독립된 창처럼 표시되기 때문에 상단에 시스템 타이틀 바가 생성됩니다
-
-WindowInsets.captionBarIgnoringVisibility
-caption bar가 보여지든 숨겨지든 상관없이 반환하는 inset 값
-
-WindowInsets.systemBars
-상태 표시줄, 탐색 메뉴, caption bar을 포함하는 시스템 표시줄 inset의 합집합입니다.
-
-WindowInsets.systemBarsIgnoringVisibility
-시스템 표시줄이 보여지든 숨겨지든 상관없이 반환하는 inset 값
-
-WindowInsets.ime
-소프트 키보드가 화면 하단에서 차지하는 높이만큼의 공간 크기를 설명하는 inset입니다.
-
-WindowInsets.imeAnimationSource
-현재 키보드 애니메이션이 시작되기 직전에 소프트 키보드가 차지하고 있던 공간의 inset입니다. 키보드가 사라지고 있는 중이면 키보드가 완전히 올라와 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 숨겨져 있을 때의 공간 영역을 의미합니다
-
-WindowInsets.imeAnimationTarget
-현재 키보드 애니메이션이 시작되기 직후에 소프트 키보드가 차지하고 있던 공간의 inset입니다. 키보드가 사라지고 있는 중이면 키보드가 완전히 사라져 있던 상태의 공간 영역, 키보드가 나타나는 중이면 키보드가 올라와 있을 때의 공간 영역을 의미합니다
-
-WindowInsets.tappableElement
-탐색 UI에 대한 더 구체적인 정보를 제공하는 inset 유형으로, 앱이 아닌 시스템이 '탭'을 처리하는 영역의 크기를 나타냅니다. 제스처로 navigation을 하는 투명한 탐색 바의 경우, 시스템 탐색 UI 위로 앱 요소가 보일 수 있지만, 이 영역에서 발생하는 터치는 시스템이 처리하므로 앱 UI와 겹치지 않도록 주의해야 합니다
-
-WindowInsets.tappableElementIgnoringVisibility
-탭할 수 있는 요소가 보여지든 숨겨지든 상관없이 반환하는 inset 값
-
-WindowInsets.systemGestures
-이 inset은 시스템이 제스처 탐색(예: 뒤로가기 스와이프)을 처리하는 화면 영역을 의미. 기본적으로 이 영역 내의 제스처는 시스템에서 처리하지만 앱은 Modifier.systemGestureExclusion를 통해 일부 영역을 예외로 지정해 직접 제스처를 처리하게 할 수 있습니다.
-
-WindowInsets.mandatorySystemGestures
-시스템 제스처 중에서도 무조건 시스템이 처리해야 하는 제스처 영역. 이 영역에 대해서는 앱이 제스처 처리 우선권을 가질 수 없습니다.  Modifier.systemGestureExclusion을 통해 예외 지정할 수 없습니다.
-
-WindowInsets.displayCutout
-디스플레이 컷아웃 (노치 또는 핀홀)과의 중복을 방지하는 데 필요한 간격의 양을 나타내는 inset입니다.
-
-WindowInsets.waterfall
-waterfall 디스플레이의 곡선 영역을 나타내는 inset입니다. 화면의 좌우 또는 상하 가장자리가 둥글게 말려있는 디스플레이를 뜻합니다. 이 inset은 화면 가장자리의 곡면 부분 때문에 앱 UI가 가려지거나 터치 불가 영역이 생길 수 있어, UI 배치 시 고려해야 하는 영역입니다.
-
-
-이러한 유형은 콘텐츠가 가려지지 않도록 하는 세 가지 '안전한' inset 유형으로 요약됩니다.
-WindowInsets.safeDrawing
-WindowInsets.safeGestures
-WindowInsets.safeContent
-이러한 '안전한' inset 유형은 기본 플랫폼 인셋에 따라 다양한 방식으로 콘텐츠를 보호합니다.
-
-WindowInsets.safeDrawing을 사용하여 시스템 UI 아래에 그려지면 안 되는 콘텐츠를 보호하세요. 이는 inset을 사용하는 가장 일반적인 방법으로, 시스템 UI에 의해 일부 또는 완전히 가려지는 콘텐츠가 그려지지 않도록 방지합니다.
-WindowInsets.safeGestures를 사용해 제스처 충돌을 방지하며 콘텐츠를 보호하세요. 이는 시스템 제스처와 앱 내 제스처(예: 바텀 시트, 캐러셀(슬라이드 쇼 형태의 UI), 게임 내 제스처)가 겹치지 않도록 합니다.
-WindowInsets.safeContent는 safeDrawing과 safeGestures를 결합한 것으로, 시각적 겹침과 제스처 충돌 모두 없도록 콘텐츠를 보호합니다.
-
-
-
-inset 사용법
+5)compose
+ⅰ)기본 사용법
 앱의 UI를 제대로 배치되도록 제어하기 위해서는 다음 단계를 따라야 합니다. 그렇지 않으면 앱이 시스템 UI 뒤에 검은색이나 단색을 그리거나 소프트웨어 키보드와 동기화되지 않을 수 있습니다.
-1. Android 15 이상에서 edge to edge를 적용하려면 Android 15 (API 수준 35) 이상을 타겟팅해야합니다. 앱이 시스템 UI 뒤에 표시됩니다. inset을 처리하여 앱의 UI를 조정할 수 있습니다.
-2. 원하는 경우 Activity.onCreate()에서 enableEdgeToEdge()를 호출하여 이전 Android 버전에서도 앱이 edge to edge를 사용할 있습니다.
-3. AndroidManifest.xml 항목에서 android:windowSoftInputMode="adjustResize"을 설정합니다.이 설정을 하면 앱이 소프트웨어 키보드(IME)의 크기를 inset으로 받을 수 있게 되고, 키보드가 나타나거나 사라질 때 전체 레이아웃의 크기가 자동으로 조정됩니다. 이를 통해 적절한 레이아웃과 패딩을 적용할 수 있게 됩니다
+
+1. Android 15 이상에서 edge to edge를 적용하려면 Android 15 (API 수준 35) 이상을 타겟팅. 앱 콘텐츠가 시스템 UI 뒤에 표시. inset을 처리하여 앱의 UI를 조정 가능.
+2. Activity.onCreate()에서 enableEdgeToEdge()를 호출하여 이전 Android 버전에서도 앱이 edge to edge를 사용 가능
+3. AndroidManifest.xml 항목에서 android:windowSoftInputMode="adjustResize"을 설정. 앱이 소프트웨어 키보드(IME)의 크기를 inset으로 받을 수 있게 되고, 키보드가 나타나거나 사라질 때 전체 레이아웃의 크기가 자동으로 조정. 이를 통해 적절한 레이아웃과 패딩을 적용 가능
+
 <activity
   android:name=".ui.MainActivity"
   android:label="@string/app_name"
@@ -111,6 +199,7 @@ inset 사용법
   android:exported="true">
 
 개발자가 activity에서 모든 inset 처리를 직접 제어하고 싶으면 Compose API를 활용하면 됩니다. 콘텐츠가 시스템 UI에 가려지지 않도록 하고, 인터랙션 가능한 요소들이 시스템 UI와 겹치지 않도록 할 수 있습니다. 이러한 API는 앱의 레이아웃이 inset 변경에 맞춰 동기화되도록 도와줍니다. 예를 들어 전체 앱의 콘텐츠에 inset을 적용하는 가장 기본적인 방법은 다음과 같습니다.
+
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
@@ -123,22 +212,33 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 위의 예제는 safeDrawing window inset을 앱 전체 콘텐츠의 패딩으로 적용합니다. 이렇게 하면 인터랙션 가능한 요소가 시스템 UI와 겹치지 않도록 보장되지만, 앱이 시스템 UI 아래로 그려지는 edge-to-edge 효과를 내는 것은 불가능해집니다. 전체 창을 온전히 활용하려면, inset을 화면 단위 또는 컴포넌트 단위로 정밀하게 적용할 필요가 있습니다. 이러한 모든 inset 유형은 IME 애니메이션이 API 21이상 사용될 수 있도록 자동으로 처리합니다. 따라서 이러한 inset을 사용하는 레이아웃도 inset 값 변화에 따라 자동으로 애니메이션됩니다. inset 값을 Composable 레이아웃에 적용하는 주요 방법은 두 가지입니다. 패딩 modifier와 inset 크기 modifier입니다.
 
-Modifier.windowInsetsPadding(windowInsets: WindowInsets)는 지정된 창 inset을 패딩으로 적용하여 Modifier.padding과 똑같이 작동합니다. 예를 들어 Modifier.windowInsetsPadding(WindowInsets.safeDrawing)는 safeDrawing inset을 4면 모두에 패딩으로 적용합니다. 가장 일반적인 inset 유형을 위한 여러 내장 유틸리티 메서드도 있습니다. Modifier.safeDrawingPadding()은 Modifier.windowInsetsPadding(WindowInsets.safeDrawing)와 동일한 이러한 메서드 중 하나입니다. 다른 inset 유형에도 유사한 modifier가 있습니다.
+ⅱ)padding modifier
+- Modifier.windowInsetsPadding(windowInsets: WindowInsets)
+지정된 창 inset을 패딩으로 적용하여 Modifier.padding과 똑같이 작동
 
+- Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+ safeDrawing inset을 4면 모두에 패딩으로 적용. 가장 일반적인 inset 유형을 위한 여러 내장 유틸리티 메서드 존재
+
+- Modifier.safeDrawingPadding()
+ Modifier.windowInsetsPadding(WindowInsets.safeDrawing)와 동일한 메서드 중 하나. 다른 inset 유형에도 유사한 modifier 존재
+
+ⅲ)insets 크기 modifier
 다음 modifier는 inset 크기로 구성요소의 크기를 설정하여 inset 양을 적용합니다.
-Modifier.windowInsetsStartWidth(windowInsets: WindowInsets)
-windowInsets의 시작 측면을 너비로 적용합니다 (예: Modifier.width).
 
-Modifier.windowInsetsEndWidth(windowInsets: WindowInsets)
-windowInsets의 끝쪽을 너비로 적용합니다 (예: Modifier.width).
+- Modifier.windowInsetsStartWidth(windowInsets: WindowInsets)
+windowInsets의 시작 측면을 너비로 적 (예: Modifier.width).
 
-Modifier.windowInsetsTopHeight(windowInsets: WindowInsets)
-windowInsets의 상단이 높이로 적용됩니다 (예: Modifier.height).
+- Modifier.windowInsetsEndWidth(windowInsets: WindowInsets)
+windowInsets의 끝쪽을 너비로 적용 (예: Modifier.width).
 
-Modifier.windowInsetsBottomHeight(windowInsets: WindowInsets)
-windowInsets의 하단이 높이로 적용됩니다 (예: Modifier.height).
+- Modifier.windowInsetsTopHeight(windowInsets: WindowInsets)
+windowInsets의 상단이 높이로 적용 (예: Modifier.height).
+
+- Modifier.windowInsetsBottomHeight(windowInsets: WindowInsets)
+windowInsets의 하단이 높이로 적용 (예: Modifier.height).
 
 이러한 modifier는 inset의 공간을 차지하는 Spacer의 크기를 조정하는 데 특히 유용합니다.
+
 LazyColumn(
     Modifier.imePadding()
 ) {
@@ -152,6 +252,7 @@ LazyColumn(
     }
 }
 
+ⅳ)소비된 insets
 inset 패딩 modifier(windowInsetsPadding 및 safeDrawingPadding 같은 헬퍼들)는 일반 패딩 modifier과 달리, 적용된 inset 영역을 자동으로 소비(consume)합니다. 컴포지션 트리의 더 깊은 위치로 내려갈수록, 중첩된 inset 패딩 modifier나 inset 크기 modifier는 바깥쪽에서 일부 inset이 이미 소비되었음을 인식하고, 동일한 inset 영역을 중복으로 적용하지 않도록 처리합니다. 그렇지 않으면 불필요하게 공간이 많이 생길 수 있기 때문입니다. inset 크기 modifier들도, inset이 이미 소비된 경우 중복 적용을 피하도록 동작합니다. 하지만 이들은 크기를 직접 조절할 뿐이므로 자체적으로 inset을 consume하지는 않습니다. 그렇기에 해당 inset 정보를 다른 컴포저블에도 사용할 수 있습니다. 이러한 동작 결과로 인해, 중첩된 padding modifier는 각 Composable에 적용되는 패딩 양을 자동으로 조절합니다.
 
 이전과 동일한 LazyColumn 예제를 보면, imePadding modifier에 의해 LazyColumn이 크기가 조정되고, LazyColumn 내부에서 마지막 아이템은 시스템 바의 하단 높이에 맞춰 크기가 조정됩니다. IME가 닫히면 IME에 높이가 없으므로 imePadding() modifier는 패딩을 적용하지 않습니다. imePadding() modifier는 패딩을 적용하지 않으므로 inset이 사용되지 않으며 Spacer의 높이는 시스템 표시줄의 하단 크기가 됩니다. IME가 열리면 IME inset이 IME 크기에 맞게 애니메이션으로 표시되고 imePadding() modifier가 IME가 열릴 때 LazyColumn의 크기를 조절하기 위해 하단 패딩을 적용하기 시작합니다. imePadding() modifier가 하단 패딩을 적용하기 시작하면 해당 양의 inset도 사용하기 시작합니다. 따라서 시스템 표시줄의 간격 중 일부가 이미 imePadding() modifier에 의해 적용되었으므로 Spacer의 높이가 감소하기 시작합니다. imePadding() modifier가 시스템 표시줄보다 큰 하단 패딩을 적용하면 Spacer의 높이는 0입니다. IME가 닫히면 변경사항이 반대로 적용됩니다. imePadding()이 시스템 표시줄의 하단보다 적게 적용되면 Spacer이 높이 0에서 확장되기 시작하여 IME가 완전히 애니메이션으로 표시되지 않을 때까지 Spacer이 시스템 표시줄의 하단 높이와 일치합니다. 만약 시스템 표시줄 위의 LazyColumn에서 마지막 TextField를 그리려면 contentPadding 대신 Spacer를 사용해야합니다. 그렇지 않으면 IME가 TextField를 숨길 수 있습니다
@@ -185,21 +286,26 @@ inset 값을 소비하지 않고 직접 사용하려면 WindowInsets 자체를 �
 WindowInsets.asPaddingValues()를 써서 소비되지 않은 상태의 패딩 값을 얻으면 됩니다.
 다만 명확한 제어를 위해 가능하면 windowInsetsPadding이나 size modifier를 사용하는 것을 권장합니다.
 
+ⅴ)compose 단계
 Compose는 AndroidX core API를 기반으로 inset을 업데이트하고 애니메이션 처리하며, 이 AndroidX core API는 다시 플랫폼의 inset 관리 API를 사용합니다.inset 값은 composition 단계 이후, layout 단계 이전에 업데이트됩니다.  즉, composition 중에 inset 값을 읽으면 한 프레임 이전의 값을 읽게 되는 경우가 많습니다. 위에서 설명한 내장 modifier들은 inset 값을 layout 단계까지 지연시켜 사용하도록 설계되어, inset 값이 업데이트된 것과 같은 프레임에서 사용되도록 보장합니다.
 
-사용 편의성을 위해 많은 내장 Material 3 컴포저블(androidx.compose.material3)은 Material 사양에 따라 앱에 컴포저블이 배치되는 방식을 기반으로 inset을 자체적으로 처리합니다. Material 2 구성요소(androidx.compose.material)는 inset 자체를 자동으로 처리하지 않습니다. 하지만 inset에 액세스하여 수동으로 적용할 수 있습니다. androidx.compose.material 1.6.0 이상에서 windowInsets 매개변수를 사용하여 BottomAppBar, TopAppBar, BottomNavigation, NavigationRail에 inset을 수동으로 적용합니다. 마찬가지로 Scaffold에는 contentWindowInsets 매개변수를 사용합니다. 그 외에는 수동으로 inset을 패딩으로 적용합니다.
+ⅵ) insets 처리 material
+많은 뷰 기반 Android Material 구성요소(com.google.android.material)는 사용 편의성을 위해 BottomAppBar, BottomNavigationView, NavigationRailView, NavigationView를 비롯한 인셋을 자동으로 처리합니다. 하지만 AppBarLayout는 인셋을 자동으로 처리하지 않습니다. 상단 인셋을 처리하기 위해 android:fitsSystemWindows="true"를 추가합니다.
 
 다음은 inset을 자동으로 처리하는 Material 구성요소 목록입니다.
-앱 바
-TopAppBar/ SmallTopAppBar/ CenterAlignedTopAppBar/ MediumTopAppBar/ LargeTopAppBar: 창 상단에 사용되므로 시스템 표시줄의 상단 및 horizontal 측면을 패딩으로 적용합니다.
-BottomAppBar: 시스템 표시줄의 하단 및 horizontal 측면을 패딩으로 적용합니다.
-콘텐츠 컨테이너
-ModalDrawerSheet / DismissibleDrawerSheet / PermanentDrawerSheet (modal navigation drawer 내부의 콘텐츠): 콘텐츠에 vertical 및 start inset을 적용합니다.
-ModalBottomSheet: 하단 inset을 적용합니다.
-NavigationBar : 하단 및 horizontal inset을 적용합니다.
-NavigationRail: vertical 및 start inset을 적용합니다.
+
+- 앱 바
+TopAppBar/ SmallTopAppBar/ CenterAlignedTopAppBar/ MediumTopAppBar/ LargeTopAppBar: 창 상단에 사용되므로 시스템 표시줄의 상단 및 horizontal 측면을 패딩으로 적용
+BottomAppBar: 시스템 표시줄의 하단 및 horizontal 측면을 패딩으로 적용
+
+- 콘텐츠 컨테이너
+ModalDrawerSheet / DismissibleDrawerSheet / PermanentDrawerSheet (modal navigation drawer 내부의 콘텐츠): 콘텐츠에 vertical 및 start inset을 적용
+ModalBottomSheet: 하단 inset을 적용
+NavigationBar : 하단 및 horizontal inset을 적용
+NavigationRail: vertical 및 start inset을 적용
+
 Scaffold
-기본적으로 Scaffold는 삽입을 매개변수 paddingValues로 제공하여 소비하고 사용할 수 있게 합니다. 하지만 Scaffold는 이 inset 값을 content에 자동으로 직접 적용하지 않으며 inset 값을 사용하는 것은 개발자의 책임입니다. 예를 들어 Scaffold 내에서 LazyColumn로 이러한 inset을 사용하려면 다음을 실행합니다.
+Scaffold는 삽입을 매개변수 paddingValues로 제공하여 소비하고 사용할 수 있게 함.  Scaffold는 이 inset 값을 content에 자동으로 직접 적용하지 않으며 inset 값을 사용하는 것은 개발자의 책임. 예를 들어 Scaffold 내에서 LazyColumn로 이러한 inset을 사용하려면 다음을 실행.
 
 Scaffold { innerPadding ->
     // 사용하고 적용할 수 있는 inset정보가 포함된 innerPadding 
@@ -212,6 +318,8 @@ Scaffold { innerPadding ->
     }
 }
 
+Material 2 구성요소(androidx.compose.material)는 inset 자체를 자동으로 처리하지 않습니다. 하지만 inset에 액세스하여 수동으로 적용할 수 있습니다. androidx.compose.material 1.6.0 이상에서 windowInsets 매개변수를 사용하여 BottomAppBar, TopAppBar, BottomNavigation, NavigationRail에 inset을 수동으로 적용합니다. 마찬가지로 Scaffold에는 contentWindowInsets 매개변수를 사용합니다. 그 외에는 수동으로 inset을 패딩으로 적용합니다.
+
 컴포저블에 전달된 windowInsets 매개변수를 변경하여 컴포저블의 동작을 구성할 수 있습니다. 이 매개변수는 다른 종류의 window inset일 수 있고 빈 인스턴스 WindowInsets(0, 0, 0, 0)를 전달하여 사용 중지할 수도 있습니다. 예를 들어 LargeTopAppBar에서 inset 처리를 사용 중지하려면 windowInsets 매개변수를 빈 인스턴스로 설정합니다
 
 LargeTopAppBar(
@@ -223,342 +331,14 @@ LargeTopAppBar(
 
 앱에 Compose 코드와 뷰 코드가 모두 포함된 경우 각 코드가 사용할 시스템 inset을 명시하고 inset이 형제 뷰에 디스패치되도록 해야 할 수 있습니다. 화면에 동일한 계층 구조에 뷰와 Compose 코드가 모두 있는 경우 기본 inset을 재정의해야 할 수 있습니다. 이 경우 inset을 사용해야 하는 항목과 무시해야 하는 항목을 명시해야 합니다. 예를 들어 가장 바깥쪽 레이아웃이 Android View 레이아웃인 경우 View 시스템에서 inset을 사용하고 Compose에서는 무시해야 합니다. 가장 바깥쪽 레이아웃이 컴포저블인 경우 Compose에서 inset을 사용하고 AndroidView 컴포저블을 적절히 패딩해야 합니다. 기본적으로 각 ComposeView는 WindowInsetsCompat 수준의 소비에서 모든 inset을 소비합니다. 이 기본 동작을 변경하려면 AbstractComposeView.consumeWindowInsets을 false로 설정합니다. 앱에 Views 코드가 포함된 경우 Android 10 (API 수준 29) 이하를 실행하는 기기에서 inset이 형제 뷰에 디스패치되는지 확인해야 할 수 있습니다. 
 
-enableEdgeToEdge를 호출하면 기기 테마가 변경될 때 시스템 표시줄 아이콘 색상이 업데이트됩니다. 더 넓은 화면으로 전환하는 동안 앱의 배경과 대비되도록 시스템 표시줄 아이콘 색상을 수동으로 업데이트해야 할 수 있습니다. 예를 들어 밝은 상태 표시줄 아이콘을 만들려면 다음을 실행합니다.
 
-//kotlin
-WindowCompat.getInsetsController(window, window.decorView)
-    .isAppearanceLightStatusBars = false
-//java
-WindowCompat.getInsetsController(window, window.getDecorView())
-    .setAppearanceLightStatusBars(false);
 
-
-edge to edge으로 인해 시스템 상태 표시줄과 gesture 탐색 메뉴는 투명하지만 3버튼 탐색 메뉴는 반투명합니다. enableEdgeToEdge를 호출하여 이전 버전에서도 동일한 효과를 적용할 수 있습니다.
-
-투명한 시스템 표시줄을 만드는 경우 Android 15 이상을 타겟하거나, 하위 버전(Android 14 이하)에서는 enableEdgeToEdge()를 기본 인자로 호출하여 제스처 내비게이션 바를 투명하게 만들 수 있습니다.  3버튼 내비게이션 바를 사용하는 경우, Window.setNavigationBarContrastEnforced를 false로 설정해야 합니다. 그렇지 않으면 반투명 scrim, 어두운 오버레이가 적용됩니다.
-
-반투면 시스템 표시줄을 만드는 경우 기본 콘텐츠와 겹치게 만들고 인셋으로 덮인 영역에는 그라데이션의 맞춤 컴포저블을 만드세요. 적응형 앱의 경우 edge to edge 화면 디자인에 표시된 대로 각 창의 색상과 일치하는 맞춤 컴포저블을 삽입합니다. 반투명 탐색 메뉴를 만들려면 Window.setNavigationBarContrastEnforced를 true로 설정합니다.
-
-class SystemBarProtectionSnippets : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // window.isNavigationBarContrastEnforced = true하는 메서드
-        //  3버튼 내비게이션 바에 어두운 오버레이가 적용
-        enableEdgeToEdge()
-
-        setContent {
-            MyTheme {
-                // Main content
-                MyContent()
-
-                // After drawing main content, draw status bar protection
-                StatusBarProtection()
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusBarProtection(
-    color: Color = MaterialTheme.colorScheme.surfaceContainer,
-    heightProvider: () -> Float = calculateGradientHeight(),
-) {
-
-    Canvas(Modifier.fillMaxSize()) {
-        val calculatedHeight = heightProvider()
-        val gradient = Brush.verticalGradient(
-            colors = listOf(
-                color.copy(alpha = 1f),
-                color.copy(alpha = .8f),
-                Color.Transparent
-            ),
-            startY = 0f,
-            endY = calculatedHeight
-        )
-        drawRect(
-            brush = gradient,
-            size = Size(size.width, calculatedHeight),
-        )
-    }
-}
-
-@Composable
-fun calculateGradientHeight(): () -> Float {
-    val statusBars = WindowInsets.statusBars
-    val density = LocalDensity.current
-    return { statusBars.getTop(density).times(1.2f) }
-}
-
-edge to edge design: https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge
-
-
-
-inset 활용
-Android 15(API 수준 35)부터 앱의 상단 및 하단 영역이 상태 표시줄과 탐색 메뉴 뒤에 배치됩니다. 상태 표시줄과 탐색 메뉴를 합쳐 시스템 표시줄이라고 합니다. 시스템 표시줄은 일반적으로 알림 표시, 기기 상태 전달, 기기 탐색에 전용으로 사용되는 영역입니다. 앱과 시스템 UI가 표시되는 중복되는 영역은 window inset의 한 예입니다. window inset은 앱이 시스템 UI와 겹칠 수 있는 화면 부분을 나타냅니다. 이러한 UI 영역과 겹친다는 것은 시스템 UI 위에 앱 콘텐츠가 표시된다는 의미일 수도 있고, 시스템이 제스처에 대한 정보를 앱에 제공한다는 의미일 수도 있습니다. 다음 유형의 window inset을 사용할 수 있습니다.
-
-기본적으로, 앱 창을 전체 화면에 걸쳐 확장하고 시스템 바 뒤까지 앱 콘텐츠를 그리는 edge-to-edge 방식이 활성화됩니다. 이때 시스템 바 뒤에 중요한 콘텐츠나 터치 대상이 표시되지 않도록 여백을 사용해야 합니다.
-
-영화나 이미지와 같은 콘텐츠를 표시하는 앱은 몰입도 높은 환경을 위해 시스템 표시줄을 숨길 수 있습니다. 시스템 표시줄은 기기를 탐색하고 기기 상태를 확인하는 일반적인 방법이므로, 시스템 표시줄을 숨기는게 사용자 요구와 기대에 맞는지 고려해야 합니다.
-
-Display cutout은 일부 장치에서 디스플레이 표면으로 확장되어 장치 전면에 센서 공간을 제공하는 영역입니다. 앱은 중요한 콘텐츠가 컷아웃 영역과 겹치지 않도록 위치를 쿼리하여 display cutout을 지원할 수 있습니다.
-
-키보드 전환은 window inset이 동적으로 업데이트되는 일반적인 예입니다. 앱은 현재 키보드 상태를 관찰하고, 프로그래매틱 방식으로 상태를 전환하고, window inset의 애니메이션을 지원하고, 키보드 전환 간에 앱 콘텐츠가 원활하게 애니메이션 처리되도록 할 수 있습니다.
-
-
-많은 앱에 상단 앱 바가 있습니다. 상단 앱 바는 화면의 상단 가장자리까지 늘어나 상태 표시줄 뒤에 표시되어야 합니다. 선택적으로 콘텐츠가 스크롤될 때 상단 앱 바가 상태 표시줄 높이로 축소될 수 있습니다.
-하단 앱 바 또는 하단 탐색 메뉴도 있습니다. 이러한 막대는 화면 하단 가장자리까지 늘어나 탐색 메뉴 뒤에 표시되어야 합니다. 그렇지 않으면 앱은 탐색 메뉴 뒤에 스크롤 콘텐츠를 표시해야 합니다. 앱에서 더 edge-to-edge 레이아웃을 구현할 때는 다음 사항에 유의하세요. edge-to-edge 화면 표시 사용 설정, 시각적 중복을 처리, 시스템 바 뒤에 스크림 표시
-
-앱이 SDK 35 이상을 타겟팅하는 경우 Android 15 이상 기기에서 더 넓은 화면이 자동으로 사용 설정됩니다. 이전 Android 버전에서 더 넓은 화면을 사용 설정하려면 Activity의 onCreate에서 enableEdgeToEdge를 수동으로 호출하면 됩니다. 기본적으로 enableEdgeToEdge()는 시스템 표시줄을 투명하게 만듭니다. 단, 상태 표시줄에 반투명 스크림이 적용되는 3버튼 탐색 모드는 예외입니다. 시스템 아이콘과 스크림의 색상은 시스템 밝은 테마 또는 어두운 테마에 따라 조정됩니다.
-//kotlin
- override fun onCreate(savedInstanceState: Bundle?) {
-         super.onCreate(savedInstanceState)
-         WindowCompat.enableEdgeToEdge(window)
-        ...
-      }
-//java
- @Override
-      protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        WindowCompat.enableEdgeToEdge(getWindow());
-        ...
-      }
-
-
-앱의 일부 뷰는 그림 3과 같이 시스템 표시줄 뒤에 그려질 수 있습니다. inset을 이용하면 겹쳐진 영역을해결할 수 있습니다. 앱을 edge-to-edge  화면으로 표시하는 데 적용되는 inset 유형은 다음과 같습니다.
-시스템 표시줄 인셋: 탭할 수 있고 시스템 표시줄에 의해 시각적으로 가려서는 안 되는 뷰에 가장 적합
-디스플레이 컷아웃 인셋: 기기 모양으로 인해 화면 컷아웃이 있을 수 있는 영역
-시스템 동작 인셋: 앱보다 우선순위가 높은 시스템에서 사용하는 동작 탐색 영역
-
-시스템 표시줄 인셋은 가장 일반적으로 사용되는 인셋 유형입니다. 시스템 UI가 앱 위 Z축에 표시되는 영역을 나타냅니다. 탭할 수 있고 시스템 표시줄에 의해 시각적으로 가려서는 안 되는 앱의 뷰를 이동하거나 패딩하는 데 가장 적합합니다. 예를 들어 그림 3의 플로팅 작업 버튼 (FAB)은 탐색 메뉴에 의해 부분적으로 가려집니다. 동작 모드나 버튼 모드에서 이러한 시각적 중복을 방지하려면 WindowInsetsCompat.Type.systemBars()과 함께 getInsets(int)을 사용하여 뷰의 여백을 늘리면 됩니다.
-다음 코드 예는 시스템 표시줄 인셋을 구현하는 방법을 보여줍니다.
-
-//java
-ViewCompat.setOnApplyWindowInsetsListener(fab, (v, windowInsets) -> {
-  Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-  // view에 margin으로서 inset적용
-  // 해당 코드는 bottom, left, and right수치만 적용했지만 원하는데로 값 부여 가능
-  //원할경우 padding으로 적용 가능
-  MarginLayoutParams mlp = (MarginLayoutParams) v.getLayoutParams();
-  mlp.leftMargin = insets.left;
-  mlp.bottomMargin = insets.bottom;
-  mlp.rightMargin = insets.right;
-  v.setLayoutParams(mlp);
-
-  // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
-    return WindowInsetsCompat.CONSUMED;
-});
-//kotlin
-ViewCompat.setOnApplyWindowInsetsListener(fab) { v, windowInsets ->
-  val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-  // view에 margin으로서 inset적용
-  // 해당 코드는 bottom, left, and right수치만 적용했지만 원하는데로 값 부여 가능
-  //원할경우 padding으로 적용 가능
-  v.updateLayoutParams<MarginLayoutParams> {
-      leftMargin = insets.left
-      bottomMargin = insets.bottom
-      rightMargin = insets.right
-  }
-
-  // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
-  WindowInsetsCompat.CONSUMED
-}
-
-그림 3에 위의 코드를 적용하면 그림 4와 같이 버튼 모드에서 시각적 중복이 발생하지 않습니다. 그림 5처럼 동작 탐색 모드에도 동일하게 적용됩니다.
-
-일부 기기에는 디스플레이 컷아웃이 있습니다. 일반적으로 컷아웃은 화면 상단에 있으며 상태 표시줄에 포함됩니다. 기기 화면이 가로 모드인 경우 컷아웃이 세로 가장자리에 있을 수 있습니다. 앱이 화면에 표시하는 콘텐츠에 따라 디스플레이 컷아웃을 피하기 위해 패딩을 구현해야 합니다. 기본적으로 앱은 디스플레이 컷아웃에 그려지기 때문입니다. 많은 앱 화면에서 리스트를 사용하는데 디스플레이 컷아웃이나 시스템 표시줄로 리스트의 항목을 가려지면 안됩니다. 시스템 표시줄과 디스플레이 컷아웃 유형에 논리 연산 or을 적용하여 WindowInsetsCompat 값을 결정합니다.
-
-//java
-ViewCompat.setOnApplyWindowInsetsListener(mBinding.recyclerView, (v, insets) -> {
-  Insets bars = insets.getInsets(
-    WindowInsetsCompat.Type.systemBars()
-    | WindowInsetsCompat.Type.displayCutout()
-  );
-  v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-  return WindowInsetsCompat.CONSUMED;
-});
-//kotlin
-ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView) { v, insets ->
-  val bars = insets.getInsets(
-    WindowInsetsCompat.Type.systemBars()
-      or WindowInsetsCompat.Type.displayCutout()
-  )
-  v.updatePadding(
-    left = bars.left,
-    top = bars.top,
-    right = bars.right,
-    bottom = bars.bottom,
-  )
-  WindowInsetsCompat.CONSUMED
-}
-
-패딩이 목록 항목과 함께 스크롤되도록 RecyclerView에 clipToPadding을 설정합니다. 이렇게 하면 사용자가 스크롤할 때 항목이 시스템 표시줄 뒤로 이동할 수 있습니다.
-<androidx.recyclerview.widget.RecyclerView
-    android:id="@+id/recycler_view"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:clipToPadding="false"
-    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
-
-시스템 동작 인셋은 시스템 동작이 앱보다 우선하는 창 영역을 나타냅니다. 그림 6에 주황색으로 표시된 영역입니다. 시스템 바 인셋과 마찬가지로 WindowInsetsCompat.Type.systemGestures()와 함께 getInsets(int)를 사용하여 시스템 동작 인셋이 겹치지 않도록 할 수 있습니다. 이러한 인셋을 사용하여 스와이프 가능한 뷰의 위치 자체를 가장자리로부터 멀리 이동하거나 패딩을 줍니다. 일반적인 사용 사례로는 하단 시트, 게임에서의 스와이프, ViewPager2를 사용하여 구현된 캐러셀이 있습니다. Android 10 이상에서 시스템 동작 인셋에는 홈 동작의 하단 인셋과 뒤로 동작의 왼쪽 및 오른쪽 인셋이 포함됩니다. 다음 코드 예에서는 시스템 동작 인셋을 구현하는 방법을 보여줍니다.
-
-//java
-ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-    Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
-    // view에 padding으로 inset 적용Here, set all the dimensions
-    // 원하는 수치 적용 가능
-   //원할 경우 margin으로 적용 가능
-    view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
-
-    // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
-    return WindowInsetsCompat.CONSUMED;
-});
-//kotlin
-ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-    Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
-   // view에 padding으로 inset 적용Here, set all the dimensions
-    // 원하는 수치 적용 가능
-   //원할 경우 margin으로 적용 가능
-    view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
-
-    // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
-    return WindowInsetsCompat.CONSUMED;
-});
-
-
-많은 뷰 기반 Android Material 구성요소(com.google.android.material)는 BottomAppBar, BottomNavigationView, NavigationRailView, NavigationView를 비롯한 인셋을 자동으로 처리합니다. 하지만 AppBarLayout는 인셋을 자동으로 처리하지 않습니다. 상단 인셋을 처리하기 위해 android:fitsSystemWindows="true"를 추가합니다.
-
-
-인셋이 하위 뷰로 디스패치되는 것을 중지하고 과도한 패딩을 방지하려면 WindowInsetsCompat.CONSUMED 상수를 사용하여 인셋을 사용하면 됩니다. 하지만 Android 10 (API 수준 29 이하)을 실행하는 기기에서는 WindowInsetsCompat.CONSUMED를 호출한 후 인셋이 형제 요소에 디스패치되지 않아 의도하지 않은 시각적 중복이 발생할 수 있습니다. 지원되는 모든 Android 버전에서 인셋이 형제 요소에 디스패치되는지 확인하려면 AndroidX Core 및 Core-ktx 1.16.0-alpha01 이상에서 사용할 수 있는 인셋을 사용하기 전에 ViewGroupCompat#installCompatInsetsDispatch를 사용하세요.
-//java
-// R.id.main처럼 루트 view의 레이아웃 적용
-LinearLayout rootView = findViewById(R.id.main);
-// inset 소비하기 전에 호출
-ViewGroupCompat.installCompatInsetsDispatch(rootView);
-//kotlin
-// R.id.main처럼 루트 view의 레이아웃 적용
-val rootView = findViewById(R.id.main)
-// inset 소비하기 전에 호출
-ViewGroupCompat.installCompatInsetsDispatch(rootView)
-
-
-일부 콘텐츠는 전체 화면으로 표시하여 사용자에게 몰입감 있는 환경을 제공하는 것이 좋습니다. WindowInsetsController 및 WindowInsetsControllerCompat 라이브러리를 사용하여 몰입형 모드의 시스템 표시줄을 숨길 수 있습니다.
-//java
-Window window = getWindow();
-WindowInsetsControllerCompat windowInsetsController =
-      WindowCompat.getInsetsController(window, window.getDecorView());
-if (windowInsetsController == null) {
-    return;
-  }
-// 시스템바 숨기기
-windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
-// 시스템바 보여주기
-windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
-
-//kotlin
-val windowInsetsController =
-      WindowCompat.getInsetsController(window, window.decorView)
-
-// 시스템바 숨기기
-windowInsetsController.hide(Type.systemBars())
-
-// 시스템바 보여주기
-windowInsetsController.show(Type.systemBars())
-
-
-enableEdgeToEdge를 호출하면 기기 테마가 변경될 때 시스템 표시줄 아이콘 색상이 업데이트됩니다. edge to edge 화면으로 전환하는 동안 앱의 배경과 대비되도록 시스템 표시줄 아이콘 색상을 수동으로 업데이트할 수 있습니다. 예를 들어 밝은 상태 표시줄 아이콘을 만들려면 다음을 실행합니다.
-//java
-WindowCompat.getInsetsController(window, window.getDecorView())
-    .setAppearanceLightStatusBars(false);
-//kotlin
-WindowCompat.getInsetsController(window, window.decorView)
-    .isAppearanceLightStatusBars = false
-
-
-앱이 SDK 35 이상을 타겟팅하면 edge to edge 화면이 적용됩니다. 시스템 상태 표시줄과 동작 탐색 메뉴는 투명하지만 3버튼 탐색 메뉴는 반투명합니다. enableEdgeToEdge를 호출하면 이전 버전에도 적용할 수 있습니다. 하지만 시스템 기본값이 모든 사용 사례에 적합하지 않을 수 있습니다. 아래 디자인 권장 사이트를 참고하여 투명 또는 반투명 표시줄을 사용할지 결정하면 됩니다.
-https://developer.android.com/design/ui/mobile/guides/foundations/system-bars?hl=ko
-https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge?hl=ko
-
-Android 15 (SDK 35) 이상을 타겟팅하거나 이전 버전의 기본 인수로 enableEdgeToEdge()를 호출하여 투명한 상태 표시줄을 만듭니다. Android 15 이상을 타겟팅하거나 이전 버전의 기본 인수로 enableEdgeToEdge()를 호출하여 투명한 동작 탐색 메뉴를 만드세요. 3버튼 탐색 메뉴의 경우 Window.setNavigationBarContrastEnforced을 false로 설정하세요. 그렇지 않으면 반투명 스크림이 적용됩니다.
-
-반투명 상태 표시줄을 만들려면 다음을 실행하세요.
-1. androidx-core 종속 항목을 1.16.0-beta01 이상으로 업데이트합니다.
-2. XML 레이아웃을 androidx.core.view.insets.ProtectionLayout로 래핑하고 ID를 할당합니다.
-3. 프로그래매틱 방식으로 ProtectionLayout에 액세스하여 보호를 설정하고 상태 표시줄의 측면과 GradientProtection을 지정합니다.
-
-<androidx.core.view.insets.ProtectionLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/list_protection"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <ScrollView
-        android:id="@+id/item_list"
-        android:clipToPadding="false"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <!--items-->
-
-    </ScrollView>
-
-</androidx.core.view.insets.ProtectionLayout>
-
-findViewById<ProtectionLayout>(R.id.list_protection)
-    .setProtections(
-        listOf(
-            GradientProtection(
-                WindowInsetsCompat.Side.TOP,
-                // Ideally, this is the pane's background color
-                paneBackgroundColor
-            )
-        )
-    )
-GradientProtection에 전달된 ColorInt이 콘텐츠 배경과 일치하는지 확인합니다. 예를 목록 세부정보 레이아웃에는 목록 패널과 세부정보 패널의 색상이 서로 다른 GradientProtections가 있을 수 있습니다.
-
-투명한 제스처 네비게이션 바는 만들지 마세요. 만약 반투명한 3버튼 네비게이션 바를 만들려면 아래 방법 중 하나를 사용하세요:
-
-이미 레이아웃이 ProtectionView로 감싸져 있다면, 스크림을 끄고 직접 처리하고 싶으면
-setProtections 메서드에 ColorProtection 또는 GradientProtection을 추가로 전달하세요.
-그 전에 window.isNavigationBarContrastEnforced = false로 설정해야 합니다.
-
-스크림을 시스템 기본 처리에 맡기고 싶으면 window.isNavigationBarContrastEnforced = true로 설정하세요. 앱이 enableEdgeToEdge()를 호출하면 기본값은 true입니다.
-
-
-인셋을 처리하고 clipToPadding을 false로 설정하면 마지막 목록 항목이 RecyclerView 또는 NestedScrollView의 시스템 표시줄에 가려지지 않습니다. 다음 동영상은 가장자리부터 가장자리까지 디스플레이가 사용 중지된 RecyclerView(왼쪽)와 사용 설정된 RecyclerView (오른쪽)를 보여줍니다.
-
-
-전체 화면 대화상자를 더 넓게 만들려면 대화상자에서 enableEdgeToEdge을 호출합니다.
-//java
-public class MyAlertDialogFragment extends DialogFragment {
-    @Override
-    public void onStart() {
-        super.onStart();
-        Dialog dialog = getDialog();
-        if (dialog != null) {
-            Window window = dialog.getWindow();
-            if (window != null) {
-                WindowCompat.enableEdgeToEdge(window);
-            }
-        }
-    }
-    ...
-}
-//kotlin
-class MyAlertDialogFragment : DialogFragment() {
-    override fun onStart(){
-        super.onStart()
-        dialog?.window?.let { WindowCompat.enableEdgeToEdge(it) }
-    }
-    ...
-}
-
-
-
+3. 둥근 모서리 처리
+1) UI 요소
 Android 12(API 레벨 31)부터 RoundedCorner와 WindowInsets.getRoundedCorner(int position)을 사용하여 기기 화면의 둥근 모서리에 대한 반지름과 중심점을 가져올 수 있습니다. 이 API들은 둥근 모서리가 있는 화면에서 앱의 UI 요소가 잘리는 것을 방지합니다. 프레임워크는 getPrivacyIndicatorBounds() API도 제공하는데, 이는 표시 중인 마이크 및 카메라 표시기의 경계 사각형을 반환합니다. 이 API들은 둥근 모서리가 없는 기기에서는 아무런 효과를 주지 않습니다.
 
 이 기능을 구현하려면 WindowInsets.getRoundedCorner(int position)을 사용하여 앱의 영역 기준으로 RoundedCorner 정보를 가져옵니다. 앱이 전체 화면을 차지하지 않는 경우, API는 앱의 창 경계를 기준으로 둥근 모서리의 중심점을 계산해 적용합니다. 다음 코드는 RoundedCorner에서 가져온 정보를 기반으로 뷰에 여백(margin)을 설정하여 UI가 잘리지 않도록 하는 방법을 보여줍니다. 여기서는 오른쪽 상단의 둥근 모서리에 대해 처리하는 예시입니다.
+
 //java
 //상단 오른쪽 모서리 WindowInsets 얻기
 val insets = rootWindowInsets
@@ -618,8 +398,9 @@ lp.topMargin = Math.max(topBoundary - buttonTopInWindow, 0)
 closeButton.layoutParams = lp
 
 
-디스플레이 전체를 채우는 UI의 경우, 둥근 모서리때문에 콘텐츠가 잘리는(clipping) 문제가 발생할 수 있습니다. 예를 들어, 그림 2는 시스템 바 뒤에 레이아웃이 그려진 상태에서 화면 구석에 아이콘이 위치해 있고, 이 아이콘이 둥근 모서리에 의해 일부 가려지는 경우를 보여줍니다.
-이 문제를 피하려면, 둥근 모서리가 있는지 확인하고, 앱 콘텐츠가 기기 모서리를 침범하지 않도록 패딩을 적용해야 합니다.
+2)화면 전체
+디스플레이 전체를 채우는 UI의 경우, 둥근 모서리때문에 콘텐츠가 잘리는(clipping) 문제가 발생할 수 있습니다. 예를 들어, 그림 2는 시스템 바 뒤에 레이아웃이 그려진 상태에서 화면 구석에 아이콘이 위치해 있고, 이 아이콘이 둥근 모서리에 의해 일부 가려지는 경우를 보여줍니다. 이 문제를 피하려면, 둥근 모서리가 있는지 확인하고, 앱 콘텐츠가 기기 모서리를 침범하지 않도록 패딩을 적용해야 합니다.
+
 //java
 public class InsetsLayout extends FrameLayout {
     public InsetsLayout(@NonNull Context context) {
@@ -763,17 +544,26 @@ class InsetsLayout(context: Context, attrs: AttributeSet) : FrameLayout(context,
     private fun calculatePadding(radius1: Int?, radius2: Int?, margin: Int, padding: Int): Int =
         (max(radius1 ?: 0, radius2 ?: 0) - margin - padding).coerceAtLeast(0)
 }
-예시 코드에서는 UI가 둥근 모서리 영역까지 확장되었는지 판단하고, 확장된 경우 해당 위치에 패딩을 추가합니다. 그림 3에서는 "Show layout bounds(레이아웃 경계 표시)" 개발자 옵션을 활성화해서 실제 패딩이 적용된 상태를 더 명확히 보여줍니다.
 
-이 기능을 구현하려면 두 개의 사각형 영역을 계산해야 합니다:
-safeArea: 둥근 모서리의 반지름(radii) 안쪽에 위치한 안전한 영역
-layoutBounds: 레이아웃의 크기에서 패딩을 제외한 실제 콘텐츠 영역
+예시 코드에서는 UI가 둥근 모서리 영역까지 확장되었는지 판단하고, 확장된 경우 해당 위치에 패딩을 추가합니다. 그림 3에서는 "Show layout bounds(레이아웃 경계 표시)" 개발자 옵션을 활성화해서 실제 패딩이 적용된 상태를 더 명확히 보여줍니다. 패딩을 추가하기 위해서는 두 개의 사각형 영역을 계산해야 합니다.
+
+- safeArea
+둥근 모서리의 반지름(radii) 안쪽에 위치한 안전한 영역
+- layoutBounds
+레이아웃의 크기에서 패딩을 제외한 실제 콘텐츠 영역
+
 layoutBounds가 safeArea를 완전히 포함하면, 콘텐츠가 잘릴 수 있기 때문에 패딩을 추가해야 합니다.
 반대로, 레이아웃이 화면 가장자리까지 확장되지 않아서 둥근 모서리 영역에 닿지 않는다면, 굳이 패딩을 추가하지 않아도 됩니다. 그림 4는 레이아웃이 내비게이션 바 뒤로 그려지지 않는 경우를 보여주며, 이 경우에는 둥근 모서리도 내비게이션 바 영역 안에 있어서 추가적인 패딩이 필요하지 않습니다
 
 
-몰입형 모드
-동영상, 게임, 이미지 갤러리, 책, 프레젠테이션 슬라이드 등은 상태 표시줄이나 탐색 메뉴의 표시기 없이 전체 화면으로 이용하는 것이 좋습니다. 이를 몰입형 모드라고 합니다. 몰입형 모드를 사용하면 게임 중에 실수로 종료하는 것을 방지하고 이미지, 동영상, 도서를 즐길 수 있는 몰입형 환경을 제공합니다. 하지만 사용자가 알림을 확인하거나, 즉흥적인 검색을 실행하거나, 다른 작업을 수행하기 위해 얼마나 자주 앱을 시작하고 종료하는지 고려해야 합니다. 몰입형 모드를 사용하면 사용자가 시스템 탐색에 쉽게 액세스할 수 없으므로 사용자 환경에 미치는 이점이 단순히 추가 화면 공간을 사용하는 것 이상인 경우에만 몰입형 모드를 사용하세요. WindowInsetsControllerCompat.hide()을 사용하여 시스템 표시줄을 숨기고 WindowInsetsControllerCompat.show()을 사용하여 다시 표시합니다. 다음 코드는 시스템 표시줄을 숨기고 표시하는 버튼을 구성하는 예를 보여줍니다. 선택적으로 숨길 시스템 표시줄의 유형을 지정하고 사용자가 시스템 표시줄과 상호작용할 때의 동작을 결정할 수 있습니다.
+
+4.몰입형 모드
+ⅰ)몰입형 코드란
+동영상, 게임, 이미지 갤러리, 책, 프레젠테이션 슬라이드 등은 상태 표시줄이나 탐색 메뉴의 표시기 없이 전체 화면으로 이용하는 것이 좋습니다. 이를 몰입형 모드라고 합니다. 몰입형 모드를 사용하면 게임 중에 실수로 종료하는 것을 방지하고 이미지, 동영상, 도서를 즐길 수 있는 몰입형 환경을 제공합니다. 하지만 사용자가 알림을 확인하거나, 즉흥적인 검색을 실행하거나, 다른 작업을 수행하기 위해 얼마나 자주 앱을 시작하고 종료하는지 고려해야 합니다. 몰입형 모드를 사용하면 사용자가 시스템 탐색에 쉽게 액세스할 수 없으므로 사용자 환경에 미치는 이점이 단순히 추가 화면 공간을 사용하는 것 이상인 경우에만 몰입형 모드를 사용하세요. WindowInsetsControllerCompat.hide()을 사용하여 시스템 표시줄을 숨기고 WindowInsetsControllerCompat.show()을 사용하여 다시 표시합니다. 
+
+ⅱ)가시성
+시스템 표시줄 인셋은 가장 일반적으로 사용되는 인셋 유형입니다. 시스템 UI가 앱 위 Z축에 표시되는 영역을 나타냅니다. 탭할 수 있고 시스템 표시줄에 의해 시각적으로 가려서는 안 되는 앱의 뷰를 이동하거나 패딩하는 데 가장 적합합니다. WindowInsetsController 및 WindowInsetsControllerCompat 라이브러리를 사용하여 몰입형 모드의 시스템 표시줄을 숨길 수 있습니다. 다음 코드는 시스템 표시줄을 숨기고 표시하는 버튼을 구성하는 예를 보여줍니다. 선택적으로 숨길 시스템 표시줄의 유형을 지정하고 사용자가 시스템 표시줄과 상호작용할 때의 동작을 결정할 수 있습니다.
+
 //java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
@@ -839,39 +629,254 @@ override fun onCreate(savedInstanceState: Bundle?) {
 }
 
 숨길 시스템 표시줄의 유형을 지정하려면 다음 매개변수 중 하나를 WindowInsetsControllerCompat.hide()에 전달하세요.
-WindowInsetsCompat.Type.systemBars()를 사용하여 시스템 표시줄을 모두 숨깁니다.
-WindowInsetsCompat.Type.statusBars()을 사용하여 상태 표시줄만 숨깁니다.
-WindowInsetsCompat.Type.navigationBars()를 사용하여 탐색 메뉴만 숨깁니다.
+
+- WindowInsetsCompat.Type.systemBars()
+시스템 표시줄을 모두 숨김
+- WindowInsetsCompat.Type.statusBars()
+상태 표시줄만 숨김
+- WindowInsetsCompat.Type.navigationBars()
+탐색 메뉴만 숨김
 
 WindowInsetsControllerCompat.setSystemBarsBehavior()를 사용하여 사용자가 숨겨진 시스템 표시줄과 상호작용할 때 시스템 표시줄이 어떻게 작동하는지 지정합니다.
-WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_TOUCH를 사용하여 해당 디스플레이에서 모든 사용자 상호작용 시 숨겨진 시스템 표시줄을 표시합니다.
-WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_SWIPE를 사용하여 시스템 표시줄이 숨겨진 화면 가장자리에서 스와이프하는 등 시스템 동작에서 숨겨진 시스템 표시줄을 표시합니다.
-WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE를 사용하여 시스템 동작으로 숨겨진 시스템 표시줄을 일시적으로 표시합니다(예: 표시줄이 숨겨진 화면 가장자리에서 스와이프). 이러한 일시적인 시스템 표시줄은 앱 콘텐츠에 오버레이되고 어느 정도 투명할 수 있으며 짧은 제한 시간이 지나면 자동으로 숨겨집니다.
+
+- WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_TOUCH
+해당 디스플레이에서 모든 사용자 상호작용 시 숨겨진 시스템 표시줄을 표시
+
+- WindowInsetsControllerCompat.BEHAVIOR_SHOW_BARS_BY_SWIPE
+시스템 표시줄이 숨겨진 화면 가장자리에서 스와이프하는 등 시스템 동작에서 숨겨진 시스템 표시줄을 표시
+
+- WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+시스템 동작으로 숨겨진 시스템 표시줄을 일시적으로 표시합니다(예: 표시줄이 숨겨진 화면 가장자리에서 스와이프). 이러한 일시적인 시스템 표시줄은 앱 콘텐츠에 오버레이되고 어느 정도 투명할 수 있으며 짧은 제한 시간이 지나면 자동으로 숨겨짐.
+
+그림 3의 플로팅 작업 버튼 (FAB)은 탐색 메뉴에 의해 부분적으로 가려집니다. 동작 모드나 버튼 모드에서 이러한 시각적 중복을 방지하려면 WindowInsetsCompat.Type.systemBars()과 함께 getInsets(int)을 사용하여 뷰의 여백을 늘리면 됩니다. 다음 코드 예는 시스템 표시줄 인셋을 구현하는 방법을 보여줍니다.
+
+//java
+ViewCompat.setOnApplyWindowInsetsListener(fab, (v, windowInsets) -> {
+  Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+  // view에 margin으로서 inset적용
+  // 해당 코드는 bottom, left, and right수치만 적용했지만 원하는데로 값 부여 가능
+  //원할경우 padding으로 적용 가능
+  MarginLayoutParams mlp = (MarginLayoutParams) v.getLayoutParams();
+  mlp.leftMargin = insets.left;
+  mlp.bottomMargin = insets.bottom;
+  mlp.rightMargin = insets.right;
+  v.setLayoutParams(mlp);
+
+  // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
+    return WindowInsetsCompat.CONSUMED;
+});
+//kotlin
+ViewCompat.setOnApplyWindowInsetsListener(fab) { v, windowInsets ->
+  val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+  // view에 margin으로서 inset적용
+  // 해당 코드는 bottom, left, and right수치만 적용했지만 원하는데로 값 부여 가능
+  //원할경우 padding으로 적용 가능
+  v.updateLayoutParams<MarginLayoutParams> {
+      leftMargin = insets.left
+      bottomMargin = insets.bottom
+      rightMargin = insets.right
+  }
+
+  // window inset을 자식 view에게 전달하고 싶지 않으면 CONSUMED으로 리턴
+  WindowInsetsCompat.CONSUMED
+}
+
+그림 3에 위의 코드를 적용하면 그림 4와 같이 버튼 모드에서 시각적 중복이 발생하지 않습니다. 그림 5처럼 동작 탐색 모드에도 동일하게 적용됩니다.
+
+ⅲ) 투명여부
+앱이 SDK 35 이상을 타겟팅하면 edge to edge 화면이 적용됩니다. 시스템 상태 표시줄과 동작 탐색 메뉴가 투명해줍니다. 하지만 제스처 네비게이션 바는 시각적 명확성을 위해 반투명을 권장합니다. 
+
+앱이 enableEdgeToEdge()를 호출하면 기본으로 3버튼 탐색 메뉴는 반투명합니다.  window.isNavigationBarContrastEnforced = true 입니다. 반투명 스크림, 어두운 오버레이를 적용하고 싶지 않는 경우Window.setNavigationBarContrastEnforced을 false로 설정하면 됩니다. ProtectionView로 감싸진 레이아웃이 있다면setProtections 메서드에 ColorProtection 또는 GradientProtection을 추가로 전달하세요. 
+
+반투명 상태 표시줄을 만들려면 다음을 실행하세요.
+1. androidx-core 종속 항목을 1.16.0-beta01 이상으로 업데이트합니다.
+2. XML 레이아웃을 androidx.core.view.insets.ProtectionLayout로 래핑하고 ID를 할당합니다.
+3. 프로그래매틱 방식으로 ProtectionLayout에 액세스하여 보호를 설정하고 상태 표시줄의 측면과 GradientProtection을 지정합니다.
+
+<androidx.core.view.insets.ProtectionLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/list_protection"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ScrollView
+        android:id="@+id/item_list"
+        android:clipToPadding="false"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!--items-->
+
+    </ScrollView>
+
+</androidx.core.view.insets.ProtectionLayout>
+
+findViewById<ProtectionLayout>(R.id.list_protection)
+    .setProtections(
+        listOf(
+            GradientProtection(
+                WindowInsetsCompat.Side.TOP,
+                // Ideally, this is the pane's background color
+                paneBackgroundColor
+            )
+        )
+    )
+
+GradientProtection에 전달된 ColorInt이 콘텐츠 배경과 일치하는지 확인합니다. 예를 목록 세부정보 레이아웃에는 목록 패널과 세부정보 패널의 색상이 서로 다른 GradientProtections가 있을 수 있습니다.
+
+enableEdgeToEdge를 호출하면 이전 버전에도 적용할 수 있습니다. 하지만 시스템 기본값이 모든 사용 사례에 적합하지 않을 수 있습니다. 아래 디자인 권장 사이트를 참고하여 투명 또는 반투명 표시줄을 사용할지 결정하면 됩니다.
+https://developer.android.com/design/ui/mobile/guides/foundations/system-bars?hl=ko
+https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge?hl=ko
+
+ⅳ)아이콘 색상
+enableEdgeToEdge를 호출하면 기기 테마가 변경될 때 시스템 표시줄 아이콘 색상이 업데이트됩니다. edge to edge 화면으로 전환하는 동안 앱의 배경과 대비되도록 시스템 표시줄 아이콘 색상을 수동으로 업데이트할 수 있습니다. 예를 들어 밝은 상태 표시줄 아이콘을 만들려면 다음을 실행합니다.
+//java
+WindowCompat.getInsetsController(window, window.getDecorView())
+    .setAppearanceLightStatusBars(false);
+//kotlin
+WindowCompat.getInsetsController(window, window.decorView)
+    .isAppearanceLightStatusBars = false
+
+
+2)compose
+반투면 시스템 표시줄을 만드는 경우 기본 콘텐츠와 겹치게 만들고 인셋으로 덮인 영역에는 그라데이션의 맞춤 컴포저블을 만드세요. 적응형 앱의 경우 edge to edge 화면 디자인에 표시된 대로 각 창의 색상과 일치하는 맞춤 컴포저블을 삽입합니다. 반투명 탐색 메뉴를 만들려면 Window.setNavigationBarContrastEnforced를 true로 설정합니다.
+
+class SystemBarProtectionSnippets : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // window.isNavigationBarContrastEnforced = true하는 메서드
+        //  3버튼 내비게이션 바에 어두운 오버레이가 적용
+        enableEdgeToEdge()
+
+        setContent {
+            MyTheme {
+                // Main content
+                MyContent()
+
+                // After drawing main content, draw status bar protection
+                StatusBarProtection()
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusBarProtection(
+    color: Color = MaterialTheme.colorScheme.surfaceContainer,
+    heightProvider: () -> Float = calculateGradientHeight(),
+) {
+
+    Canvas(Modifier.fillMaxSize()) {
+        val calculatedHeight = heightProvider()
+        val gradient = Brush.verticalGradient(
+            colors = listOf(
+                color.copy(alpha = 1f),
+                color.copy(alpha = .8f),
+                Color.Transparent
+            ),
+            startY = 0f,
+            endY = calculatedHeight
+        )
+        drawRect(
+            brush = gradient,
+            size = Size(size.width, calculatedHeight),
+        )
+    }
+}
+
+@Composable
+fun calculateGradientHeight(): () -> Float {
+    val statusBars = WindowInsets.statusBars
+    val density = LocalDensity.current
+    return { statusBars.getTop(density).times(1.2f) }
+}
+
+enableEdgeToEdge를 호출하면 기기 테마가 변경될 때 시스템 표시줄 아이콘 색상이 업데이트됩니다. 더 넓은 화면으로 전환하는 동안 앱의 배경과 대비되도록 시스템 표시줄 아이콘 색상을 수동으로 업데이트해야 할 수 있습니다. 예를 들어 밝은 상태 표시줄 아이콘을 만들려면 다음을 실행합니다.
+
+//kotlin
+WindowCompat.getInsetsController(window, window.decorView)
+    .isAppearanceLightStatusBars = false
+//java
+WindowCompat.getInsetsController(window, window.getDecorView())
+    .setAppearanceLightStatusBars(false);
 
 
 
+5. Display cutout
+1)Display cutout?
 디스플레이 컷아웃(display cutout)은 일부 기기에서 화면 영역 안으로 파고든 부분을 말합니다. 이는 화면 가장자리까지 콘텐츠를 표시하는 edge-to-edge 경험을 제공하면서도, 전면 카메라나 센서 같은 중요한 하드웨어를 위한 공간을 확보하기 위한 구조입니다. 그렇기에 컷아웃 영역에 앱 콘텐츠를 표시하기 전에, 앱이 edge-to-edge 콘텐츠 표시를 지원하도록 구성되어 있는지 확인해야 합니다. Android는 Android 9(API 레벨 28) 이상에서 디스플레이 컷아웃을 기본 지원합니다. 하지만 일부 제조사는 Android 8.1 이하에서도 컷아웃을 지원할 수 있습니다.
 
-컷아웃 영역에 콘텐츠를 렌더링하려는 경우, WindowInsetsCompat.getDisplayCutout()을 사용해 DisplayCutout 객체를 가져올 수 있습니다. 이 객체는 각 컷아웃의 안전 인셋(safe insets)과 경계 상자(bounding box)를 제공합니다. 이 API를 통해 콘텐츠가 컷아웃과 겹치는지 확인하고, 필요 시 위치를 조정할 수 있습니다. 또한 콘텐츠가 컷아웃 뒤에 배치되었는지도 확인할 수 있습니다. layoutInDisplayCutoutMode 속성은 콘텐츠가 컷아웃 영역에 어떻게 그려지는지를 제어하는 윈도우 속성입니다. 이 속성에는 다음과 같은 값 중 하나를 설정할 수 있습니다:
+일반적으로 컷아웃은 화면 상단에 있으며 상태 표시줄에 포함됩니다. 기기 화면이 가로 모드인 경우 컷아웃이 세로 가장자리에 있을 수 있습니다. 앱이 화면에 표시하는 콘텐츠에 따라 디스플레이 컷아웃을 피하기 위해 패딩을 구현해야 합니다. 기본적으로 앱은 디스플레이 컷아웃에 그려지기 때문입니다. 
 
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
-컷아웃이 시스템 바 안에 있을 때만 콘텐츠가 컷아웃 영역에 렌더링됩니다.
-그렇지 않으면 컷아웃과 겹치지 않도록 콘텐츠가 제한되어 앱은 그 영역을 피해서 콘텐츠를 가운데 좁은 영역에만 표시하게 됩니다. 예를 들어 가로 모드에서는, 콘텐츠가 좌우로 꽉 차지 못하고 좌우에 검은 여백의 빈 공간, 레터박스가 생길 수 있습니다. 앱이 SDK 35을 타깃하면, 비-플로팅(non-floating) 윈도우의 경우 ALWAYS로 해석됩니다.
 
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-콘텐츠가 항상 컷아웃 영역까지 확장되어 표시됩니다.
-앱이 SDK 35을 타깃하고 Android 15에서 실행 중이라면, 비-플로팅 윈도우에 대해 유일하게 허용되는 모드입니다 (edge-to-edge 보장을 위해).
+2) 사용법
+컷아웃 영역에 콘텐츠를 렌더링하려는 경우, WindowInsetsCompat.getDisplayCutout()을 사용해 DisplayCutout 객체를 가져올 수 있습니다. 이 객체는 각 컷아웃의 안전 인셋(safe insets)과 경계 상자(bounding box)를 제공합니다. 이 API를 통해 콘텐츠가 컷아웃과 겹치는지 확인하고, 필요 시 위치를 조정할 수 있습니다. 또한 콘텐츠가 컷아웃 뒤에 배치되었는지도 확인할 수 있습니다.
 
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-세로 및 가로 모드 모두에서 짧은 변(short edge)에 위치한 컷아웃까지 콘텐츠를 그립니다.
-플로팅 윈도우에는 사용하지 말 것.
-SDK 35을 타깃하면 ALWAYS로 해석됩니다.
+많은 앱 화면에서 리스트를 사용하는데 디스플레이 컷아웃이나 시스템 표시줄로 리스트의 항목을 가려지면 안됩니다. 시스템 표시줄과 디스플레이 컷아웃 유형에 논리 연산 or을 적용하여 WindowInsetsCompat 값을 결정합니다.
 
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
-콘텐츠가 컷아웃 영역에 절대 렌더링되지 않도록 합니다.
-SDK 35 타깃의 경우, 이 설정도 비-플로팅 윈도우에서는 ALWAYS로 간주됩니다.
+//java
+ViewCompat.setOnApplyWindowInsetsListener(mBinding.recyclerView, (v, insets) -> {
+  Insets bars = insets.getInsets(
+    WindowInsetsCompat.Type.systemBars()
+    | WindowInsetsCompat.Type.displayCutout()
+  );
+  v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+  return WindowInsetsCompat.CONSUMED;
+});
+//kotlin
+ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView) { v, insets ->
+  val bars = insets.getInsets(
+    WindowInsetsCompat.Type.systemBars()
+      or WindowInsetsCompat.Type.displayCutout()
+  )
+  v.updatePadding(
+    left = bars.left,
+    top = bars.top,
+    right = bars.right,
+    bottom = bars.bottom,
+  )
+  WindowInsetsCompat.CONSUMED
+}
 
-이 컷아웃 모드는 코드에서 프로그래밍적으로 설정할 수도 있고, Activity에 적용할 스타일 속성으로도 지정할 수 있습니다. 예시는 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES 속성을 Activity에 스타일로 지정하는 방법을 보여줍니다.
+패딩이 목록 항목과 함께 스크롤되도록 RecyclerView에 clipToPadding을 설정합니다. 이렇게 하면 사용자가 스크롤할 때 항목이 시스템 표시줄 뒤로 이동할 수 있습니다.
+<androidx.recyclerview.widget.RecyclerView
+    android:id="@+id/recycler_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+
+3)Display cutout 모드
+layoutInDisplayCutoutMode 속성은 콘텐츠가 컷아웃 영역에 어떻게 그려지는지를 제어하는 윈도우 속성입니다. 이 속성에는 다음과 같은 값 중 하나를 설정할 수 있습니다.
+
+- LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+컷아웃이 시스템 바 안에 있을 때만 콘텐츠가 컷아웃 영역에 렌더링.
+그렇지 않으면 컷아웃과 겹치지 않도록 콘텐츠가 제한되어 앱은 그 영역을 피해서 콘텐츠를 가운데 좁은 영역에만 표시. 예를 들어 가로 모드에서는, 콘텐츠가 좌우로 꽉 차지 못하고 좌우에 검은 여백의 빈 공간, 레터박스가 생김. 앱이 SDK 35을 타깃하면, 비-플로팅(non-floating) 윈도우의 경우 ALWAYS로 해석
+
+- LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+콘텐츠가 항상 컷아웃 영역까지 확장되어 표시.
+앱이 SDK 35을 타깃하고 Android 15에서 실행 중이라면, edge-to-edge 보장을 위해 비-플로팅 윈도우에 대해 유일하게 허용되는 모드.
+
+- LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+세로 및 가로 모드 모두에서 짧은 변(short edge)에 위치한 컷아웃까지 콘텐츠를 확장.
+시스템 바가 숨겨졌든 보이든 관계없이 확장. 단, 이 모드를 사용할 경우 중요한 콘텐츠가 컷아웃과 겹치지 않도록 주의해야 함. 화면의 긴 변(long edge) 에 있는 컷아웃 영역에는 절대 콘텐츠가 확장되지 않음. 플로팅 윈도우에는 사용하지 말 것. 앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES도 사실상 ALWAYS로 해석됨 (non-floating window 기준).
+다음 이미지는 세로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예
+다음 이미지는 가로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예
+이 모드에서 창은 디스플레이의 짧은 가장자리에 있는 컷아웃 아래로 확장. 창이 가로 방향으로 놓여 있는지와 상관없이 가로 및 세로 방향 모두 시스템 표시줄 모서리의 컷아웃은 짧은 가장자리에 있는 것으로 간주
+
+- LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+콘텐츠가 컷아웃 영역에 절대 렌더링되지 않도록 함
+SDK 35 타깃의 경우, 이 설정도 비-플로팅 윈도우에서는 ALWAYS로 간주.
+앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
+LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER는 non-floating 윈도우에 대해 ALWAYS로 해석. 즉, 실질적으로 컷아웃 영역까지 콘텐츠가 확장. (기존 의미와 다르게 작동).
+아래는 세로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
+아래는 가로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
+
+컷아웃 모드는 코드에서 프로그래밍적으로 설정할 수도 있고, Activity에 적용할 스타일 속성으로도 지정할 수 있습니다. 예시는 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES 속성을 Activity에 스타일로 지정하는 방법을 보여줍니다.
 
 <style name="ActivityTheme">
   <item name="android:windowLayoutInDisplayCutoutMode">
@@ -879,77 +884,50 @@ SDK 35 타깃의 경우, 이 설정도 비-플로팅 윈도우에서는 ALWAYS�
   </item>
 </style>
 
-
-
-기본 동작
 앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이라면,
 LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS가 기본 동작이며,
 LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT도 사실상 ALWAYS로 해석됨 (단, non-floating window일 경우). 그렇지 않다면, 즉 SDK 35 미만이거나 Android 15 미만인 경우,
 LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT는 기존 기본값으로 작동함.
 
-짧은 변(short edge) 컷아웃 영역에 콘텐츠 렌더링
-앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES도 사실상 ALWAYS로 해석됨 (non-floating window 기준).
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES 모드에서는,
-세로 및 가로 모드 모두에서 디스플레이의 짧은 변에 있는 컷아웃 영역까지 콘텐츠가 확장됨.
-시스템 바가 숨겨졌든 보이든 관계없이 확장됨. 단, 이 모드를 사용할 경우 중요한 콘텐츠가 컷아웃과 겹치지 않도록 주의해야 함. 화면의 긴 변(long edge) 에 있는 컷아웃 영역에는 절대 콘텐츠가 확장되지 않음.
-다음 이미지는 세로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예입니다.
-다음 이미지는 가로 모드 기기의 경우 LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES의 예입니다.  
-이 모드에서 창은 디스플레이의 짧은 가장자리에 있는 컷아웃 아래로 확장됩니다. 창이 가로 방향으로 놓여 있는지와 상관없이 가로 및 세로 방향 모두 시스템 표시줄 모서리의 컷아웃은 짧은 가장자리에 있는 것으로 간주됩니다.
 
-ChatGPT의 말:
-디스플레이 컷아웃 영역에 절대 콘텐츠를 렌더링하지 않기
-앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
-LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER는 non-floating 윈도우에 대해 ALWAYS로 해석됨. 즉, 실질적으로 컷아웃 영역까지 콘텐츠가 확장됨 (기존 의미와 다르게 작동).
+4)수동 처리
+컷아웃 영역이 중요한 텍스트, 컨트롤, 혹은 정밀한 터치 인식이 필요한 인터랙티브 요소를 가리지 않도록 직접 컷아웃 정보를 처리해야 합니다. 컷아웃 영역은 터치 감도가 낮을 수 있으므로 주의해야 합니다. 아웃을 처리할 때 status bar 높이를 하드코딩하지 말아야 합니다. 그렇지 않으면 콘텐츠가 겹치거나 잘릴 수 있음. 대신, 아래 방법 중 하나를 통해 컷아웃을 처리해야합니다.
+- WindowInsets.displayCutout, WindowInsets.safeContent, WindowInsets.safeDrawing 사용
+- LocalView.current.rootWindowInsets.displayCutout로 컷아웃 Path 객체 접근
 
-원래 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER의 의미는,
-윈도우가 컷아웃 영역과 절대 겹치지 않도록 하는 것임.
-
-아래는 세로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
-아래는 가로 모드에서 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER를 적용한 예시.
+Jetpack Compose에서는 displayCutout, safeContent, 또는 safeDrawing을 이용해 컷아웃 인셋을 처리해야합니다. 컷아웃 패딩이 필요한 곳에는 이를 존중하고, 필요 없는 곳은 무시할 수 있습니다.
 
 
+5)고려사항
+- UI의 핵심 요소 배치에 주의. 컷아웃 영역이 중요한 텍스트, 컨트롤, 기타 정보를 가리지 않도록 할 것.
 
-컷아웃 정보를 수동으로 처리하기
-컷아웃 영역이 중요한 텍스트, 컨트롤, 혹은 정밀한 터치 인식이 필요한 인터랙티브 요소를 가리지 않도록 직접 컷아웃 정보를 처리해야 함. 컷아웃 영역은 터치 감도가 낮을 수 있으므로 주의해야 함. 아웃을 처리할 때 status bar 높이를 하드코딩하지 말 것. 이렇게 하면 콘텐츠가 겹치거나 잘릴 수 있음. 대신, 아래 방법 중 하나를 통해 컷아웃을 처리할 것
-WindowInsets.displayCutout, WindowInsets.safeContent, WindowInsets.safeDrawing 사용
-LocalView.current.rootWindowInsets.displayCutout로 컷아웃 Path 객체 접근
+- 정밀한 터치가 필요한 인터랙션 요소는 컷아웃 영역에 두지 말 것. 컷아웃 영역은 터치 민감도가 낮을 수 있음.
 
-Jetpack Compose에서는 다음을 권장함. displayCutout, safeContent, 또는 safeDrawing을 이용해 컷아웃 인셋을 처리. 컷아웃 패딩이 필요한 곳에는 이를 존중하고, 필요 없는 곳은 무시할 수 있음.
+- WindowInsetsCompat를 사용해 status bar 높이를 가져와 콘텐츠에 적절한 padding 적용. status bar 높이를 하드코딩하지 말 것 .겹치거나 잘리는 문제가 생길 수 있음.
 
+- 앱이 차지하는 실제 window 영역을 확인할 때는 View.getLocationInWindow() 사용. 전체 window를 사용한다고 가정하지 말고, getLocationOnScreen()은 사용하지 말 것.
 
-컷아웃을 다룰 때 다음 사항을 고려할 것:
-UI의 핵심 요소 배치에 주의
-컷아웃 영역이 중요한 텍스트, 컨트롤, 기타 정보를 가리지 않도록 할 것.
+몰입형 모드 전환이 필요한 경우 always, shortEdges, never 모드를 명시적으로 설정.
+default 모드는 시스템 바가 표시될 때는 컷아웃에 콘텐츠가 그려지지만, immersive mode에서는 그려지지 않음 .이로 인해 전환 중 콘텐츠가 위아래로 움직이는 현상 발생.
 
-정밀한 터치가 필요한 인터랙션 요소는 컷아웃 영역에 두지 말 것
-컷아웃 영역은 터치 민감도가 낮을 수 있음.
-
-WindowInsetsCompat를 사용해 status bar 높이를 가져와 콘텐츠에 적절한 padding 적용
-status bar 높이를 하드코딩하지 말 것 .겹치거나 잘리는 문제가 생길 수 있음.
-
-앱이 차지하는 실제 window 영역을 확인할 때는 View.getLocationInWindow() 사용
-전체 window를 사용한다고 가정하지 말고, getLocationOnScreen()은 사용하지 말 것.
-
-immersive mode 전환이 필요한 경우 always, shortEdges, never 모드를 명시적으로 설정
-default 모드는 시스템 바가 표시될 때는 컷아웃에 콘텐츠가 그려지지만, immersive mode에서는 그려지지 않음 이로 인해 전환 중 콘텐츠가 위아래로 움직이는 현상 발생.
-
-immersive mode에서는 window 좌표와 screen 좌표를 주의해서 사용해야 함
-letterbox(레터박스) 상태에서는 전체 화면을 쓰지 않으므로
-화면 원점(screen origin) 기준 좌표 ≠ window origin 기준 좌표
+- 몰입형 모드에서는 window 좌표와 screen 좌표를 주의해서 사용해야 함. letterbox(레터박스) 상태에서는 전체 화면을 쓰지 않으므로 화면 원점(screen origin) 기준 좌표 ≠ window origin 기준 좌표.
 필요 시 getLocationOnScreen()을 사용해 screen 좌표를 뷰 좌표로 변환할 것.
 
-MotionEvent 처리 시 getX() / getY() 사용
-getRawX() / getRawY()는 위 좌표 이슈로 인해 사용하지 말 것.
+- MotionEvent 처리 시 getX() / getY() 사용. getRawX() / getRawY()는 위 좌표 이슈로 인해 사용하지 말 것.
 
 
-앱의 모든 화면과 사용자 경험을 테스트하세요. 가능하다면 다양한 형태의 컷아웃이 있는 기기에서 테스트하세요. 컷아웃이 있는 실제 기기가 없다면, Android 9 이상이 실행되는 기기나 에뮬레이터에서 일반적인 컷아웃 구성을 다음 방법으로 시뮬레이션할 수 있습니다:
-1.개발자 옵션(Developer options)을 활성화합니다.
-2.개발자 옵션 화면에서 Drawing 섹션으로 스크롤합니다.
-3.Simulate a display with a cutout(컷아웃이 있는 디스플레이 시뮬레이션) 항목을 선택합니다.
-4.원하는 컷아웃 유형을 선택합니다.
+6)테스트
+앱의 모든 화면과 사용자 경험을 테스트하세요. 가능하다면 다양한 형태의 컷아웃이 있는 기기에서 테스트하세요. 컷아웃이 있는 실제 기기가 없다면, Android 9 이상이 실행되는 기기나 에뮬레이터에서 일반적인 컷아웃 구성을 다음 방법으로 시뮬레이션할 수 있습니다.
+
+1.개발자 옵션(Developer options) 활성화.
+2.개발자 옵션 화면에서 Drawing 섹션으로 스크롤.
+3.Simulate a display with a cutout(컷아웃이 있는 디스플레이 시뮬레이션) 항목 선택.
+4.원하는 컷아웃 유형을 선택.
 
 
+
+6. 소프트웨어 키보드
+1)개본 개념
 WindowInsetsCompat를 사용하면 앱이 시스템 표시줄과 상호작용하는 방식과 유사하게 터치 키보드 (IME)를 쿼리하고 제어할 수 있습니다. 앱은 WindowInsetsAnimationCompat을 사용하여 소프트 키보드가 열리거나 닫힐 때 원활한 전환을 만들 수도 있습니다.
 
 WindowInsets을 사용하여 소프트웨어 키보드 공개 상태를 확인합니다.
@@ -963,6 +941,7 @@ val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
 val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
 또는 ViewCompat.setOnApplyWindowInsetsListener를 사용하여 소프트 키보드 표시 상태의 변경사항을 관찰할 수 있습니다.
+
 //java
 ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
   boolean imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
@@ -975,8 +954,11 @@ ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets ->
   val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
   insets
 }
+
  AndroidX 구현과의 최상의 하위 호환성을 달성하려면 AndroidManifest.xml 파일에서 android:windowSoftInputMode="adjustResize"을 활동으로 설정하세요.
 
+
+2)애니메이션 효과
 사용자가 텍스트 입력란을 탭하면 다음 예와 같이 키보드가 화면 하단에서 슬라이드되어 제자리에 배치됩니다. 그림 2의 '동기화되지 않음'이라는 라벨이 지정된 예에서는 Android 10 (API 수준 29)의 기본 동작을 보여줍니다. 여기서는 텍스트 필드와 앱 콘텐츠가 키보드의 애니메이션과 동기화되지 않고 제자리에 스냅됩니다. 이 동작은 시각적으로 거슬릴 수 있습니다. Android 11 (API 수준 30) 이상에서는 WindowInsetsAnimationCompat를 사용하여 화면 하단에서 키보드가 위아래로 슬라이드하는 것과 앱의 전환을 동기화할 수 있습니다. 그림 2의 '동기화됨' 라벨이 지정된 예와 같이 더 부드럽게 표시됩니다.
 Android 10 이하에서 상위 ViewGroup 객체에 setWindowInsetsApplyListener에서 WindowInsets를 직접 사용하지 마세요. 대신  WindowInsetsAnimatorCompat를 사용하세요
 
@@ -999,6 +981,7 @@ ViewCompat.setWindowInsetsAnimationCallback(
     });
 
 WindowInsetsAnimationCompat.Callback에는 onPrepare(), onStart(), onProgress(), onEnd() 등 재정의할 메서드가 여러 개 있습니다. 레이아웃을 변경하기 전에 onPrepare()를 호출하는 것으로 시작합니다. onPrepare는 인셋 애니메이션이 시작될 때, 애니메이션으로 인해 뷰가 다시 배치되기 전에 호출됩니다. 이를 사용하여 시작 상태(이 경우 뷰의 하단 좌표)를 저장할 수 있습니다. 다음 스니펫은 onPrepare 호출의 예를 보여줍니다.
+
 //java
 float startBottom;
 
@@ -1016,7 +999,9 @@ override fun onPrepare(
 ) {
   startBottom = view.bottom.toFloat()
 }
+
 인셋 애니메이션이 시작되면 onStart가 호출됩니다. 이를 사용하여 모든 뷰 속성을 레이아웃 변경의 최종 상태로 설정할 수 있습니다. OnApplyWindowInsetsListener 콜백이 뷰 중 하나로 설정되어 있으면 이 시점에서 이미 호출됩니다. 이때 뷰 속성의 최종 상태를 저장하는 것이 좋습니다. 다음 스니펫은 onStart 호출의 예를 보여줍니다.
+
 //java
 float endBottom;
 
@@ -1041,7 +1026,9 @@ override fun onStart(
 
   return bounds
 }
+
 onProgress는 애니메이션을 실행하는 과정에서 인셋이 변경될 때 호출되므로 이를 재정의하여 키보드 애니메이션 중에 모든 프레임에서 알림을 받을 수 있습니다. 키보드와 동기화되어 뷰가 애니메이션으로 표시되도록 뷰 속성을 업데이트합니다. 이 시점에서 모든 레이아웃 변경이 완료됩니다. 예를 들어 View.translationY를 사용하여 뷰를 이동하면 이 메서드를 호출할 때마다 값이 점차 감소하여 결국 원래 레이아웃 위치인 0에 도달합니다. 다음 스니펫은 onProgress 호출의 예를 보여줍니다.
+
 //java
 @NonNull
 @Override
@@ -1084,7 +1071,10 @@ override fun onProgress(
 
 선택적으로 onEnd를 재정의할 수 있습니다. 이 메서드는 애니메이션이 끝난 후 호출됩니다. 이때 임시 변경사항을 정리하는 것이 좋습니다.
 
+
+3)compose
 compose에서는 스크롤 컨테이너에 Modifier.imeNestedScroll()를 적용하여 컨테이너 하단으로 스크롤할 때 IME를 자동으로 열고 닫을 수 있습니다.
+
 class WindowInsetsExampleActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1121,4 +1111,27 @@ fun MyScreen() {
             Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
         }
     }
+}
+
+
+
+7. EdgeToEdge.enable(this)
+- EdgeToEdge.enable(this)
+    - API 29 이상 (Android 10 이상) 시스템바(상태바, 내비게이션 바) 투명화.
+- ViewCompat.setOnApplyWindowInsetsListener
+    - WindowInsets(창 삽입) 활용하여 시스템 UI 요소(예: 상태바, 내비게이션 바, 키보드 등)가 차지하는 영역을 감지하고, 그 영역을 기반으로 뷰에 패딩을 동적으로 적용하는 로직
+    - insets 리턴하는 이유는 하위 뷰나 다른 뷰는 Insets 정보를 받을 수 없기 때문. 특정 뷰에서  소비하고 반환하지 않으면, 시스템은 이를 완전히 소비(consumed)했다고 간주. 즉, 다른 뷰에서 더이상 insets 정보를 못 받음
+
+//화면 회전같이 insets 변경마다 호출
+ViewCompat.setOnApplyWindowInsetsListener(
+    findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars =
+                //insets 정보(크기) 가져오기
+                insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(
+                systemBars.left, systemBars.top, 
+                systemBars.right, systemBars.bottom
+                );
+            //추가 처리를 위한 insets 리턴   
+            return insets;
 }
