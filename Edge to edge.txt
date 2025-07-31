@@ -853,12 +853,16 @@ ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView) { v, insets ->
 layoutInDisplayCutoutMode 속성은 콘텐츠가 컷아웃 영역에 어떻게 그려지는지를 제어하는 윈도우 속성입니다. 이 속성에는 다음과 같은 값 중 하나를 설정할 수 있습니다.
 
 - LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
-컷아웃이 시스템 바 안에 있을 때만 콘텐츠가 컷아웃 영역에 렌더링.
-그렇지 않으면 컷아웃과 겹치지 않도록 콘텐츠가 제한되어 앱은 그 영역을 피해서 콘텐츠를 가운데 좁은 영역에만 표시. 예를 들어 가로 모드에서는, 콘텐츠가 좌우로 꽉 차지 못하고 좌우에 검은 여백의 빈 공간, 레터박스가 생김. 앱이 SDK 35을 타깃하면, 비-플로팅(non-floating) 윈도우의 경우 ALWAYS로 해석
+컷아웃이 시스템 바 안에 있을 때 또는 cuout까지의 거리가 16dp 이하인인 경우에만 콘텐츠가 컷아웃 영역에 렌더링.
+OEM(제조사)마다 cutout이 창과 겹치는 깊이가 16dp 이하일 경우, 사용자 설정을 통해 항상 확장되도록 허용할 수도 있음.
+FLAG_FULLSCREEN, SYSTEM_UI_FLAG_FULLSCREEN, SYSTEM_UI_FLAG_HIDE_NAVIGATION를 설정했거나 전체 화면, 가로 모드에서는 컷아웃을 피해서 콘텐츠 배치
+컷아웃과 겹치지 않도록 콘텐츠가 제한되면 앱은 그 영역을 피해서 콘텐츠를 가운데 좁은 영역에만 표시. 예를 들어 가로 모드에서는, 콘텐츠가 좌우로 꽉 차지 못하고 좌우에 검은 여백의 빈 공간, 레터박스가 생김. 앱이 SDK 35을 타깃하면, 비-플로팅(non-floating) 윈도우의 경우 ALWAYS로 해석
 
 - LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 콘텐츠가 항상 컷아웃 영역까지 확장되어 표시.
 앱이 SDK 35을 타깃하고 Android 15에서 실행 중이라면, edge-to-edge 보장을 위해 비-플로팅 윈도우에 대해 유일하게 허용되는 모드.
+다만 시스템이 여전히 뷰 계층 수준에서 콘텐츠 배치를 cutout과 겹치지 않도록 막을 수 있음. 
+Window.setDecorFitsSystemWindows(false)를 통해 시스템바에 맞춰 자동 padding 주는 것을 막을 수 있음. 시스템이 insets 정보만 넘겨주어 레이아웃 위치는 앱이 직접 제어할 수 있기에 cutout 영역 위에 직접 콘텐츠를 그릴 수 있음
 
 - LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 세로 및 가로 모드 모두에서 짧은 변(short edge)에 위치한 컷아웃까지 콘텐츠를 확장.
@@ -870,6 +874,8 @@ LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES도 사실상 ALWAYS로 해석됨 (non-
 
 - LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
 콘텐츠가 컷아웃 영역에 절대 렌더링되지 않도록 함
+플래그 변경으로 인한 레이아웃 크기나 위치의 급격한 변화(재조정)가 발생하지 않아
+UI가 갑자기 움직이거나 흔들리는 현상을 줄일 수 있음
 SDK 35 타깃의 경우, 이 설정도 비-플로팅 윈도우에서는 ALWAYS로 간주.
 앱이 SDK 35을 타겟하고 Android 15 기기에서 실행 중이면,
 LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER는 non-floating 윈도우에 대해 ALWAYS로 해석. 즉, 실질적으로 컷아웃 영역까지 콘텐츠가 확장. (기존 의미와 다르게 작동).
