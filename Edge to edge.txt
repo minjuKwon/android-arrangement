@@ -1122,11 +1122,33 @@ fun MyScreen() {
 
 
 7. EdgeToEdge.enable(this)
-- EdgeToEdge.enable(this)
-    - API 29 이상 (Android 10 이상) 시스템바(상태바, 내비게이션 바) 투명화.
-- ViewCompat.setOnApplyWindowInsetsListener
-    - WindowInsets(창 삽입) 활용하여 시스템 UI 요소(예: 상태바, 내비게이션 바, 키보드 등)가 차지하는 영역을 감지하고, 그 영역을 기반으로 뷰에 패딩을 동적으로 적용하는 로직
-    - insets 리턴하는 이유는 하위 뷰나 다른 뷰는 Insets 정보를 받을 수 없기 때문. 특정 뷰에서  소비하고 반환하지 않으면, 시스템은 이를 완전히 소비(consumed)했다고 간주. 즉, 다른 뷰에서 더이상 insets 정보를 못 받음
+1)EdgeToEdge.enable(this)
+- 시스템 바(상태바·내비게이션 바)를 투명하게 만들고 콘텐츠를 edge-to-edge로 확장하는 역할
+- SDK 버전에 따라 다르게 처리
+- 공통적으로 WindowCompat.setDecorFitsSystemWindows(window, false) 사용
+- 시스템이 콘텐츠 영역을 시스템 바를 피해서 배치하지 않도록 함. 즉, 콘텐츠가 상태바, 내비게이션 바 아래로 그려질 수 있게 허용 (edge-to-edge 설정 핵심).
+- SDK 21 미만은 edge-to-edge 지원 안 하기에 아무 동작도 하지 않음.
+- 21 이상: FLAG_TRANSLUCENT_STATUS, FLAG_TRANSLUCENT_NAVIGATION 플래그로 시스템 바를 반투명 처리 (구버전 방식), 배경만 투명해지며 시스템 바 영역을 피하지 않도록 설정.
+- 23 이상: 상태바 색상 지정. WindowInsetsControllerCompat를 이용해 라이트/다크 아이콘 여부 설정 (라이트 바 여부 제어 가능해짐)
+- 26 이상: 상태바와 더불어 내비게이션 바 색상도 getScrim()으로 설정 가능. WindowInsetsControllerCompat를 통해 색상바와 내비게이션 바 아이콘 색도 제어.
+- 28 이상: Cutout(노치) 지원 추가. layoutInDisplayCutoutMode를 SHORT_EDGES로 설정. 세로 및 가로 모드 모두에서 짧은 변 cutout에 콘텐츠 확장 허용.
+- 29 이상: 명암 대비 강제 적용 해제 및 조절. night mode 설정에 따라 결정. night이면 isStatusBarContrastEnforced가 true가 되어 시스템이 자체적으로 명암 대비를 강제 적용. false이면 앱이 지정한 색상 그대로 사용. 상태바/내비게이션 바 색상은 getScrimWithEnforcedContrast()로 명암 대비를 고려하여 적절한 색상을 계산해서 반환
+- 30 이상: layoutInDisplayCutoutMode = ALWAYS. cutout이 있는 모든 화면 가장자리까지 콘텐츠 확장 허용.
+
+| 클래스   | SDK | 주요 처리              | 컷아웃 지원   | 시스템 바 투명    | 아이콘 색 설정 | 명암 대비 |
+| ----- | --- | ------------------ | -------- | ----------- | -------- | ----- |
+| Base  | <21 | 없음                 | ❌        | ❌           | ❌        | ❌     |
+| Api21 | 21+ | 투명 플래그             | ❌        | ✅ (old way) | ❌        | ❌     |
+| Api23 | 23+ | 색 설정 + 아이콘 색       | ❌        | ✅           | ✅        | ❌     |
+| Api26 | 26+ | 내비게이션 바도 설정        | ❌        | ✅           | ✅        | ❌     |
+| Api28 | 28+ | 컷아웃: `SHORT_EDGES` | ✅        | ✅           | ✅        | ❌     |
+| Api29 | 29+ | 명암 대비 제어           | ✅        | ✅           | ✅        | ✅     |
+| Api30 | 30+ | 컷아웃: `ALWAYS`      | ✅ (모든 변) | ✅           | ✅        | ✅     |
+
+
+2)ViewCompat.setOnApplyWindowInsetsListener
+- ViewCompat.setOnApplyWindowInsetsListener 안의 코드는 화면 회전이나 상태바, 네비게이션 바 크기 변경 등으로 insets 값이 바뀔 때마다 호출
+- insets.getInsets(WindowInsetsCompat.Type.systemBars())로 시스템바 영역 크기를 받아와서, v.setPadding으로 뷰에 패딩을 줘서 콘텐츠가 시스템 바와 겹치지 않도록 함
 
 //화면 회전같이 insets 변경마다 호출
 ViewCompat.setOnApplyWindowInsetsListener(
