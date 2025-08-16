@@ -255,3 +255,145 @@ ContactsContract.SyncState
 (모두)
 이 테이블을 사용하여 동기화 어댑터의 메타데이터를 저장합니다.	
 이 테이블을 사용하면 동기화 상태와 기타 동기화 관련 데이터를 기기에 영구적으로 저장할 수 있습니다.
+
+
+
+연락처 제공자 액세스
+엔터티 쿼리
+Contacts Provider의 테이블들은 계층 구조로 구성되어 있기 때문에, 특정 행과 그것에 연결된 모든 "자식" 행들을 함께 가져오는 것이 유용할 때가 많습니다. 예를 들어, 어떤 사람의 모든 정보를 표시하려면 하나의 ContactsContract.Contacts 행에 해당하는 모든 ContactsContract.RawContacts 행을 가져오거나, 하나의 ContactsContract.RawContacts 행에 해당하는 모든 ContactsContract.CommonDataKinds.Email 행을 가져와야 할 수 있습니다. 이를 가능하게 하기 위해 Contacts Provider는 엔티티라는 구조를 제공하며, 이는 테이블 간의 데이터베이스 조인처럼 동작합니다.
+엔티티는 부모 테이블과 자식 테이블에서 선택된 컬럼으로 구성된 테이블과 같습니다. 엔티티를 쿼리할 때는, 엔티티에서 제공하는 컬럼을 기준으로 projection과 검색 조건을 지정합니다. 결과는 Cursor로 반환되며, 여기에는 검색된 각 자식 테이블 행마다 한 줄이 포함됩니다. 예를 들어, ContactsContract.Contacts.Entity를 쿼리하여 특정 연락처 이름과 그 이름에 연결된 모든 raw contact의 ContactsContract.CommonDataKinds.Email 행을 요청하면, Cursor에는 각 이메일 행마다 하나의 row가 반환됩니다.
+
+엔티티를 사용하면 쿼리가 단순해집니다. 엔티티를 이용하면 하나의 contact이나 raw contact에 대한 모든 연락처 데이터를 한 번에 가져올 수 있으며, 먼저 부모 테이블을 조회해 ID를 얻고, 그 ID로 다시 자식 테이블을 조회해야 하는 번거로움을 피할 수 있습니다. 또한, Contacts Provider는 엔티티에 대한 쿼리를 단일 트랜잭션으로 처리하므로, 가져온 데이터가 내부적으로 일관성을 유지합니다. 엔티티는 보통 부모와 자식 테이블의 모든 컬럼을 포함하지 않습니다. 엔티티의 컬럼 이름 상수 목록에 없는 컬럼명을 사용하려 하면 Exception이 발생합니다.
+
+아래 코드는 하나의 contact에 대해 모든 raw contact 행을 가져오는 방법을 보여줍니다. "main"과 "detail" 두 개의 액티비티로 구성된 애플리케이션의 일부입니다. 메인 액티비티는 연락처 목록을 보여주고, 사용자가 하나를 선택하면 해당 contact의 ID를 detail 액티비티로 전달합니다. detail 액티비티는 ContactsContract.Contacts.Entity를 사용해 선택된 contact에 연결된 모든 raw contact의 데이터 행을 표시합니다. 아래 코드는 details의 activity코드입니다.
+
+//java
+...
+    /*
+     * URI에 엔티티 경로를 추가합니다. Contacts Provider의 경우,
+     * 예상되는 URI는 content://com.google.contacts/#/entity 입니다. (#는 ID 값)
+     */
+    contactUri = Uri.withAppendedPath(
+            contactUri,
+            ContactsContract.Contacts.Entity.CONTENT_DIRECTORY);
+
+    // LOADER_ID로 식별되는 로더 초기화
+    getLoaderManager().initLoader(
+            LOADER_ID,  // 초기화할 로더의 식별자
+            null,       // 로더에 전달할 인자(해당 코드에는 없음)
+            this);      // activity의 context
+
+   // 리스트 뷰에 연결할 새 커서 어댑터를 생성
+    cursorAdapter = new SimpleCursorAdapter(
+            this,                        // activity의 context
+            R.layout.detail_list_item,   // detail위젯을 포함하는 뷰 아이템
+            mCursor,                     // 데이터를 제공하는 커서
+            fromColumns,                //데이터를 제공하는 커서의 컬럼
+            toViews,                    // 데이터를 표시할 뷰 아이템의 뷰들
+            0);                          // 플래그
+
+   // ListView의 백업 어댑터 설정
+    rawContactList.setAdapter(cursorAdapter);
+...
+@Override
+public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+
+    /*
+     * 가져올 컬럼을 설정합니다.
+     * RAW_CONTACT_ID는 데이터 행과 연결된 raw contact을 식별하기 위해 포함됩니다.
+     * DATA1은 데이터 행의 첫 번째 컬럼을 포함하며(보통 가장 중요한 값).
+     * MIMETYPE은 데이터 행의 데이터 타입을 나타냅니다.
+     */
+    String[] projection =
+        {
+            ContactsContract.Contacts.Entity.RAW_CONTACT_ID,
+            ContactsContract.Contacts.Entity.DATA1,
+            ContactsContract.Contacts.Entity.MIMETYPE
+        };
+
+/*
+     * 조회된 커서를 raw contact id 기준으로 정렬하여,
+     * 하나의 raw contact에 대한 모든 데이터 행을 모아둡니다.
+     */
+    String sortOrder =
+            ContactsContract.Contacts.Entity.RAW_CONTACT_ID +
+            " ASC";
+
+       /*
+     * 새로운 CursorLoader를 반환합니다. 인자는
+     * ContentResolver.query()와 비슷하지만, Context 인자를 통해
+     * 사용할 ContentResolver의 위치를 제공합니다.
+     */
+    return new CursorLoader(
+            getApplicationContext(),  //  activity의 context
+            contactUri,              // 단일 contact에 대한 엔티티 콘텐츠 URI
+            projection,               // 가져올 컬럼
+            null,                     // 모든 raw contact과 그 데이터 행을 가져옵니다.(selection)
+            null,                     //가져올 행의 조건 바인딩의 실제 값(selectionArgs)
+            sortOrder);               // raw contact ID 기준으로 정렬
+}
+
+//kotlin
+/*
+     * URI에 엔티티 경로를 추가합니다. Contacts Provider의 경우,
+     * 예상되는 URI는 content://com.google.contacts/#/entity 입니다. (#는 ID 값)
+     */
+    contactUri = Uri.withAppendedPath(
+            contactUri,
+            ContactsContract.Contacts.Entity.CONTENT_DIRECTORY
+    )
+
+   // LOADER_ID로 식별되는 로더를 초기화합니다.
+    loaderManager.initLoader(
+            LOADER_ID,  // 초기화할 로더의 식별자
+            null,       /// 로더에 전달할 인자(해당 코드에는 없음)
+            this        //  activity의 context
+    )
+
+    // 리스트 뷰에 연결할 새 커서 어댑터를 생성
+    cursorAdapter = SimpleCursorAdapter(
+            this,                       //  activity의 context
+            R.layout.detail_list_item,  // detail 위젯을 포함하는 뷰 아이템
+            mCursor,                   // 데이터를 제공하는 커서
+            fromColumns,               // 데이터를 제공하는 커서의 컬럼
+            toViews,                  // 데이터를 표시할 뷰 아이템의 뷰들
+            0)                          // 플래그
+
+      // ListView의 백업 어댑터를 설정
+    rawContactList.adapter = cursorAdapter
+...
+override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {
+    /*
+     * 가져올 컬럼을 설정합니다.
+     * RAW_CONTACT_ID는 데이터 행과 연결된 raw contact을 식별하기 위해 포함됩니다.
+     * DATA1은 데이터 행의 첫 번째 컬럼을 포함하며(보통 가장 중요한 값).
+     * MIMETYPE은 데이터 행의 데이터 타입을 나타냅니다.
+     */
+    val projection: Array<String> = arrayOf(
+            ContactsContract.Contacts.Entity.RAW_CONTACT_ID,
+            ContactsContract.Contacts.Entity.DATA1,
+            ContactsContract.Contacts.Entity.MIMETYPE
+    )
+
+    /*
+     * 조회된 커서를 raw contact id 기준으로 정렬하여,
+     * 하나의 raw contact에 대한 모든 데이터 행을 모아둡니다.
+     */
+    val sortOrder = "${ContactsContract.Contacts.Entity.RAW_CONTACT_ID} ASC"
+
+   /*
+     * 새로운 CursorLoader를 반환합니다. 인자는
+     * ContentResolver.query()와 비슷하지만, Context 인자를 통해
+     * 사용할 ContentResolver의 위치를 제공합니다.
+     */
+    return CursorLoader(
+            applicationContext, // activity의 context
+            contactUri,        // 단일 contact에 대한 엔티티 콘텐츠 URI
+            projection,         // 가져올 컬럼
+            null,               // 모든 raw contact과 그 데이터 행을 가져옵니다.(selection)
+            null,               //가져올 행의 조건 바인딩의 실제 값(selectionArgs)
+            sortOrder          // raw contact ID 기준으로 정렬
+    )
+}
+
+로드가 완료되면 LoaderManager에서 onLoadFinished() 콜백을 호출합니다. 이 메서드로 수신되는 인수 중 하나는 쿼리 결과가 포함된 Cursor입니다. 자체 앱에서는 이 Cursor에서 데이터를 가져와 표시하거나 추가로 작업할 수 있습니다.
