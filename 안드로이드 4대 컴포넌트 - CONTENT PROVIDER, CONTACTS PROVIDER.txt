@@ -397,3 +397,515 @@ override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {
 }
 
 로드가 완료되면 LoaderManager에서 onLoadFinished() 콜백을 호출합니다. 이 메서드로 수신되는 인수 중 하나는 쿼리 결과가 포함된 Cursor입니다. 자체 앱에서는 이 Cursor에서 데이터를 가져와 표시하거나 추가로 작업할 수 있습니다.
+
+
+배치 수정
+개념
+가능하면 ContentProviderOperation 객체 타입의 ArrayList를 생성하고 applyBatch()를 호출하여 연락처 제공자의 데이터를 '배치 모드'로 삽입, 업데이트 및 삭제해야 합니다. 연락처 제공자가 applyBatch()의 모든 작업을 단일 트랜잭션으로 실행하므로 수정사항으로 인해 연락처 저장소가 일관되지 않은 상태로 남아 있지 않습니다. 배치 수정을 사용하면 원시 연락처와 그 세부 데이터를 동시에 삽입하는 것도 용이합니다. 만약 단일 원시 연락처를 수정하려면 앱에서 수정을 직접 처리하는 대신 기기의 연락처 애플리케이션으로 인텐트를 전송하는 것이 좋습니다.
+
+Yield 지점
+많은 수의 작업이 포함된 일괄 수정은 다른 프로세스를 차단하여 전반적인 사용자 환경을 저하할 수 있습니다. 실행하고자 하는 모든 수정사항을 가능한 한 적은 수의 별도 목록에 정리하고 이와 동시에 시스템이 차단되지 않도록 하려면 하나 이상의 작업에 yield 지점를 설정해야 합니다. Yield 지점은 isYieldAllowed() 값이 true로 설정된 ContentProviderOperation 객체입니다. 연락처 제공자가 Yield 지점을 만나면 다른 프로세스가 실행되도록 작업을 일시 중지하고 현재 트랜잭션을 닫습니다. 제공자가 다시 시작되면 ArrayList에서 다음 작업을 계속 진행하고 새 트랜잭션을 시작합니다.
+Yield 포인트를 설정하면 applyBatch() 한 번 호출 시에도 여러 트랜잭션이 발생할 수 있다.
+따라서 관련된 row 집합의 마지막 작업에 yield 포인트를 설정하는 것이 좋다.
+예를 들어, 하나의 raw contact와 그에 연결된 데이터(row)들을 추가하는 작업 집합에서는 마지막 작업에 yield 포인트를 설정하거나, 단일 contact와 관련된 row 집합의 마지막 작업에 yield 포인트를 설정해야 한다.
+Yield 포인트는 또한 원자적 연산 단위이기도 하다. 두 yield 포인트 사이의 모든 접근은 하나의 단위로서 성공하거나 실패한다. yield 포인트를 전혀 설정하지 않으면, 연산 단위는 배치 전체가 된다. 연산 단위는 가장 작은 원자적 단위로 의미가 없게 된다. yield 포인트를 사용하면, 연산이 시스템 성능을 저하시키는 것을 방지하면서도 연산의 일부 집합이 원자적으로 처리되도록 할 수 있다.
+
+수정 역참조
+새로운 raw contact row와 그에 연결된 데이터(row)들을 ContentProviderOperation 객체 집합으로 삽입할 때, 데이터 row를 raw contact row에 연결하려면 raw contact의 _ID 값을 RAW_CONTACT_ID 칼럼에 넣어야 한다. 그러나 데이터 row를 위한 ContentProviderOperation을 만들 때는, 아직 raw contact row를 실행하기 전이기 때문에 ID 값이 생성되지 않아서 사용할 수 없다. 이를 해결하기 위해 ContentProviderOperation.Builder 클래스에는 withValueBackReference() 메서드가 있다. 이 메서드를 사용하면 같은 배치 작업에 포함된 이전 작업의 실행 값을 사용할 수 있기 때문에 해당 결과 값의 ID를 참조하여  컬럼을 삽입하거나 수정할 수 있다.
+withValueBackReference() 메서드에는 두 가지 인수가 있습니다.
+key
+키-값 쌍의 키입니다. 이 인수의 값은 수정 중인 테이블의 열 이름이어야 합니다.
+previousResult
+applyBatch()의 ContentProviderResult 객체 배열에 있는 값의 0 기반 인덱스입니다. 배치 작업이 적용되면 각 작업의 결과가 임시 배열에 저장됩니다. previousResult은 이러한 결과 중 어느 인덱스의 값이며 key 값을 사용하여 검색 및 저장됩니다. 이렇게 하면 새 원시 연락처행을 삽입하고 _ID 값을 반환하여 다음 ContactsContract.Data 행을 추가할 때 해당 값을 '역참조'할 수 있습니다. applyBatch()를 처음 호출하면 사용자가 제공하는 ContentProviderOperation 객체의 ArrayList 크기와 같은 크기로 전체 결과 배열이 생성됩니다. 그러나 결과 배열의 모든 요소는 null로 설정되며, 아직 적용되지 않은 작업의 결과를 역참조하려고 하면 withValueBackReference()에서 예외가 발생합니다.
+다음 예제는 새로운 원시 연락처와 데이터를 일괄 삽입하는 방법을 보여줍니다. 양보 지점을 설정하고 역참조를 사용하는 코드가 포함되어 있습니다. 
+첫 번째 코드는 UI에서 연락처 데이터를 검색합니다. 이 시점에서 사용자는 이미 새 원시 연락처를 추가할 계정을 선택했습니다.
+// 현재 선택한 계정을 사용하여 현재 UI 값에서 연락처 항목 생성
+protected void createContactEntry() {
+    /*
+     * UI에서 값 얻기
+     */
+    String name = contactNameEditText.getText().toString();
+    String phone = contactPhoneEditText.getText().toString();
+    String email = contactEmailEditText.getText().toString();
+
+    int phoneType = contactPhoneTypes.get(
+            contactPhoneTypeSpinner.getSelectedItemPosition());
+
+    int emailType = contactEmailTypes.get(
+            contactEmailTypeSpinner.getSelectedItemPosition());
+// 현재 선택한 계정을 사용하여 현재 UI 값에서 연락처 항목 생성
+private fun createContactEntry() {
+    /*
+     * UI에서 값 얻기
+     */
+    val name = contactNameEditText.text.toString()
+    val phone = contactPhoneEditText.text.toString()
+    val email = contactEmailEditText.text.toString()
+
+    val phoneType: String = contactPhoneTypes[mContactPhoneTypeSpinner.selectedItemPosition]
+
+    val emailType: String = contactEmailTypes[mContactEmailTypeSpinner.selectedItemPosition]
+다음 코드는 ContactsContract.RawContacts 테이블에 원시 연락처 행의 삽입 연산을 만듭니다.
+    /*
+     * 새로운 raw contact와 그에 연결된 데이터를 삽입하기 위한 배치 작업을 준비
+     * 이 사람에 대한 데이터가 Contacts Provider에 전혀 없더라도, 직접 추가할 수 있는 것은 
+     * Contact이 아니라 raw contact뿐 이후 Contacts Provider가 자동으로 Contact을 추가
+     */
+     // ContentProviderOperation 객체 타입의 새 배열 생성
+    ArrayList<ContentProviderOperation> ops =
+            new ArrayList<ContentProviderOperation>();
+    /*
+     * 계정 유형(서버 유형)과 계정 이름(사용자 계정)으로 새로운 원시 연락처 생성
+    * 표시 이름은 이 행에 저장되지 않고 StructuredName 데이터 행에 저장
+    * 다른 데이터는 필요하지 않음
+     */
+    ContentProviderOperation.Builder op =
+            ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+            .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, selectedAccount.getType())
+            .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, selectedAccount.getName());
+
+    // 연산 구축 후 연산 배열에 추가
+    ops.add(op.build());
+    /*
+     * 새로운 raw contact와 그에 연결된 데이터를 삽입하기 위한 배치 작업을 준비
+     * 이 사람에 대한 데이터가 Contacts Provider에 전혀 없더라도, 직접 추가할 수 있는 것은 
+     * Contact이 아니라 raw contact뿐 이후 Contacts Provider가 자동으로 Contact을 추가
+     */
+    // ContentProviderOperation 객체 타입의 새 배열 생성
+    val ops = arrayListOf<ContentProviderOperation>()
+
+   /*
+     * 계정 유형(서버 유형)과 계정 이름(사용자 계정)으로 새로운 원시 연락처 생성
+    * 표시 이름은 이 행에 저장되지 않고 StructuredName 데이터 행에 저장
+    * 다른 데이터는 필요하지 않음
+     */
+    var op: ContentProviderOperation.Builder =
+            ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, selectedAccount.name)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, selectedAccount.type)
+
+   // 연산 구축 후 연산 배열에 추가
+    ops.add(op.build())
+그런 다음 코드에 표시 이름, 전화 및 이메일 행에 대한 데이터 행을 생성합니다.
+각 연산 빌더 객체는 withValueBackReference()를 사용하여 RAW_CONTACT_ID를 가져옵니다. 원시 연락처 행을 추가하면 새 _ID는 값을 생성하는 첫 번째 연산에서 얻는 ContentProviderResult 객체는 ID값을 참조합니다. 따라서 각 데이터 행은 RAW_CONTACT_ID에 의해 자신이 속한 새로운 ContactsContract.RawContacts 행에 자동으로 연결됩니다. 이메일 행을 추가하는 ContentProviderOperation.Builder 객체는 withYieldAllowed()를 통해 yield 지점을 설정합니다.
+    // StructuredName data으로 새로 삽입하는 원시 연락처 행의 표시 이름 설정
+    op =
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+            /*
+             * withValueBackReference는 두번째 인자로 ContentProviderResult 인덱스 값을 받아 
+             * 해당 값을 첫번째 인자에 부여
+             *  해당 코드에서 StructuredName 데이터의 원시 연락처 ID 열은
+             *  원시 연락처 행을 추가하는 첫 번째 연산에서 반환된 결과 값으로 설정.
+             */
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+
+            // data열의 MIME 타입에 StructuredName으로 설정
+            .withValue(ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+
+            //data 열의 표시 이름에 UI에 있는 이름으로 설정
+            .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, name);
+
+    //연산 구축 후 연산 배열에 추가
+    ops.add(op.build());
+
+    // 특정 휴대폰 번호와 Phone data 행에서의 유형 삽입
+    op =
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+             //배치의 첫번째 연산에서 얻은 새로운 원시 연락처 ID을 원시 연락처 id열에 설정         
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+            // data행의 MIME유형을 Phone으로 설정
+            .withValue(ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+            //휴대폰 번호와 유형 설정
+            .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+            .withValue(ContactsContract.CommonDataKinds.Phone.TYPE, phoneType);
+
+    //연산 구축 후 연산 배열에 추가
+    ops.add(op.build());
+
+    // 특정 이메일과 Phone data 행에서의 유형 삽입
+    op =
+            ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+            //배치의 첫번째 연산에서 얻은 새로운 원시 연락처 ID을 원시 연락처 id열에 설정 
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+
+            // data행의 MIME유형을 Email으로 설정
+            .withValue(ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE)
+
+            //이메일 주소와 유형 설정
+            .withValue(ContactsContract.CommonDataKinds.Email.ADDRESS, email)
+            .withValue(ContactsContract.CommonDataKinds.Email.TYPE, emailType);
+
+    /*
+     * 양보 지점 설정. 해당 삽입이 끝나면 
+     * 배치 작업의 스레드가 다른 스레드보다 우선순위를 갖게 됨.  
+     * 하나의 연락처에 영향을 주는 일련의 작업 집합을 처리한 뒤에는 
+     * 항상 이 메소드를 사용하여 성능 저하 방지.
+     */
+    op.withYieldAllowed(true);
+    //연산 구축 후 연산 배열에 추가
+    ops.add(op.build());
+
+마지막 코드는 새로운 원시 연락처와 데이터 행을 삽입하는 applyBatch() 호출을 보여줍니다.
+
+//java
+    // 연락처 제공자에게 새로운 연락처 생성 요청
+    Log.d(TAG,"Selected account: " + selectedAccount.getName() + " (" +
+            selectedAccount.getType() + ")");
+    Log.d(TAG,"Creating contact: " + name);
+
+    /*
+     * 배치에서 ContentProviderOperation 객체 타입의 배열 적용. 
+     * 해당 결과 값 사용X
+     */
+    try {
+            getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
+    } catch (Exception e) {
+
+            // 경고 표시
+            Context ctx = getApplicationContext();
+
+            CharSequence txt = getString(R.string.contactCreationFailure);
+            int duration = Toast.LENGTH_SHORT;
+            Toast toast = Toast.makeText(ctx, txt, duration);
+            toast.show();
+
+            // 예외 로그출력
+            Log.e(TAG, "Exception encountered while inserting contact: " + e);
+    }
+}
+//kotlin
+    // 연락처 제공자에게 새로운 연락처 생성 요청
+    Log.d(TAG, "Selected account: ${mSelectedAccount.name} (${mSelectedAccount.type})")
+    Log.d(TAG, "Creating contact: $name")
+
+    /*
+     * 배치에서 ContentProviderOperation 객체 타입의 배열 적용. 
+     * 해당 결과 값 사용X
+     */
+    try {
+        contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+    } catch (e: Exception) {
+        // 경고 표시
+        val txt: String = getString(R.string.contactCreationFailure)
+        Toast.makeText(applicationContext, txt, Toast.LENGTH_SHORT).show()
+
+        // 예외 로그출력
+        Log.e(TAG, "Exception encountered while inserting contact: $e")
+    }
+}
+
+낙관적 동시 실행 제어
+일괄 연산을 사용하면 기본 저장소를 잠그지 않은 채 수정 트랜잭션을 적용하는 방법인 낙관적 동시 실행 제어를 구현할 수 있습니다. 한 사용자가 데이터를 읽을 때 lock을 걸어 동시 수정을 막는 비관적 동시성 제어와 달리 낙관적 동시성 제어는 lock 설정을 하지 않아 데이터를 수정할 때 다른 사용자에 의해 변경되었는지 검사하는 방식입니다. 그렇기 때문에 해당 기능을 사용하려면 트랜잭션을 적용한 다음 동시 적용에 의한 다른 수정이 있는지 확인해야 합니다. 일관되지 않은 수정이 발견하면 트랜잭션을 롤백하고 다시 시도합니다. 낙관적 동시 실행 제어는 한 번에 한 명의 사용자만 존재하고 데이터 저장소에 대한 동시 접근이 거의 없는 휴대기기에 유용합니다. 잠금을 사용하지 않으므로 잠금을 설정하거나 다른 트랜잭션이 잠금을 해제하기를 기다리면서 시간을 낭비하지 않아도 됩니다.
+단일 ContactsContract.RawContacts 행을 업데이트하는 동안 낙관적 동시 실행 제어를 사용하려면 다음 단계를 따라야 합니다.
+1.검색하려는 데이터와 해당 원시 연락처의 VERSION 열을 검색합니다.
+2.newAssertQuery(Uri) 메서드를 사용하여 제약 조건을 적용하는 데 적합한 ContentProviderOperation.Builder 객체를 만듭니다. 콘텐츠 URI는 RawContacts.CONTENT_UR에 원시 연락처의 _ID를 추가하여 사용합니다.
+3.ContentProviderOperation.Builder 객체에 withValue()를 호출하여 VERSION 열과 방금 검색한 버전 번호를 비교합니다.
+4. newAssertQuery로 생성한 ContentProviderOperation.Builder에 withExpectedCount()를 호출하여 이 assertion에서 쿼리의 결과로 하나의 행만 반환하는 걸 검사합니다. 잘못된 쿼리나 상황으로 여러 개의 열이 반환되면 동기화 충돌 위험이 있기에 해당 조건을 걸어 OperationApplicationException을 발생시킵니다.
+5.build()를 호출하여 ContentProviderOperation 객체를 만든 다음 이 객체를 applyBatch()에 전달하는 ArrayList의 첫 번째 객체로 추가합니다.
+6.일괄 트랜잭션을 적용합니다.
+행을 읽은 시점과 행을 수정하려고 시도하는 시점 사이에 원시 연락처 행을 업데이트하는 다른 연산이 발생하면, 'assert' ContentProviderOperation가 실패하고 전체 배치 작업이 취소됩니다. 그러면 일괄 작업을 다시 시도하거나 다른 조치를 취할 수 있습니다.
+다음 코드에서는 CursorLoader를 사용하여 단일 원시 연락처를 쿼리한 후 'assertion' ContentProviderOperation를 만드는 방법을 보여줍니다.
+//java
+/*
+ * 애플리케이션에서는 원시 연락처 테이블에 쿼리하기 위해 CursorLoader 사용
+ *  시스템에서 해당 메서드를 load가 끝날 때 호출
+ */
+public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+    // 원시 연락처의 _ID와 VERSION 값 얻기
+    rawContactID = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
+    mVersion = cursor.getInt(cursor.getColumnIndex(SyncColumns.VERSION));
+}
+
+...
+
+// assert 연산을위한 Uri 설정
+Uri rawContactUri = ContentUris.withAppendedId(RawContacts.CONTENT_URI, rawContactID);
+
+// assert 연산 빌더 생성
+ContentProviderOperation.Builder assertOp = ContentProviderOperation.newAssertQuery(rawContactUri);
+
+// assertions에 assert 연산 추가. 테스트할 열의 개수와 version과 검사
+assertOp.withValue(SyncColumns.VERSION, mVersion);
+assertOp.withExpectedCount(1);
+
+//ContentProviderOperation 객체를 담을 ArrayList 생성
+ArrayList ops = new ArrayList<ContentProviderOperation>;
+
+ops.add(assertOp.build());
+
+//ops에 원하는 배치 연산 추가 가능
+
+...
+
+// 배치 적용. assert가 실패하면 예외 발생
+try
+    {
+        ContentProviderResult[] results =
+                getContentResolver().applyBatch(AUTHORITY, ops);
+
+    } catch (OperationApplicationException e) {
+
+        //assert 연산이 실패할 때 원하는 동작 작동
+    }
+//kotlin
+/*
+ * 애플리케이션에서는 원시 연락처 테이블에 쿼리하기 위해 CursorLoader 사용
+ *  시스템에서 해당 메서드를 load가 끝날 때 호출
+ */
+override fun onLoadFinished(loader: Loader<Cursor>, cursor: Cursor) {
+    // 원시 연락처의 _ID와 VERSION 값 얻기
+    rawContactID = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID))
+    mVersion = cursor.getInt(cursor.getColumnIndex(SyncColumns.VERSION))
+}
+
+...
+
+// assert 연산을위한 Uri 설정
+val rawContactUri: Uri = ContentUris.withAppendedId(
+        ContactsContract.RawContacts.CONTENT_URI,
+        rawContactID
+)
+
+// assert 연산 빌더 생성
+val assertOp: ContentProviderOperation.Builder =
+        ContentProviderOperation.newAssertQuery(rawContactUri).apply {
+            //assertions에 assert 연산 추가. 테스트할 열의 개수와 version과 검사
+            withValue(SyncColumns.VERSION, mVersion)
+            withExpectedCount(1)
+        }
+
+//ContentProviderOperation 객체를 담을 ArrayList 생성
+val ops = arrayListOf<ContentProviderOperation>()
+
+ops.add(assertOp.build())
+
+//ops에 원하는 배치 연산 추가 가능
+
+...
+
+// 배치 적용. assert가 실패하면 예외 발생
+try {
+    val results: Array<ContentProviderResult> = contentResolver.applyBatch(AUTHORITY, ops)
+} catch (e: OperationApplicationException) {
+    //assert 연산이 실패할 때 원하는 동작 작동
+}
+
+
+인텐트를 통한 검색과 수정
+기기에 있는 연락처 애플리케이션에 인텐트를 전송하면 연락처 제공자에 간접적으로 접근할 수 있습니다. 이 인텐트는 사용자가 연락처 관련 작업을 할 수 있는 기기에 있는 연락처 애플리케이션 UI를 시작합니다. 사용자가 인텐트로 접근할 때 할 수 있는 일은 다음과 같습니다.
+
+- 목록에서 연락처를 선택하면 추가 작업을 위해 앱에 전달.
+- 기존 연락처의 데이터 수정
+- 새 원시 데이터에 해당되는 계정 중 아무 곳에나 삽입.
+- 연락처 또는 연락처 데이터 삭제.
+
+사용자가 현재 입력, 수정 중인 값을 최종적으로 적용되기 전에 인텐트의 일부로 전송할 수 있습니다. 인텐트를 통해 기기의 연락처 애플리케이션으로 연락처 제공자에 접근하면, 제공자에 접근하기 위한 고유한 UI나 코드를 작성할 필요가 없습니다. 또한 제공자에 대한 읽기 또는 쓰기 권한을 요청할 필요도 없습니다. 기기의 연락처 애플리케이션에서 연락처에 관한 읽기 권한을 위임할 수 있고 다른 애플리케이션을 통해 제공자를 수정하므로 쓰기 권한도 필요하지 않기 때문입니다. 
+
+제공자에 접근하기 위해 인텐트를 전송하는 기본 과정은 다음을 참고하세요.  
+https://velog.io/@miniji/%EC%95%88%EB%93%9C%EB%A1%9C%EC%9D%B4%EB%93%9C-4%EB%8C%80-%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8-Content-Provider1content-provider#2intent-%EC%82%AC%EC%9A%A9%ED%95%98%EC%97%AC-%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%97%90-%EC%A0%91%EA%B7%BC
+
+사용할 수 있는 action, MIME 유형 및 데이터 값은 표에 요약되어 있습니다.
+
+목록에서 연락처 선택/ACTION_PICK/ Contacts.CONTENT_URI: 연락처 목록 표시, Phone.CONTENT_URI: 원시 연락처의 전화번호 목록을 표시, StructuredPostal.CONTENT_URI: 원시 연락처의 우편 주소 목록을 표시, Email.CONTENT_URI: 원시 연락처의 이메일 주소 목록을 표시/ 사용되지 않음/ 개발자가 제공하는 콘텐츠 URI 유형에 따라 원시 연락처 목록 또는 원시 연락처의 데이터 목록을 표시. 선택한 행의 콘텐츠 URI를 반환하는 startActivityForResult()를 호출. URI 형식은 테이블의 콘텐츠 URI에 행의 LOOKUP_ID가 추가된 형태. 기기의 연락처 앱은 activity 수명 동안 이 콘텐츠 URI에 읽기 및 쓰기 권한을 위임
+새 원시 연락처 삽입/Insert.ACTION/해당 사항 없음/RawContacts.CONTENT_TYPE: 여러 원시 연락처의 MIME 유형./ 기기의 연락처 애플리케이션에 연락처 추가 화면을 표시. 인텐트에 추가한 extra 값이 화면에 표시. 이 인텐트를 startActivityForResult()와 함께 보내면, 새로 추가된 raw contact의 콘텐츠 URI가 onActivityResult() 콜백 메서드의 Intent 인자의 "data" 필드에 담겨서 activity로 되돌옴. 이 값을 가져오려면 getData() 호출
+연락처 수정/ACTION_EDIT/ 연락처의 ACTION_EDIT/ 편집기 activity를 통해 사용자는 해당 연락처와 연관된 데이터 편집 가능/Contacts.CONTENT_ITEM_TYPE, 단일 연락처/연락처 애플리케이션에 연락처 편집 화면 표시. 인텐트에 추가한 extra 값이 화면에 표시. 사용자가 완료를 클릭하여 수정사항을 저장하면 activity 포그라운드로 돌아옴
+데이터를 추가할 수 있는 선택 도구를 표시/ACTION_INSERT_OR_EDIT/해당 사항 없음/CONTENT_ITEM_TYPE/이 인텐트는 항상 연락처 앱의 선택 도구 화면을 표시. 사용자는 수정할 연락처또는 새 연락처 추가 가능. 사용자의 선택에 따라 수정 또는 추가 화면이 표시. 개발자가 인텐트에 추가한 extra 값이 화면에 표시. 앱이 이메일이나 전화번호와 같은 연락처 데이터를 표시하는 경우 이 인텐트를 사용하면 사용자가 기존 연락처에 데이터를 추가 가능. 이 인텐트의 extra에서는 개발자가 직접 이름 값을 전송하지 않아도 됨. 사용자가 항상 기존 이름을 선택하거나 새 이름을 추가하기 때문. 또한 개발자가 이름을 전송하고 사용자가 수정을 선택하면 연락처 앱은 개발자가 보낸 이름을 표시하여 기존의 저장된 값을 덮어씀. 사용자가 이를 인식하지 못하고 수정사항을 저장하면 기존 값은 손실.
+
+인텐트를 사용하여 원시 연락처 또는 그 데이터를 삭제할 수 없습니다. 대신 원시 연락처를 삭제하려면 ContentResolver.delete() 또는 ContentProviderOperation.newDelete()를 사용해야 합니다.
+
+putExtra()와 함께 사용할 수 있는 추가 값은 ContactsContract.Intents.Insert 문서를 참고하세요.
+https://developer.android.com/reference/android/provider/ContactsContract.Intents.Insert
+
+다음 코드는 새로운 원시 연락처와 데이터를 삽입하는 인텐트를 구성하고 전송하는 방법을 보여줍니다.
+//java
+// UI에서 값 얻기
+String name = contactNameEditText.getText().toString();
+String phone = contactPhoneEditText.getText().toString();
+String email = contactEmailEditText.getText().toString();
+
+String company = companyName.getText().toString();
+String jobtitle = jobTitle.getText().toString();
+
+// 기기의 연락처 앱에 보낼 새로운 인텐트 생성
+Intent insertIntent = new Intent(ContactsContract.Intents.Insert.ACTION);
+
+// activity에서 삽입할 거 같은 MIME타입 설정
+insertIntent.setType(ContactsContract.RawContacts.CONTENT_TYPE);
+
+//삽입할 연락처 이름 설정
+insertIntent.putExtra(ContactsContract.Intents.Insert.NAME, name);
+
+//삽입할 회사와 직업 이름  설정
+insertIntent.putExtra(ContactsContract.Intents.Insert.COMPANY, company);
+insertIntent.putExtra(ContactsContract.Intents.Insert.JOB_TITLE, jobtitle);
+
+/*
+ * DATA 키와 연결된 ArrayList 형태로 데이터 행들을 추가하는 방법
+ */
+
+// 각 열에 ContentValues 객체를 포함하는 array list 정의
+ArrayList<ContentValues> contactData = new ArrayList<ContentValues>();
+
+
+/*
+ * 원리 연락처 열 정의
+ */
+
+// ContentValues 객체 타입의 열 설정
+ContentValues rawContactRow = new ContentValues();
+
+// 열에 계정 타입과 이름 추가
+rawContactRow.put(ContactsContract.RawContacts.ACCOUNT_TYPE, selectedAccount.getType());
+rawContactRow.put(ContactsContract.RawContacts.ACCOUNT_NAME, selectedAccount.getName());
+
+// array에 열 추가
+contactData.add(rawContactRow);
+
+/*
+ * 휴대폰 번호 데이터 열 설정
+ */
+
+//ContentValues 객체 타입의 열 설정
+ContentValues phoneRow = new ContentValues();
+
+//해당 데이터 행에 대한 MIME 유형을 지정(모든 데이터 행은 유형별로 표시해야 함)
+phoneRow.put(
+        ContactsContract.Data.MIMETYPE,
+        ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE
+);
+
+//행에 전화번호와 전화번호의 유형 추가
+phoneRow.put(ContactsContract.CommonDataKinds.Phone.NUMBER, phone);
+
+// array에 열 추가
+contactData.add(phoneRow);
+
+/*
+ * 이메일 데이터 열 설정
+ */
+
+//ContentValues 객체 타입의 열 설정
+ContentValues emailRow = new ContentValues();
+
+//해당 데이터 행에 대한 MIME 유형을 지정(모든 데이터 행은 유형별로 표시해야 함)
+emailRow.put(
+        ContactsContract.Data.MIMETYPE,
+        ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE
+);
+
+//행에 이메일과 이메일의 유형 추가
+emailRow.put(ContactsContract.CommonDataKinds.Email.ADDRESS, email);
+
+// array에 열 추가
+contactData.add(emailRow);
+
+/*
+ * array에 인텐트 extra추가. 프로세스 간 전달에서는 parcelable 객체 사용 필수
+ * 기기의 연락처 앱에서의 키는 Intents.Insert.DATA
+ */
+insertIntent.putParcelableArrayListExtra(ContactsContract.Intents.Insert.DATA, contactData);
+
+// 연락처를 추가하는 activity에서 인텐트를 전송할 연락처 앱 실행
+startActivity(insertIntent);
+//koltin
+// UI에서 값 얻기
+val name = contactNameEditText.text.toString()
+val phone = contactPhoneEditText.text.toString()
+val email = contactEmailEditText.text.toString()
+
+val company = companyName.text.toString()
+val jobtitle = jobTitle.text.toString()
+
+/*
+ * DATA 키와 연결된 ArrayList 형태로 데이터 행들을 추가하는 방법
+ */
+// 각 열에 ContentValues 객체를 포함하는 array list 정의
+val contactData = arrayListOf<ContentValues>()
+
+/*
+ * 원시 연락처 열 정의
+ */
+
+// ContentValues 객체 타입의 열 설정
+val rawContactRow = ContentValues().apply {
+    // 열에 계정 타입과 이름 추가
+    put(ContactsContract.RawContacts.ACCOUNT_TYPE, selectedAccount.type)
+    put(ContactsContract.RawContacts.ACCOUNT_NAME, selectedAccount.name)
+}
+
+// array에 열 추가
+contactData.add(rawContactRow)
+
+/*
+ * 휴대폰 번호 데이터 열 설정
+ */
+
+//ContentValues 객체 타입의 열 설정
+val phoneRow = ContentValues().apply {
+    //해당 데이터 행에 대한 MIME 유형을 지정(모든 데이터 행은 유형별로 표시해야 함) put(ContactsContract.Data.MIMETYPE,ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+
+    //행에 전화번호와 전화번호의 유형 추가
+    put(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+}
+
+// array에 열 추가
+contactData.add(phoneRow)
+
+/*
+ * 이메일 데이터 열 설정
+ */
+
+//ContentValues 객체 타입의 열 설정
+val emailRow = ContentValues().apply {
+    //해당 데이터 행에 대한 MIME 유형을 지정(모든 데이터 행은 유형별로 표시해야 함)
+    put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE)
+
+    //행에 이메일과 이메일의 유형 추가
+    put(ContactsContract.CommonDataKinds.Email.ADDRESS, email)
+}
+
+// array에 열 추가
+contactData.add(emailRow)
+
+// 기기의 연락처 앱에 보낼 새로운 인텐트 생성
+val insertIntent = Intent(ContactsContract.Intents.Insert.ACTION).apply {
+    // activity에서 삽입할 거 같은 MIME타입 설정
+    type = ContactsContract.RawContacts.CONTENT_TYPE
+
+    //삽입할 연락처 이름 설정
+    putExtra(ContactsContract.Intents.Insert.NAME, name)
+
+    //삽입할 회사와 직업 이름  설정
+    putExtra(ContactsContract.Intents.Insert.COMPANY, company)
+    putExtra(ContactsContract.Intents.Insert.JOB_TITLE, jobtitle)
+
+    /*
+     * array에 인텐트 extra추가. 프로세스 간 전달에서는 parcelable 객체 사용 필수
+     * 기기의 연락처 앱에서의 키는 Intents.Insert.DATA
+     */
+    putParcelableArrayListExtra(ContactsContract.Intents.Insert.DATA, contactData)
+}
+
+// 연락처를 추가하는 activity에서 인텐트를 전송할 연락처 앱 실행
+startActivity(insertIntent)
+
+
+데이터 무결성
+연락처 저장소에는 사용자가 정확하고 최신일 거라고 예상하는 중요하고 민감한 데이터가 포함되어 있으므로, 연락처 제공자에는 데이터 무결성에 관해 잘 정의된 규칙이 있습니다. 개발자는 연락처 데이터를 수정할 때 이러한 규칙을 준수해야 합니다. 중요한 규칙은 다음과 같습니다.
+- 추가하는 모든 ContactsContract.RawContacts 행에 항상 ContactsContract.CommonDataKinds.StructuredName 행을 추가: 
+ContactsContract.Data 테이블에 ContactsContract.CommonDataKinds.StructuredName 행이 없는 ContactsContract.RawContacts 행은 집계 중에 문제를 일으킬 수 있음
+- 항상 새 ContactsContract.Data 행을 상위 ContactsContract.RawContacts 행에 연결: ContactsContract.RawContacts에 연결되지 않은 ContactsContract.Data 행은 기기의 연락처 애플리케이션에 표시되지 않으며 동기화 어댑터에 문제를 일으킬 수 있음
+- 개발자 본인 소유인 원시 연락처에 대한 데이터만 변경: 연락처 제공자는 일반적으로 여러 다양한 계정 유형/온라인 서비스에서 가져온 데이터를 관리한다는 사실에 유의 필요. 애플리케이션이 사용자에게 속한 행의 데이터만 수정하거나 삭제하도록 해야 하며, 개발자가 제어하는 계정 유형 및 이름으로만 데이터 삽입
+- 권한, 콘텐츠 URI, URI 경로, 열 이름, MIME 유형 및 TYPE 값에는 항상 ContactsContract 및 서브클래스에 정의된 상수를 사용: 상수를 사용하면 오류를 방지하는 데 도움. 또한 지원 중단된 상수가 있는 경우 컴파일러 경고가 전송
+
+
+맞춤 데이터 행
+사용자 정의 MIME 타입을 생성하고 사용하면, ContactsContract.Data 테이블에 자신만의 데이터 행을 삽입·수정·삭제·조회할 수 있습니다. Generic column 이름에 대해 자체적으로 정의한 타입별 컬럼 이름을 매핑할 수 있지만 사용자 정의 행들은 ContactsContract.DataColumns에 정의된 컬럼만 사용할 수 있도록 제한됩니다. 기기 기본 연락처 앱에서는 이 데이터가 표시되지만, 수정·삭제할 수 없으며 사용자가 추가 데이터를 넣을 수도 없습니다. 사용자가 맞춤 데이터 행을 수정할 수 있게 하려면, 개발자가 자신의 앱 안에서 편집 activity를 직접 제공해야 합니다.
+
+맞춤 데이터를 표시하려면 <ContactsAccountType> 요소와 하나 이상의 <ContactsDataKind> 하위 요소가 포함된 contacts.xml 파일을 생성해야 합니다.
+
+맞춤 MIME 유형에 관해 자세히 보려면 다음을 참고하세요
+https://velog.io/@miniji/%EC%95%88%EB%93%9C%EB%A1%9C%EC%9D%B4%EB%93%9C-4%EB%8C%80-%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8-Content-Provider2content-provider-%EC%83%9D%EC%84%B1#5-contentprovider-mime-%EC%9C%A0%ED%98%95-%EA%B5%AC%ED%98%84
