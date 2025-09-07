@@ -1089,3 +1089,72 @@ ContactsContract.Data 테이블에 있는 사용자 정의 데이터 행 타입�
 데이터 행에서 검색한 주요 칼럼 값 중 하나의 열 이름. 이 값은 해당 데이터 행 항목의 첫 번째 줄에 표시. 첫 번째 줄은 데이터의 요약을 보여주기 위해 사용되지만, 반드시 그렇게 써야 하는 건 아님.
 - android:detailColumn
 데이터 행에서 검색한 주요 칼럼 값 중 하나의 열 이름. 이 값은 해당 데이터 행 항목의 두 번째 줄부터 표시.
+
+
+
+연락처 제공자 추가 기능
+연락처 그룹
+연락처 제공자는 선택적으로 관련된 연락처 집합을 그룹 데이터로 라벨을 지정할 수 있습니다. 특정 사용자 계정과 연결된 서버에서 그룹을 유지하려는 경우 해당 계정 계정 유형의 동기화 어댑터는 그룹 데이터를 연락처 제공자와 서버 간에 전송해야 합니다. 사용자가 서버에 새 연락처를 추가하고 이 연락처를 새 그룹에 넣으면 동기화 어댑터는 반드시 새 그룹을 ContactsContract.Groups 테이블에 추가해야 합니다. 원시 연락처가 속한 그룹은 ContactsContract.CommonDataKinds.GroupMembership MIME 유형을 사용하여 ContactsContract.Data 테이블에 저장됩니다.
+
+만약 서버에서 연락처 제공자로 원시 연락처 데이터를 추가하는 동기화 어댑터를 설계하고 있는데 그룹을 사용하지 않는다면, 제공자에 데이터가 표시되도록 명시해야 합니다. 그룹 단위로 연락처가 관리되기 때문에, 어떤 그룹에도 속하지 않는 연락처는 UI에 표시되지 않도록 설계되었기 때문입니다. 사용자가 기기에 계정을 추가할 때 실행되는 코드에서 연락처 제공자가 계정에 추가하는 ContactsContract.Settings 행을 업데이트해야 합니다. 이 행에서 Settings.UNGROUPED_VISIBLE 열의 값을 1로 설정합니다. 이렇게 하면 연락처 제공자는 그룹을 사용하지 않더라도 연락처 데이터를 항상 표시합니다.
+
+
+연락처 사진
+ContactsContract.Data 테이블은 사진을 MIME 유형이 Photo.CONTENT_ITEM_TYPE인 행으로 저장합니다. 행의 CONTACT_ID 열은 행이 속한 원시 연락처의 _ID 열과 연결됩니다. ContactsContract.Contacts.Photo 클래스는 연락처 대표 사진의 사진 정보가 포함된 ContactsContract.Contacts의 하위 테이블을 정의합니다. 연락처에는 여러 계정별 연락처(원시 연락처) 데이터 집합으로 구성되어 여러 장의 사진이 연결될 수 있습니다. 이때 대표 사진은 그 중 대표로 쓰이는 사진입니다. 일반적으로 연락처 목록이나 상세 화면에 표시됩니다. 즉, 연락처 대표 사진이란 연락처 기본 원시 연락처의 기본 사진을 말합니다. 마찬가지로 ContactsContract.RawContacts.DisplayPhoto 클래스는 원시 연락처 대표 사진의 사진 정보가 포함된 ContactsContract.RawContacts의 하위 테이블을 정의합니다.
+
+원시 연락처의 기본 썸네일을 검색하는 편의 클래스는 없지만 ContactsContract.Data 테이블에 쿼리를 전송하여 원시 연락처의 _ID, Photo.CONTENT_ITEM_TYPE, IS_PRIMARY 열을 조건으로 선택하면 원시 연락처의 대표 사진 행을 찾을 수 있습니다. 한 사람의 소셜 스트림 데이터에도 사진이 포함되어 있을 수 있습니다
+
+ContactsContract.Contacts.Photo에서 사진은 두 가지 방식으로 저장될 수 있습니다. 기본으로 photo는 데이터 행에 직접 저장된 썸네일 크기의 이미지이고, display photo는 존재한다면 파일로 저장된 더 큰 버전의 사진입니다. 또한 ContactsContract.Contacts.openContactPhotoInputStream(ContentResolver, Uri, boolean) 편의 메서드를 사용하여 썸네일 크기이든 전체 크기이든 원본 사진 데이터를 가져올 수 있습니다.
+ContactsContract.Contacts.CONTENT_URI나 ContactsContract.Contacts.CONTENT_LOOKUP_URI와 모두 사용할 수 있습니다.
+
+//썸네일 사이즈 사진
+ public InputStream openPhoto(long contactId) {
+     Uri contactUri = ContentUris.withAppendedId(Contacts.CONTENT_URI, contactId);
+     Uri photoUri = Uri.withAppendedPath(contactUri, Contacts.Photo.CONTENT_DIRECTORY);
+     Cursor cursor = getContentResolver().query(photoUri,
+          new String[] {Contacts.Photo.PHOTO}, null, null, null);
+     if (cursor == null) {
+         return null;
+     }
+     try {
+         if (cursor.moveToFirst()) {
+             byte[] data = cursor.getBlob(0);
+             if (data != null) {
+                 return new ByteArrayInputStream(data);
+             }
+         }
+     } finally {
+         cursor.close();
+     }
+     return null;
+ }
+//더 큰 사이즈 사진
+ public InputStream openDisplayPhoto(long contactId) {
+     Uri contactUri = ContentUris.withAppendedId(Contacts.CONTENT_URI, contactId);
+     Uri displayPhotoUri = Uri.withAppendedPath(contactUri, Contacts.Photo.DISPLAY_PHOTO);
+     try {
+         AssetFileDescriptor fd =
+             getContentResolver().openAssetFileDescriptor(displayPhotoUri, "r");
+         return fd.createInputStream();
+     } catch (IOException e) {
+         return null;
+     }
+ }
+ 
+ContactsContract.RawContacts.DisplayPhoto에 접근하려면, 원시 연락처 URI에 CONTENT_DIRECTORY를 추가하면 됩니다. 결과 URI는 이미지 파일을 나타내며, ContentResolver.openAssetFileDescriptor를 사용하여 다뤄야 합니다. 쓰기 모드로도 사진을 열 수 있습니다. 호출자는 자산 파일(asset file)을 열고 원시 연락처와 연관된 기본 사진을 생성하거나 교체할 수 있으며, 전체 크기 사진 데이터를 파일에 기록하면 됩니다. 파일을 닫으면, 이미지가 파싱되고 필요 시 전체 크기 표시 사진과 썸네일 크기에 맞게 축소되어 저장됩니다.
+ public void writeDisplayPhoto(long rawContactId, byte[] photo) {
+     Uri rawContactPhotoUri = Uri.withAppendedPath(
+             ContentUris.withAppendedId(RawContacts.CONTENT_URI, rawContactId),
+             RawContacts.DisplayPhoto.CONTENT_DIRECTORY);
+     try {
+         AssetFileDescriptor fd =
+             getContentResolver().openAssetFileDescriptor(rawContactPhotoUri, "rw");
+         OutputStream os = fd.createOutputStream();
+         os.write(photo);
+         os.close();
+         fd.close();
+     } catch (IOException e) {
+         // Handle error cases.
+     }
+ }
+ 
