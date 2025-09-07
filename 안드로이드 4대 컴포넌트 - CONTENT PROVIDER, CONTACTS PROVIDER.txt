@@ -952,3 +952,140 @@ https://velog.io/@miniji/%EC%95%88%EB%93%9C%EB%A1%9C%EC%9D%B4%EB%93%9C-4%EB%8C%8
 - 동기화 어댑터와 시스템 authenticator를 정의하는 XML 파일: 앞에서 설명한 동기화 어댑터와 authenticator 서비스 구성요소는 애플리케이션 매니페스트의 <service> 요소에서 정의. 이러한 요소는 시스템에 특정 데이터를 제공하는 <meta-data> 하위 요소를 포함.
     - 동기화 어댑터 서비스의 <meta-data> 요소는 XML 파일 res/xml/syncadapter.xml를 가리킴. 이 파일은 연락처 제공자와 동기화될 웹 서비스의 URI와 웹 서비스의 계정 유형을 지정.
     - 선택사항: authenticator의 <meta-data> 요소는 XML 파일 res/xml/authenticator.xml를 가리킴. 이 파일은 authenticator가 지원하는 계정 유형과 인증 프로세스 중에 표시되는 UI 리소스(예. 화면 레이아웃)를 지정. 이 요소에 지정된 계정 유형은 동기화 어댑터에 지정된 계정 유형과 동일해야 함.
+
+
+
+소셜 스트림 데이터
+android.provider.ContactsContract.StreamItems 및 android.provider.ContactsContract.StreamItemPhotos 테이블은 소셜 네트워크에서 수신하는 데이터를 관리합니다. 자신의 네트워크에서 오는 스트림 데이터를 이 테이블에 추가하는 동기화 어댑터를 작성하거나, 이 테이블에서 스트림 데이터를 읽어 자신의 애플리케이션에 표시 혹은 둘 다할 수 있습니다. 이러한 기능을 통해 소셜 네트워킹 서비스와 애플리케이션을 Android의 소셜 네트워킹 경험에 통합할 수 있습니다.
+
+
+소셜 스트림 텍스트
+스트림 항목은 항상 원시 연락처와 연관됩니다. android.provider.ContactsContract.StreamItemsColumns#RAW_CONTACT_ID는 원시 연락처의 _ID 값에 연결됩니다. 원시 연락처의 계정 유형과 계정 이름도 스트림 항목 행에 저장됩니다.
+
+스트림에서 가져온 데이터는 다음 열에 저장합니다.
+
+- android.provider.ContactsContract.StreamItemsColumns#ACCOUNT_TYPE
+필수사항. 이 스트림 항목과 연결된 원시 연락처의 사용자 계정 유형. 스트림 항목을 삽입할 때 이 값을 설정 필수
+
+- android.provider.ContactsContract.StreamItemsColumns#ACCOUNT_NAME
+필수사항. 이 스트림 항목과 연결된 원시 연락처의 사용자 계정 이름. 스트림 항목을 삽입할 때 이 값을 설정 필수
+
+- 식별자 열
+필수사항. 스트림 항목을 삽입할 때 다음 식별자 열을 삽입해야 함.
+android.provider.ContactsContract.StreamItemsColumns#CONTACT_ID: 이 스트림 항목과 연결된 연락처의 android.provider.BaseColumns#_ID 값
+android.provider.ContactsContract.StreamItemsColumns#CONTACT_LOOKUP_KEY: 이 스트림 항목과 연결된 연락처의 android.provider.ContactsContract.ContactsColumns#LOOKUP_KEY 값
+android.provider.ContactsContract.StreamItemsColumns#RAW_CONTACT_ID: 이 스트림 항목과 연결된 원시 연락처의 android.provider.BaseColumns#_ID 값
+
+- android.provider.ContactsContract.StreamItemsColumns#COMMENTS
+선택사항. 스트림 항목의 시작 부분에 표시할 수 있는 요약 정보를 저장
+
+- android.provider.ContactsContract.StreamItemsColumns#TEXT
+스트림 항목의 텍스트는 아이템을 생성한 주체가 게시한 콘텐츠이거나, 스트림 항목을 생성한 동작에 대한 설명일 수 있음. 이 열에는 fromHtml()로 렌더링할 수 있는 포맷팅이나 포함된 리소스 이미지를 담음. 제공자는 너무 긴 내용을 잘라내거나 말줄임표(…) 처리할 수 있지만, 태그가 깨지지 않도록 하려고 시도 함.
+
+- android.provider.ContactsContract.StreamItemsColumns#TIMESTAMP
+스트림 항목이 삽입되거나 업데이트된 시간이 포함된 텍스트 문자열로, 에포크 이후 밀리초 형식. 이 열을 유지관리할 책임은 스트림 항목을 삽입하거나 업데이트하는 애플리케이션에 있으며, 연락처 제공자가 자동으로 유지관리하지 않음
+
+스트림 항목의 식별 정보를 표시하려면 android.provider.ContactsContract.StreamItemsColumns#RES_ICON, android.provider.ContactsContract.StreamItemsColumns#RES_LABEL 및 android.provider.ContactsContract.StreamItemsColumns#RES_PACKAGE를 사용하여 애플리케이션의 리소스에 연결합니다.
+
+android.provider.ContactsContract.StreamItems 테이블에는 동기화 어댑터만 사용하는 android.provider.ContactsContract.StreamItemsColumns#SYNC1부터 android.provider.ContactsContract.StreamItemsColumns#SYNC4까지의 열도 포함되어 있습니다.
+
+
+소셜 스트림 사진
+android.provider.ContactsContract.StreamItemPhotos 테이블은 스트림 항목과 연결된 사진을 저장합니다. 테이블의 android.provider.ContactsContract.StreamItemPhotosColumns#STREAM_ITEM_ID 열은 android.provider.ContactsContract.StreamItems 테이블의 _ID 열에 있는 값에 연결됩니다. 사진 참조는 다음 열의 테이블에 저장됩니다.
+
+- android.provider.ContactsContract.StreamItemPhotos#PHOTO 열(BLOB)
+사진의 바이너리 표현으로, 제공자가 저장하고 표시하기 위해 크기를 조절. 이 열은 사진을 저장하는 데 사용한 연락처 제공자의 이전 버전과의 호환성을 위해 제공. 그러나 현재 버전에서는 사진을 저장하는 데 이 열을 사용해서는 안 됨. 대신 android.provider.ContactsContract.StreamItemPhotosColumns#PHOTO_FILE_ID 또는 android.provider.ContactsContract.StreamItemPhotosColumns#PHOTO_URI를 사용하여 사진을 파일로 저장. 현재 버전에서는 읽을 수 있는 사진의 썸네일이 포함
+- android.provider.ContactsContract.StreamItemPhotosColumns#PHOTO_FILE_ID
+원시 연락처의 사진의 숫자 식별자. 이 값을 상수 DisplayPhoto.CONTENT_URI에 추가하여 단일 사진 파일을 가리키는 콘텐츠 URI를 가져온 다음 openAssetFileDescriptor()를 호출하여 사진 파일의 핸들을 가져옴
+- android.provider.ContactsContract.StreamItemPhotosColumns#PHOTO_URI
+이 행에 표시된 사진의 사진 파일을 직접 가리키는 콘텐츠 URI. 이 URI로 openAssetFileDescriptor()를 호출하여 사진 파일의 핸들을 가져옴.
+
+
+소셜 스트림 테이블 사용
+소셜 스트림 테이블은 연락처 제공자의 다른 주요 테이블과 똑같이 작동하지만, 다음 예외가 적용됩니다.
+
+- 이 테이블에는 추가 액세스 권한이 필요. 여기서 읽기 작업을 수행하려면 애플리케이션에 android.Manifest.permission#READ_SOCIAL_STREAM 권한이 필요. 이를 수정하려면 애플리케이션에 android.Manifest.permission#WRITE_SOCIAL_STREAM 권한이 필요
+
+- android.provider.ContactsContract.StreamItems 테이블의 경우 각 원시 연락처에 저장되는 행 수가 제한. 이 제한에 도달하면 연락처 제공자가 가장 오래된 android.provider.ContactsContract.StreamItemsColumns#TIMESTAMP가 있는 행을 자동으로 삭제하여 새 스트림 항목 행을 위한 공간을 만듦. 한도 값을 가져오려면 콘텐츠 URI android.provider.ContactsContract.StreamItems#CONTENT_LIMIT_URI에 쿼리를 실행. 콘텐츠 URI를 제외한 모든 인수는 null로 설정된 상태로 두어도 됨. 이 쿼리는 단일 열android.provider.ContactsContract.StreamItems#MAX_ITEMS를 포함한 단일 행이 포함된 커서 반환.
+
+android.provider.ContactsContract.StreamItems.StreamItemPhotos 클래스는 단일 스트림 항목의 사진 행을 포함하는 android.provider.ContactsContract.StreamItemPhotos 하위 테이블을 정의합니다.
+
+
+소셜 스트림 상호작용
+연락처 제공자가 관리하는 소셜 스트림 데이터는 기기의 연락처 애플리케이션과 함께 사용될 때, 소셜 네트워킹 시스템을 기존 연락처와 연결할 수 있는 유용한 방법을 제공합니다. 사용할 수 있는 기능은 다음과 같습니다.
+- 동기화 어댑터를 사용하여 소셜 네트워킹 서비스를 연락처 제공자와 동기화하면 사용자 연락처의 최근 활동을 검색하고 이를 android.provider.ContactsContract.StreamItems 및 android.provider.ContactsContract.StreamItemPhotos 테이블에 저장하여 나중에 사용 가능
+- 정기적인 동기화 외에도 사용자가 볼 연락처를 선택할 때 동기화 어댑터를 발생하여 추가 데이터 검색 가능. 이렇게 하면 동기화 어댑터가 연락처의 고해상도 사진과 가장 최근 스트림 항목을 검색 가능
+- 기기의 연락처 애플리케이션과 연락처 제공자에 콜백을 등록하면 연락처가 열릴 때 인텐트를 수신하여 서비스에서 연락처 상태를 업데이트 가능. 이 방법은 동기화 어댑터로 전체 동기화를 실행하는 것보다 빠르고 대역폭도 적게 사용 가능
+- 사용자는 기기의 연락처 애플리케이션에서 연락처를 보면서 해당 연락처를 소셜 네트워킹 서비스에 추가 가능. 이를 가능하게 하는 것이 연락처 초대 기능이며, 이 기능은 기존 연락처를 네트워크에 추가하는 activity와 애플리케이션의 세부 정보를 기기의 연락처 애플리케이션 및 연락처 제공자에 제공하는 XML 파일을 조합하여 구현.
+연락처 제공자로 스트림 항목을 정기적으로 동기화하는 것은 다른 동기화와 동일합니다.
+
+소셜 네트워킹 UI를 처리하기 위한 등록
+동기화 어댑터를 등록하여 사용자가 동기화 어댑터에서 관리하는 연락처를 볼 때 콜백을 수신하려면 다음 단계를 따라야 합니다.
+- 프로젝트의 res/xml/ 디렉터리에 contacts.xml 파일 생성. 이미 해당 파일이 있다면 해당 절차 생략 가능
+- 이 파일에서 <ContactsAccountType xmlns:android="http://schemas.android.com/apk/res/android"> 요소를 추가. 해당 요소가 이미 존재한다면 해당 절차 생략 가능
+- 사용자가 기기의 연락처 애플리케이션에서 연락처 세부정보 페이지를 열 때 콜백을 받는 서비스를 등록하려면 viewContactNotifyService="serviceclass" 속성을 요소에 추가. 여기서 serviceclass는 기기의 연락처 애플리케이션에서 인텐트를 받을 서비스의 전체 클래스 이름. 콜백을 받는 서비스의 경우 인텐트를 받을 수 있도록 IntentService를 상속한 클래스 사용 필요. 수신되는 인텐트의 데이터에는 사용자가 클릭한 원시 연락처의 콘텐츠 URI가 포함. 콜백 받는 서비스에서 동기화 어댑터에 바인딩한 후 동기화 어댑터를 호출하여 원시 연락처의 데이터 업데이트 가능
+사용자가 스트림 항목이나 사진, 또는 그 두 가지를 모두 클릭할 때 호출할 Activity를 등록하는 방법은 다음과 같습니다
+- 프로젝트의 res/xml/ 디렉터리에 contacts.xml 파일 생성. 이미 해당 파일이 있다면 해당 절차 생략 가능
+- 이 파일에서 <ContactsAccountType xmlns:android="http://schemas.android.com/apk/res/android"> 요소 추가. 해당 요소가 이미 존재한다면 해당 절차 생략 가능
+- 사용자가 기기의 연락처 애플리케이션에서 스트림 항목을 클릭할 때 호출할 activity를 등록하려면 viewStreamItemActivity="activityclass" 속성 요소에 추가. 여기서 activityclass은 기기의 연락처 애플리케이션에서 인텐트를 받을 activity의 전체 클래스 이름
+수신되는 인텐트에는 사용자가 클릭한 항목 또는 사진의 콘텐츠 URI가 들어 있습니다. 텍스트 항목과 사진에 각기 별도의 activity를 적용하려면, 두 속성을 모두 같은 파일에서 명시해야 합니다.
+
+소셜 네트워킹 서비스로 상호작용
+사용자는 소셜 네트워킹 사이트에 연락처를 초대하기 위해 기기의 연락처 애플리케이션에서 나가지 않아도 됩니다. 대신 기기의 연락처 앱이 activity에 연락처를 초대하는 인텐트를 보내도록 할 수 있습니다. 설정 방법은 다음과 같습니다
+- 프로젝트의 res/xml/ 디렉터리에 contacts.xml 파일 생성. 이미 해당 파일이 있다면 해당 절차 생략 가능
+- 이 파일에서 <ContactsAccountType xmlns:android="http://schemas.android.com/apk/res/android"> 요소 추가. 해당 요소가 이미 존재한다면 해당 절차 생략 가능
+- inviteContactActivity="activityclass",
+inviteContactActionLabel="@string/invite_action_label" 속성 추가. activityclass 값은 인텐트를 받는activity의 전체 클래스 이름. invite_action_label 값은 기기의 연락처 애플리케이션의 연결 추가 메뉴에 표시되는 텍스트 문자열입니다. ContactsSource는 ContactsAccountType에서 deprecated 된 태그 이름입니다.
+
+
+contacts.xml 참조
+contacts.xml 파일에는 동기화 어댑터 및 애플리케이션과 연락처 애플리케이션 및 연락처 제공자의 상호작용을 제어하는 XML 요소가 포함되어 있습니다.
+
+<ContactsAccountType> 요소
+<ContactsAccountType
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        inviteContactActivity="activity_name"
+        inviteContactActionLabel="invite_command_text"
+        viewContactNotifyService="view_notify_service"
+        viewGroupActivity="group_view_activity"
+        viewGroupActionLabel="group_action_text"
+        viewStreamItemActivity="viewstream_activity_name"
+        viewStreamItemPhotoActivity="viewphotostream_activity_name">
+<ContactsAccountType> 요소는 애플리케이션과 연락처 애플리케이션의 상호작용을 제어합니다.
+포함된 위치: res/xml/contacts.xml
+포함 가능한 항목: <ContactsDataKind>
+설명: 사용자가 연락처 중 한 명을 소셜 네트워크에 초대하거나 소셜 네트워킹 스트림이 업데이트되었을 때 사용자에게 알리는 등의 작업을 허용하는 Android 구성요소와 UI 라벨을 선언합니다. <ContactsAccountType>의 속성에는 속성 접두사 android:가 필요하지 않습니다.
+속성: 
+- inviteContactActivity
+사용자가 기기의 연락처 애플리케이션에서 연결 추가를 선택할 때 활성화하려는 애플리케이션 activity의 전체 클래스 이름
+- inviteContactActionLabel
+연결 추가 메뉴의 inviteContactActivity에 지정된 activity에 관해 표시되는 텍스트 문자열. 예를 들어 'Follow in my network'라는 문자열을 사용. 이 라벨에 문자열 리소스 식별자 사용 가능
+- viewContactNotifyService
+사용자가 연락처를 볼 때 콜백을 수신해야 하는 애플리케이션 서비스의 전체 클래스 이름. 이 콜백은 기기의 연락처 애플리케이션에서 전송되며 이를 통해 애플리케이션에서 데이터 소모가 큰 연산을 실제로 필요할 때까지 연기 가능. 예를 들어 애플리케이션은 이 콜백에 응답하여 해당 연락처의 고해상도 사진이나 가장 최근의 소셜 스트림 항목을 읽어와 표시
+- viewGroupActivity
+그룹 정보를 표시할 수 있는 애플리케이션 activity의 전체 클래스 이름. 사용자가 기기의 연락처 애플리케이션에서 그룹 라벨을 클릭하면 해당 activity의 UI가 표시
+- viewGroupActionLabel
+사용자가 애플리케이션에서 그룹을 볼 수 있는 UI 컨트롤을 위해 연락처 애플리케이션에서 표시하는 라벨. 이 특성에서는 문자열 리소스 식별자가 허용
+- viewStreamItemActivity
+사용자가 원시 연락처의 스트림 항목을 클릭할 때 기기의 연락처 애플리케이션이 실행하는 애플리케이션 activity의 전체 클래스 이름
+- viewStreamItemPhotoActivity
+사용자가 원시 연락처의 스트림 항목에서 사진을 클릭할 때 기기의 연락처 애플리케이션이 실행하는 애플리케이션 activity의 전체 클래스 이름
+
+<ContactsDataKind> 요소
+<ContactsDataKind
+        android:mimeType="MIMEtype"
+        android:icon="icon_resources"
+        android:summaryColumn="column_name"
+        android:detailColumn="column_name">
+<ContactsDataKind> 요소는 연락처 애플리케이션의 UI에서 애플리케이션의 맞춤 데이터 행 표시를 제어합니다.
+포함된 위치: <ContactsAccountType>
+설명: 이 요소를 사용하면 연락처 애플리케이션이 원시 연락처의 상세 정보 일부로서 커스텀 데이터 행의 내용을 표시. <ContactsAccountType>의 각 <ContactsDataKind> 하위 요소는 동기화 어댑터가 ContactsContract.Data 테이블에 추가하는 특정 타입의 사용자 정의 데이터 행을 나타냄. 사용하는 각 사용자 정의 MIME 유형마다 <ContactsDataKind> 요소를 하나씩 추가해야 함. 만약 표시할 필요가 없는 사용자 정의 데이터 행이 있으면 해당 요소를 추가하지 않아도 됨.
+속성:
+- android:mimeType
+ContactsContract.Data 테이블에 있는 사용자 정의 데이터 행 타입에 대해 정의한 사용자 정의 MIME. 예를 들어, 값이 vnd.android.cursor.item/vnd.example.locationstatus라면 이는 연락처의 마지막으로 알려진 위치를 기록하는 데이터 행을 위한 사용자 정의 MIME 타입.
+- android:icon
+연락처 애플리케이션에서 데이터 옆에 표시하는 Android 드로어블 리소스. 앱에서 데이터 제공을 사용자에게 나타낼 때 사용.
+- android:summaryColumn
+데이터 행에서 검색한 주요 칼럼 값 중 하나의 열 이름. 이 값은 해당 데이터 행 항목의 첫 번째 줄에 표시. 첫 번째 줄은 데이터의 요약을 보여주기 위해 사용되지만, 반드시 그렇게 써야 하는 건 아님.
+- android:detailColumn
+데이터 행에서 검색한 주요 칼럼 값 중 하나의 열 이름. 이 값은 해당 데이터 행 항목의 두 번째 줄부터 표시.
