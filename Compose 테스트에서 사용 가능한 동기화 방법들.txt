@@ -1,0 +1,22 @@
+Compose UI 테스트를 진행할 때, 구현 코드에서 UI 변경사항이나 코루틴 같은 비동기 코드를 제대로 다루지 않으면 원하는 타이밍에 테스트 코드를 실행할 수 없습니다. 그렇기 때문에 이러한 동기화를 다루는 여러 개의 방법들을 지원합니다. Compose 테스트에서 사용 가능한 동기화 방법들에 대해 설명하겠습니다.
+
+
+
+1. IdlingResource
+1) 개념
+Compose 테스트는 Espresso와 함께 사용. Espresso는 기본적으로 안드로이드 메인 스레드의 MessageQueue에 등록된 메시지/작업만 추적. 예를 들어 View의 그리기, UI 이벤트 처리 등은 자동으로 동기화 대상. 백그라운드 스레드에서 돌아가는 연산, 코루틴, 네트워크 요청, DB 쿼리, service 동작 등은 인식 불가능. 이를 위해 별도의 등록 과정 필요. 등록하면 Espresso는 이 작업이 끝날 때까지 대기를 보장
+
+Espresso는 IdlingRegistry에 등록된 모든 IdlingResource를 확인. 각 IdlingResource의 isIdleNow()를 호출해 idle 여부 판정. isIdleNow()가 false라면 Espresso는 대기. 리소스가 idle이 될 때 ResourceCallback.onTransitionToIdle()을 호출해 Espresso를 깨움.
+
+
+2) 사용 방법
+Compose 밖에서 발생하는 비동기 처리(예: Retrofit 콜백, WorkManager 등)를 테스트 동기화에 포함시키고 싶을 때.
+
+
+3) 예제
+@Before fun setup() {
+    IdlingRegistry.getInstance().register(myIdlingResource)
+}
+@After fun tearDown() {
+    IdlingRegistry.getInstance().unregister(myIdlingResource)
+}
