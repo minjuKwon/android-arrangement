@@ -4,13 +4,15 @@ Compose UI 테스트를 진행할 때, 구현 코드에서 UI 변경사항이나
 
 1. IdlingResource
 1) 개념
-Compose 테스트는 Espresso와 함께 사용. Espresso는 기본적으로 안드로이드 메인 스레드의 MessageQueue에 등록된 메시지/작업만 추적. 예를 들어 View의 그리기, UI 이벤트 처리 등은 자동으로 동기화 대상. 백그라운드 스레드에서 돌아가는 연산, 코루틴, 네트워크 요청, DB 쿼리, service 동작 등은 인식 불가능. 이를 위해 별도의 등록 과정 필요. 등록하면 Espresso는 이 작업이 끝날 때까지 대기를 보장
-
-Espresso는 IdlingRegistry에 등록된 모든 IdlingResource를 확인. 각 IdlingResource의 isIdleNow()를 호출해 idle 여부 판정. isIdleNow()가 false라면 Espresso는 대기. 리소스가 idle이 될 때 ResourceCallback.onTransitionToIdle()을 호출해 Espresso를 깨움.
+- Compose 테스트는 Espresso와 함께 사용
+- Espresso는 기본적으로 안드로이드 메인 스레드의 MessageQueue에 등록된 메시지/작업만 추적. 예를 들어 View의 그리기, UI 이벤트 처리 등은 자동으로 동기화 대상. 
+- 백그라운드 스레드에서 돌아가는 연산, 코루틴, 네트워크 요청, DB 쿼리, service 동작 등은 인식 불가능
+- 인식 불가능 영역을 위한 별도의 등록 과정 필요. 등록하면 Espresso는 해당 작업이 끝날 때까지 대기를 보장
+- Espresso는 IdlingRegistry에 등록된 모든 IdlingResource를 확인. 각 IdlingResource의 isIdleNow()를 호출해 idle 여부 판정. isIdleNow()가 false라면 Espresso는 대기. 리소스가 idle이 될 때 ResourceCallback.onTransitionToIdle()을 호출하여 Espresso를 깨움.
 
 
 2) 사용 방법
-Compose 밖에서 발생하는 비동기 처리(예: Retrofit 콜백, WorkManager 등)를 테스트 동기화에 포함시키고 싶을 때.
+- Retrofit 콜백, WorkManager 등 Compose 밖에서 발생하는 비동기 처리를 테스트 동기화에 포함시키고 싶을 때.
 
 
 3) 예제
@@ -25,18 +27,18 @@ Compose 밖에서 발생하는 비동기 처리(예: Retrofit 콜백, WorkManage
 
 2. mainClock()
 1) 개념
-Clock은 Compose 테스트에서 프레임 단위로 애니메이션, 재구성, LaunchedEffect 등을 구동하는 시계.
-UI의 layout, draw(일부)도 clock에 의해 동작. Clock이 움직이지 않으면(tick하지 않으면) 재구성이 일어나지 않고 애니메이션도 멈춘다.
-기본적으로 mainClock이 자동으로 시간을 진행시켜서, 대기 중인 재구성·애니메이션 등을 처리.
-mainClock.autoAdvance = false 이면 자동으로 프레임을 전진시키지 않음.개발자가 직접 프레임 단위로 시간을 제어
-mainClock.advanceTimeBy(ms) : 가상 시간을 ms만큼 전진시키고 그에 따른 프레임/애니메이션 진행을 실행.
-advanceTimeBy 이후 UI 렌더링 결과를 검증하려면 반드시 waitForIdle() 또는 runOnIdle을 호출해야 draw가 완료된 상태를 보장
-draw 과정에서 읽히는 상태 변수가 변경된 경우 waitForIdle()을 사용
-mainClock은 Compose 프레임/애니메이션을 제어할 뿐, 코루틴 디스패처의 delay나 TestDispatcher의 가상 시간과는 별개다. 즉 mainClock만 조작해서는 코루틴 지연이 해결되지 않는다.
+- Clock은 Compose 테스트에서 프레임 단위로 애니메이션, 재구성, LaunchedEffect 등을 구동하는 시계. UI의 layout, draw(일부)도 clock에 의해 동작.
+- Clock이 움직이지 않으면(tick하지 않으면) 재구성이 일어나지 않고 애니메이션도 멈춤
+- 기본적으로 mainClock이 자동으로 시간을 진행시켜서, 대기 중인 재구성·애니메이션 등을 처리
+- mainClock.autoAdvance = false 이면 자동으로 프레임을 전진시키지 않음. 개발자가 직접 프레임 단위로 시간을 제어해야 함.
+- mainClock.advanceTimeBy(ms) 통해 가상 시간을 ms만큼 전진시키고 그에 따른 프레임/애니메이션 진행을 실행
+- advanceTimeBy() 이후 UI 렌더링 결과를 검증하려면 반드시 waitForIdle() 또는 runOnIdle을 호출해야 draw가 완료된 상태를 보장.
+Draw 과정에서 읽히는 상태 변수가 변경된 경우 waitForIdle()을 사용.
+- mainClock은 Compose 프레임/애니메이션을 제어할 뿐, 코루틴 디스패처의 delay나 TestDispatcher의 가상 시간과는 별개. 즉 mainClock 조작은 코루틴 지연과는 상관 없음
 
 
 2) 사용 방법
-애니메이션이나 animate 계열, 또는 Compose 내부에서 사용하는 시간 관련 동작 제어.
+- 애니메이션이나 animate 계열, 또는 Compose 내부에서 사용하는 시간 관련 동작 제어
 
 
 3) 예제
@@ -50,13 +52,14 @@ composeTestRule.mainClock.autoAdvance = true
 
 3. waitForIdle()
 1) 개념
-Compose 프레임워크 수준에서 compose 재구성으로 인한 변경(Recomposition, Layout, Draw)과 Espresso와의 기본 동기화(IdlingResource)를 기다림.
-Compose 내부 작업과 Espresso 동기화만 보장. 테스트에서 교체한 Dispatchers.Main의 코루틴 작업(특히 TestDispatcher에 스케줄된 작업)은 자동으로 완료되지 않을 수 있음.
-mainClock의 auto advancement(자동 시간 진행) 여부에 따라 동작이 달라진다. 켜져 있는 경우 mainClock이 진행되면서 대기 중인 재구성, 무효화(invalidation), 애니메이션을 처리한다. 꺼져 있는 경우 mainClock은 진행되지 않는다. Compose UI는 정지(frozen)된 것처럼 보인다. Idling resources가 idle 상태가 될 때까지 계속 대기
+- Compose 프레임워크 수준에서 compose 재구성으로 인한 변경(재구성, Layout, Draw)과 Espresso와의 기본 동기화(IdlingResource)를 기다림
+- Compose 내부 작업과 Espresso 동기화만 보장. 테스트에서 교체한 Dispatchers.Main의 코루틴 작업 특히 TestDispatcher에 스케줄된 작업은 자동으로 완료되지 않을 수 있음.
+- mainClock의 auto advancement 여부에 따라 동작이 달라짐. 켜져 있는 경우 mainClock이 진행되면서 대기 중인 재구성, invalidation, 애니메이션을 처리. 꺼져 있는 경우 mainClock은 진행되지 않아 Compose UI는 정지(frozen)된 거처럼 보임. IdlingResource가 idle 상태가 될 때까지 계속 대기
 
 
 2) 사용 방법
-버튼 클릭 등으로 UI만 갱신되는지 확인할 때. 외부 코루틴이나 테스트 디스패처 제어가 필요 없을 때.
+- 버튼 클릭 등으로 UI만 갱신되는지 확인할 때
+- 외부 코루틴이나 테스트 디스패처 제어가 필요 없을 때
 
 
 3) 예제
@@ -68,12 +71,14 @@ composeTestRule.onNodeWithText("완료").assertIsDisplayed()
 
 4. runOnIdle { ... }
 1) 개념
-Compose가 idle 상태가 된 시점에서 지정한 블록을 UI 쓰레드(또는 테스트 환경의 main dispatcher)에서 실행. 블록 안에서 UI 상태를 안전하게 읽거나 UI 스레드에서만 실행해야 할 코드를 실행 가능.
-블록 안에서 오래 걸리는 작업(차단)은 피할 것. UI idle 조건이 먼저 충족되어야 블록이 실행됨.
+- Compose가 idle 상태가 된 시점에서 지정한 블록을 UI 스레드 또는 테스트 환경의 main dispatcher에서 실행
+- 블록 안에서 UI 상태를 안전하게 읽거나 UI 스레드에서만 실행해야 할 코드를 실행 가능
+- 블록 안에서 오래 걸리는 작업(차단)은 피할 것. UI idle 조건이 먼저 충족되어야 블록이 실행됨.
+- runOnIdle 자체는 코루틴 디스패처의 대기(advance)까지 수행하지 않음. 블록 내에서 호출하면 가능.
 
 
 2) 사용 방법
-UI가 idle인 시점에 특정 검증이나 테스트 전처리를 UI 스레드에서 실행해야 할 때. runOnIdle 자체는 코루틴 디스패처의 대기(advance)까지 수행하지 않음(블록 내에서 호출하면 가능).
+- UI가 idle인 시점에 특정 검증이나 테스트 전처리를 UI 스레드에서 실행해야 할 때 
 
 
 3) 예제
@@ -84,16 +89,18 @@ val text = composeTestRule.runOnIdle {
 
 
 
-
 5. advanceUntilIdle()
 1) 개념
-테스트용 코루틴 디스패처(예: StandardTestDispatcher/TestDispatcher의 스케줄러)에서 예약된 모든 코루틴 작업을 가능한 한 실행하여 "할 일 없음" 상태가 될 때까지 진행시킴. 모든 예약/지연 작업이 끝날 때까지 가상 시간을 자동으로 앞으로 이동시키며 실행.
-runCurrent() : 현재 가상 시간에 예약된(즉시 실행 가능한) 작업만 실행.
-advanceTimeBy(ms) : 가상 시간을 ms만큼 이동시키고 해당 시점에 도달한 작업 실행.
+- 테스트용 코루틴 디스패처에서 예약된 모든 코루틴 작업을 가능한 한 실행하여 "할 일 없음" 상태가 될 때까지 진행
+- 모든 예약/지연 작업이 끝날 때까지 가상 시간을 자동으로 앞으로 이동시키며 실행
+- 유사 메서드
+  - runCurrent() : 현재 가상 시간에 예약된(즉시 실행 가능한) 작업만 실행.
+  - advanceTimeBy(ms) : 가상 시간을 ms만큼 이동시키고 해당 시점에 도달한 작업 실행.
 
 
 2) 사용 방법
-ViewModel 등에서 viewModelScope.launch { ... }로 비동기 로직이 진행되고, UI는 idle이지만 코루틴 작업이 아직 대기 중일 때. 테스트에서 코루틴을 강제로 진행시켜 결과를 확인하고자 할 때.
+- ViewModel 등에서 viewModelScope.launch { ... }로 비동기 로직이 진행되고, UI는 idle이지만 코루틴 작업이 아직 대기 중일 때
+- 테스트에서 코루틴을 강제로 진행시켜 결과를 확인하고자 할 때
 
 
 3) 예제
@@ -106,7 +113,7 @@ val testDispatcher = StandardTestDispatcher()
 
 @Test fun example() {
     composeTestRule.onNodeWithText("로드").performClick()
-    // Compose가 idle인 시점에 coroutine queue 전부 수행
+    // Compose가 idle인 시점에 코루틴 큐 전부 수행
     composeTestRule.runOnIdle {
         testDispatcher.scheduler.advanceUntilIdle()
     }
@@ -117,23 +124,21 @@ val testDispatcher = StandardTestDispatcher()
 
 6. waitUntil { condition }
 1) 개념
-주어진 조건이 true가 될 때까지(또는 타임아웃까지) 반복 검사. 내부적으로 Compose 동기화와 병행하여 동작.
-waitUntil은 각 반복(iteration) 이후마다 sleep을 수행하여 다른 프로세스에 실행 기회를 줍니다. 이 덕분에 waitUntil은 호스트 환경과 더 잘 통합되지만, 성능 측면에서는 덜 효율적입니다.
-만약 mainClock에서 auto advancement가 활성화되어 있다면, 이 메서드는 조건이 만족될 때까지 clock을 진행시켜서 보류 중인 composition, invalidation, animation을 처리합니다.
-auto advancement가 비활성화된 경우, clock은 활동적으로 진행되지 않으므로 Compose UI가 멈춘 것처럼 보이게 됩니다
-조건문 내부에서 무거운 작업을 하지 않을 것. 조건이 잘못되면 타임아웃으로 테스트 실패.
-waitUntil 도우미를 사용할 수도 있습니다.
-composeTestRule.waitUntilAtLeastOneExists(matcher, timeoutMs)
-
-composeTestRule.waitUntilDoesNotExist(matcher, timeoutMs)
-
-composeTestRule.waitUntilExactlyOneExists(matcher, timeoutMs)
-
-composeTestRule.waitUntilNodeCount(matcher, count, timeoutMs)
+- 주어진 조건이 true가 될 때까지 또는 타임아웃까지 반복 검사. 내부적으로 Compose 동기화와 병행하여 동작.
+- 각 반복 이후마다 sleep을 수행하여 다른 프로세스에 실행 기회를 줌. 이 덕분에 waitUntil은 호스트 환경과 더 잘 통합되지만, 성능 측면에서는 덜 효율적.
+- mainClock에서 auto advancement이면, 이 메서드는 조건이 만족될 때까지 clock을 진행시켜서 보류 중인 재구성, invalidation, 애니메이션을 처리.
+- auto advancement가 false인 경우, clock은 활동적으로 진행되지 않으므로 Compose UI가 멈춘 거처럼 보이게 됨
+- 조건문 내부에서 무거운 작업을 하지 말아야 함. 또한 조건이 잘못되면 타임아웃으로 테스트 실패.
+- waitUntil 도우미 메소드
+  - composeTestRule.waitUntilAtLeastOneExists(matcher, timeoutMs)
+  - composeTestRule.waitUntilDoesNotExist(matcher, timeoutMs)
+  - composeTestRule.waitUntilExactlyOneExists(matcher, timeoutMs)
+  - composeTestRule.waitUntilNodeCount(matcher, count, timeoutMs)
 
 
 2) 사용 방법
-특정 상태/조건(예: 리스트 크기, 특정 플래그)이 될 때까지 기다려야 할 때. 고정 지연 없이 상태 기반으로 대기하고 싶을 때.
+- 특정 상태, 조건이 될 때까지 기다려야 할 때
+- 고정 지연 없이 상태 기반으로 대기하고 싶을 때
 
 
 3) 예제
@@ -145,13 +150,13 @@ composeTestRule.waitUntil(timeoutMillis = 5_000) {
 
 7. assert(), perform()
 1) 개념
-onNode...()로 노드를 찾아 assertion이나 interaction(클릭, 입력 등)을 수행. 이러한 API는 내부적으로 Compose의 동기화 메커니즘과 연결되어 있어서 적절한 시점까지 기다려주고 동작을 실행/검증함.
-이들 메서드는 Compose 레벨 동기화는 해주지만, 클릭으로 인해 시작된 ViewModel의 비동기(특히 테스트 디스패처에 스케줄된)까지 보장하지 않으므로 추가적인 디스패처 제어나 waitUntil이 필요할 수 있음.
-assert 직전에 상태 변경되어 재구성이 새로 예약되면 원하는 UI 상태가 아직 반영되지 않아 테스트가 불안정해짐. 그렇기에 추가적인 waitForIdle()이나 runOnIdle { ... }호출 필요해짐
+- 테스트는 onNode...()로 노드를 찾아 assertion이나 interaction(클릭, 입력 등)을 수행. 이러한 API는 내부적으로 Compose의 동기화 메커니즘과 연결되어 있어서 적절한 시점까지 기다려주고 동작을 실행/검증함.
+- Compose 레벨 동기화는 해주지만, 클릭으로 인해 시작된 ViewModel의 비동기 특히 테스트 디스패처에 스케줄까지 보장하지 않으므로 추가적인 디스패처 제어나 waitUntil이 필요할 수 있음.
+- assert 직전에 상태 변경되어 재구성이 새로 예약되면 원하는 UI 상태가 아직 반영되지 않아 테스트가 불안정해짐. 그렇기에 추가적인 waitForIdle()이나 runOnIdle { ... }호출 필요해짐
 
 
 2) 사용 방법
-일반적인 UI 상호작용 및 검증. assertIsDisplayed(), assertTextEquals() 등
+- assertIsDisplayed(), assertTextEquals() 같이 일반적인 UI 상호작용 및 검증
 
 
 3) 예제
@@ -162,13 +167,9 @@ composeTestRule.onNodeWithTag("아이템1").performClick()
 
 8. 비교
 - UI 변경만 확인: onNode(...).perform...() → waitForIdle() 또는 바로 onNode(...).assert...() 
-
 - UI idle인데 ViewModel 코루틴이 남아 있음: composeTestRule.runOnIdle { testDispatcher.scheduler.advanceUntilIdle() }
-
 - 애니메이션/프레임 기반 동작 제어 필요: composeTestRule.mainClock.autoAdvance = false + mainClock.advanceTimeBy(...)
-
 - 특정 상태/조건까지 기다릴 때: waitUntil { condition }
-
 - 외부 비동기까지 포함해서 동기화해야 할 때: Espresso IdlingResource 등록
 
 | 구분  | Compose 내부 동기화   | 코루틴/Dispatcher 동기화   | 조건 기반 동기화  | 외부 비동기 동기화   |
@@ -176,6 +177,3 @@ composeTestRule.onNodeWithTag("아이템1").performClick()
 | **메커니즘**     | `waitForIdle()`, `runOnIdle { ... }`, Assertion/Interaction API (`onNode().assert...`, `onNode().perform...`), `mainClock`  | `advanceUntilIdle()`, `advanceTimeBy(ms)`, `runCurrent()`                                                    | `waitUntil { condition }`   | Espresso `IdlingResource`   |
 | **동작 대상/설명** | Compose UI 트리(recomposition, layout, draw), UI 스레드 실행, 내부 동기화, 프레임·애니메이션 시간 제어  | TestDispatcher의 코루틴 스케줄러 제어 (지연·예약 작업 처리)  | 특정 조건이 충족될 때까지 상태 기반 대기  | 네트워크/WorkManager 등 Compose 밖의 비동기 작업 포함  |
 | **사용 시점**    | UI 변경만 확인, UI 상태 읽기, 애니메이션 시간 제어, 일반 상호작용/검증 | ViewModel 코루틴 로직 제어 필요할 때 | UI 노드 존재/소멸, 특정 상태 변화 기다릴 때 | 외부 async 작업까지 테스트에서 동기화해야 할 때   |
-
- 
-
