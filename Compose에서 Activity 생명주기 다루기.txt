@@ -8,21 +8,7 @@ Compose에서는 Activity에 직접 의존하지 않도록 설계되어 있기 �
 Lifecycle에 직접 접근하여 사용하지는 않습니다. LifecycleOwner를 통해 사용됩니다. LifecycleOwner이 Lifecycle을 보유하고 있고 getLifecycle()을 통해 외부에서 접근합니다. 생명주기 상태가 변경되면 이를 관찰하다가 해당 변화를 인식할 수 있는 LifecycleObserver
 인터페이스가 있습니다. 관찰자를 등록하면 생명주기 이벤트가 발생할 때마다 콜백을 받게 됩니다. LifecycleOwner 내부에는 LifecycleRegistry가 있는데 생명주기 이벤트가 발생할 때 LifecycleRegistry가 현재 상태를 변경하고 등록된 LifecycleObserver들에게 해당 이벤트를 전달하게 됩니다.
 
-안드로이드에서 제공하는 DefaultLifecycleObserver에서 onCreate, onStart 등의 상응하는 메서드를 재정의하여 구성요소의 수명 주기 상태를 모니터링할 수 있습니다. 다음 예에 나와 있는 것처럼 Lifecycle 클래스의 addObserver() 메서드를 호출하고 이전에 구현된 관찰자의 인스턴스를 전달하여 관찰자를 추가할 수 있습니다. 해당 예에서 myLifecycleOwner 객체는 LifecycleOwner 인터페이스를 구현합니다
-
-class MyObserver : DefaultLifecycleObserver {
-    override fun onResume(owner: LifecycleOwner) {
-        connect()
-    }
-
-    override fun onPause(owner: LifecycleOwner) {
-        disconnect()
-    }
-}
-
-myLifecycleOwner.getLifecycle().addObserver(MyObserver())
-
-다만 Compose는 상태 기반 UI 프레임워크이기 때문에 모든 생명 주기 단계를 정의하는 DefaultLifecycleObserver는 적절하지 않습니다. 대신 LifecycleEventObserver 인터페이스를 사용할 수 있습니다. 단일 메서드으로 onStateChanged()만 있기에 직접 필요한 이벤트만 분기 처리할 수 있습니다.
+안드로이드에서 제공하는 DefaultLifecycleObserver에서 onCreate, onStart 등의 상응하는 메서드를 재정의하여 구성요소의 수명 주기 상태를 모니터링할 수 있습니다. 다만 Compose는 상태 기반 UI 프레임워크이기 때문에 굳이 모든 생명 주기 단계를 정의하는 DefaultLifecycleObserver는 적절하지 않습니다. 대신 LifecycleEventObserver 인터페이스를 사용할 수 있습니다. 단일 메서드으로 onStateChanged()만 있기에 직접 필요한 이벤트만 분기 처리할 수 있습니다.
 
 
 2) LifecycleOwner
@@ -43,82 +29,10 @@ val currentLifecycleState = lifecycleOwner.lifecycle.currentStateAsState()
 
 모든 사용자 정의 애플리케이션 클래스는 LifecycleOwner 인터페이스를 구현할 수 있습니다.
 
-ⅱ)특정 상태 관리
-관찰자가 관찰을 위해 등록할 수 있는 수명 주기를 소유자가 제공할 수 있으므로, DefaultLifecycleObserver를 구현하는 구성요소는 LifecycleOwner를 구현하는 구성요소와 원활하게 작동합니다. 위치 추적 예에서는 MyLocationListener 클래스에서 DefaultLifecycleObserver를 구현하도록 한 후 onCreate() 메서드에서 activity의 Lifecycle로 클래스를 초기화할 수 있습니다. 이렇게 하면 MyLocationListener 클래스가 자립할 수 있습니다. 즉, 수명 주기 상태의 변경에 반응하는 로직이 activity 대신 MyLocationListener에서 선언됩니다. 개별 구성요소가 자체 로직를 저장하도록 설정하면 activity와 fragment 로직을 더 쉽게 관리할 수 있습니다.
-
-class MyActivity : AppCompatActivity() {
-    private lateinit var myLocationListener: MyLocationListener
-
-    override fun onCreate(...) {
-        myLocationListener = MyLocationListener(this, lifecycle) { location ->
-            // update UI
-        }
-        Util.checkUserStatus { result ->
-            if (result) {
-                myLocationListener.enable()
-            }
-        }
-    }
-}
-
-일반적인 사용 사례에서는 Lifecycle이 현재 정상 상태가 아닌 경우 특정 콜백 호출을 피합니다. 예를 들어 activity 상태가 저장된 후 콜백이 fragment 트랜잭션을 실행하면 비정상 종료를 트리거할 수 있으므로 콜백을 호출하지 않는 것이 좋습니다.
-이러한 사용 사례를 쉽게 만들 수 있도록 Lifecycle 클래스는 다른 객체가 현재 상태를 쿼리할 수 있도록 합니다.
-
-internal class MyLocationListener(
-        private val context: Context,
-        private val lifecycle: Lifecycle,
-        private val callback: (Location) -> Unit
-): DefaultLifecycleObserver {
-
-    private var enabled = false
-
-    override fun onStart(owner: LifecycleOwner) {
-        if (enabled) {
-            // connect
-        }
-    }
-
-    fun enable() {
-        enabled = true
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            // connect if not connected
-        }
-    }
-
-    override fun onStop(owner: LifecycleOwner) {
-        // disconnect if connected
-    }
-}
-이 구현으로 LocationListener 클래스는 수명 주기를 완전히 인식합니다. 다른 activity나 fragment의 LocationListener를 사용해야 한다면 클래스를 초기화하기만 하면 됩니다. 모든 설정과 해제 작업은 클래스 자체에서 관리합니다.
-
-ⅲ) 사용자 정의 LifecycleOwner
-LifecycleOwner를 사용자 정의하고 싶다면 LifecycleRegistry 클래스를 사용하여 직접 구현할 수 있습니다. LifecycleRegistry 클래스는 추상 클래스인 Lifecycle를 구현하여 상태를 실제로 추적하고 옵저버들에게 알림을 전달하는 역할을 합니다. 하지만 다음 코드 예와 같이 이 클래스에 이벤트를 전달해야 합니다.
-
-class MyActivity : Activity(), LifecycleOwner {
-
-    private lateinit var lifecycleRegistry: LifecycleRegistry
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        lifecycleRegistry = LifecycleRegistry(this)
-        lifecycleRegistry.markState(Lifecycle.State.CREATED)
-    }
-
-    public override fun onStart() {
-        super.onStart()
-        lifecycleRegistry.markState(Lifecycle.State.STARTED)
-    }
-
-    override fun getLifecycle(): Lifecycle {
-        return lifecycleRegistry
-    }
-}
-
 
 
 2. 생명주기를 다루는 메소드들
-1)LocalLifecycleOwner / lifecycleOwner
+1)LocalLifecycleOwner
 - 정의
    - Compose에서 현재 문맥(예: Activity, Fragment, NavBackStackEntry)에 매핑된 LifecycleOwner를 제공하는 CompositionLocal
 - 동작 방식
@@ -234,38 +148,7 @@ class MyActivity : Activity(), LifecycleOwner {
 - 장점
    - observer를 재등록하지 않고도 최신 상태를 안전하게 사용 가능하여 불필요한 등록/해제 회피
 - 주의점
-   - rememberUpdatedState는 값의 동시성 보장을 단순화하지만, 상태 변경과 observer 호출 시점 간의 race를 완전히 제거해 주지 않음(상황에 따라 동기화 필요).
-
-
-8)rememberCoroutineScope
-- 정의
-   - Composable 내부에서 CoroutineScope를 얻어 이벤트 핸들러(버튼 클릭 등)에서 코루틴을 시작할 때 사용
-- 동작 방식
-   - val scope = rememberCoroutineScope()는 composition에 묶인 scope를 반환
-   - 이 scope는 그 Composable이 버려질 때(cancel) 취소
-   - 재컴포지션이 일어나더라도 동일한 scope를 반환(재생성되지 않음)
-- 사용
-   - 사용자 입력(클릭 등) 시 즉시 코루틴을 시작해야 할 때
-   - 여러 개의 독립 코루틴을 수동으로 시작/관리해야 할 때
-- 장점
-   - 재컴포지션과 무관하게 동일한 scope 사용 가능(불필요한 재취소 방지)
-- 주의점
-   - scope로 시작한 코루틴은 키(key) 변경 시 자동으로 재시작되지 않음(LaunchedEffect와의 차이)
-   - Composable이 disposal될 때만 취소
-
-
-9)SideEffect
-- 정의
-   - recomposition이 완료된 직후에 호출되는 동기(side-effect) 훅
-   - 주로 "UI가 확정된 상태"를 외부 시스템에 즉시 반영할 때 사용
-- 동작 방식
-   - 매 재컴포지션 성공 후 실행(비서스펜드).
-   - 결과는 동기적으로 실행되며, recomposition이 여러 번 일어나면 여러 번 호출
-- 언제 사용
-   - Compose 상태 변경을 Android 뷰 속성 또는 외부 상태에 즉시 반영해야 할 때(간단한 업데이트).
-- 주의점
-   - 무거운 작업, 블로킹 작업을 넣으면 안 됨(메인 스레드에서 실행될 수 있음).
-   - SideEffect는 정리 코드(onDispose)가 없으므로 리소스 등록/해제 용도로 부적합
+   - rememberUpdatedState는 값의 동시성 보장을 단순화하지만, 상태 변경과 observer 호출 시점 간의 경쟁 상태를 완전히 제거해 주지 않음. 상황에 따라 동기화 필요.
 
 
 
@@ -301,20 +184,6 @@ class MyActivity : Activity(), LifecycleOwner {
 5)LifecycleEventEffect
 - 목적
    - 이벤트 감지 전용과 suspend 작업 병행이 필요하는 경우
-
-
-6)rememberCoroutineScope
-- 목적
-   - 사용자의 조작에 따른 즉시 코루틴 실행(예: 버튼 클릭) 또는 여러 독립 코루틴의 수동 관리에 사용.
-
-
-7)ViewModel / onCleared 등
-- 목적
-   - Composable의 세부 생명주기와 분리해 상태를 장기간 보존하거나 정리할 때.
-
-8)SideEffect
-- 목적
-   - 재컴포지션 후 외부 UI(또는 시스템)에 즉시 동기 반영해야 할 때. 리스너 등록/해제에는 적절하지 않음.
 
 
 
