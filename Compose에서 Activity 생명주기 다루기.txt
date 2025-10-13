@@ -1,11 +1,15 @@
 1. 생명주기
 1)lifecycle
-Compose에서는 Activity에 직접 의존하지 않도록 설계되어 있기 때문에 Lifecycle을 통해 생명주기를 다룹니다. androidx.lifecycle 패키지는 수명 주기 인식 구성요소를 빌드할 수 있는 클래스 및 인터페이스를 제공합니다. 이때 수명 주기 인식 구성 요소는 activity나 fragment의 현재 수명 주기 상태를 기반으로 동작을 자동 조정할 수 있는 구성요소를 말합니다. Lifecycle은 activity나 fragment와 같은 구성요소의 수명 주기 상태 관련 정보를 포함하며 다른 객체가 이 상태를 관찰할 수 있게 하는 클래스입니다. Lifecycle은 두 가지 주요 열거를 사용하여 연결된 구성요소의 수명 주기 상태를 추적합니다.
+Compose에서는 Activity에 직접 의존하지 않도록 설계되어 있기 때문에 Lifecycle을 통해 생명주기를 다룹니다. androidx.lifecycle 패키지는 수명 주기 인식 구성요소를 빌드할 수 있는 클래스 및 인터페이스를 제공합니다. 이때 수명 주기 인식 구성 요소는 activity나 fragment의 현재 수명 주기 상태를 기반으로 동작을 자동 조정할 수 있는 구성요소를 말합니다. Lifecycle은 activity나 fragment와 같은 구성요소의 수명 주기 상태 관련 정보를 포함하며 다른 객체가 해당 상태를 관찰할 수 있게 하는 클래스입니다. Lifecycle은 두 가지 주요 열거를 사용하여 연결된 구성요소의 수명 주기 상태를 추적합니다.
 
 - 이벤트: 프레임워크 및 Lifecycle 클래스에서 전달되는 수명 주기 이벤트. 이러한 이벤트는 activity와 fragment의 콜백 이벤트에 매핑
 - 상태: Lifecycle 객체가 추적한 구성요소의 현재 상태
 
-DefaultLifecycleObserver에서 onCreate, onStart 등의 상응하는 메서드를 재정의하여 구성요소의 수명 주기 상태를 모니터링할 수 있습니다. 그러면 다음 예에 나와 있는 것처럼 Lifecycle 클래스의 addObserver() 메서드를 호출하고 이전에 구현된 관찰자의 인스턴스를 전달하여 관찰자를 추가할 수 있습니다. 해당 예에서 myLifecycleOwner 객체는 LifecycleOwner 인터페이스를 구현합니다
+Lifecycle에 직접 접근하여 사용하지는 않습니다. LifecycleOwner를 통해 사용됩니다. LifecycleOwner이 Lifecycle을 보유하고 있고 getLifecycle()을 통해 외부에서 접근합니다. 생명주기 상태가 변경되면 이를 관찰하다가 해당 변화를 인식할 수 있는 LifecycleObserver
+인터페이스가 있습니다. 관찰자를 등록하면 생명주기 이벤트가 발생할 때마다 콜백을 받게 됩니다. LifecycleOwner 내부에는 LifecycleRegistry가 있는데 생명주기 이벤트가 발생할 때 LifecycleRegistry가 현재 상태를 변경하고 등록된 LifecycleObserver들에게 해당 이벤트를 전달하게 됩니다.
+
+안드로이드에서 제공하는 DefaultLifecycleObserver에서 onCreate, onStart 등의 상응하는 메서드를 재정의하여 구성요소의 수명 주기 상태를 모니터링할 수 있습니다. 다음 예에 나와 있는 것처럼 Lifecycle 클래스의 addObserver() 메서드를 호출하고 이전에 구현된 관찰자의 인스턴스를 전달하여 관찰자를 추가할 수 있습니다. 해당 예에서 myLifecycleOwner 객체는 LifecycleOwner 인터페이스를 구현합니다
+
 class MyObserver : DefaultLifecycleObserver {
     override fun onResume(owner: LifecycleOwner) {
         connect()
@@ -17,6 +21,8 @@ class MyObserver : DefaultLifecycleObserver {
 }
 
 myLifecycleOwner.getLifecycle().addObserver(MyObserver())
+
+다만 Compose는 상태 기반 UI 프레임워크이기 때문에 모든 생명 주기 단계를 정의하는 DefaultLifecycleObserver는 적절하지 않습니다. 대신 LifecycleEventObserver 인터페이스를 사용할 수 있습니다. 단일 메서드으로 onStateChanged()만 있기에 직접 필요한 이벤트만 분기 처리할 수 있습니다.
 
 
 2) LifecycleOwner
