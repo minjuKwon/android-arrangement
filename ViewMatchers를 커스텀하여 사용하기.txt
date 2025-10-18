@@ -1,0 +1,155 @@
+ViewMatcher란?
+Matcher<? super View> 타입을 구현해 View 객체를 판별하는 규칙(조건)을 제공하는 인터페이스(실제로는 Hamcrest Matcher를 구현한 것)입니다. Espresso에서는 여러 표준 ViewMatchers(예: withId, withText, isDisplayed 등)를 제공하며, 이들은 모두 Matcher<? super View> 형태라 onView()에 전달할 수 있습니다.
+onView()의 역할
+Espresso.onView(Matcher<? super View> viewMatcher)는 현재 액티비티의 뷰 계층(view hierarchy) 을 탐색해, 전달한 matcher와 일치하는 뷰를 찾고 ViewInteraction 객체를 반환합니다. 반환된 ViewInteraction을 통해 perform(...)(액션 실행) 또는 check(...)(검증)를 수행합니다.
+
+
+Matcher
+Espresso는 내부적으로 Hamcrest 라이브러리의 Matcher<T> 인터페이스를 사용
+즉, Espresso의 ViewMatchers나 RootMatchers는 결국 Hamcrest의 Matcher 구현체이다.
+하지만 Matcher는 Object 타입을 받기 때문에 매칭 시 매번 타입 캐스팅이 필요하고, 타입이 다르면 ClassCastException이 날 수 있다.
+이 문제를 해결하기 위해 Hamcrest는 TypeSafeMatcher<T> 라는 추상 클래스를 제공한다.
+이 클래스는 제네릭 타입을 명시하여 매칭 시 타입 안정성(type-safety) 을 보장한다.
+내부에서 matches(Object)를 final로 막고, 대신 matchesSafely(T item)를 오버라이드하게 한다.
+즉,Matcher<T>는 인터페이스 (모든 매처의 기본형), TypeSafeMatcher<T>는 타입 안전하게 매처를 만들 수 있도록 도와주는 추상 클래스
+Espresso에서는 TypeSafeMatcher<View> 또는 TypeSafeMatcher<Root>를 상속해 커스텀 matcher를 만든다.
+
+
+TypeSafeMatcher 설명
+Hamcrest가 제공하는 추상 클래스.
+matches(Object item) 메서드를 final로 구현하고 내부에서 instanceof 검사 후 matchesSafely(T item)을 호출한다.
+따라서 개발자는 타입 캐스팅을 직접 할 필요 없이 안전한 타입(T) 으로 매칭 로직만 작성하면 된다.
+
+matches(Object item)
+Matcher 인터페이스의 메서드를 final로 오버라이드한 메서드.
+실제 매칭 로직이 수행되는 진입점.
+내부 동작:item이 null인지 확인, item이 expectedType과 호환되는지 (instanceof) 검사, 위 두 조건이 모두 통과되면 matchesSafely(T item)을 호출
+즉, 타입 검사를 자동으로 처리해 주며, 개발자는 안전하게 matchesSafely()만 구현하면 된다.
+@Override
+public final boolean matches(Object item) {
+    return item != null
+        && expectedType.isInstance(item)
+        && matchesSafely((T) item);
+}
+
+matchesSafely(T item) — 개발자가 직접 구현해야 하는 핵심 메서드
+타입이 이미 검증된 객체(T 타입)에 대해 실제 매칭 조건을 정의하는 곳.
+예: 뷰의 텍스트, 색상, 상태, 속성 등 비교 로직 작성.
+override fun matchesSafely(view: View): Boolean {
+    return (view as TextView).text == "OK"
+}
+
+describeTo(Description description) — 필수 구현 메서드
+Matcher가 기대하는 상태를 설명하는 메서드.
+테스트 실패 시 출력되는 메시지에 포함된다.
+단순히 “무엇을 기대했는가”를 기술한다.
+override fun describeTo(description: Description) {
+    description.appendText("has text 'OK'")
+}
+
+describeMismatch(Object item, Description mismatchDescription)
+선택적 재정의 메서드 (기본 구현 있음).
+매칭이 실패했을 때 실제 값이 어떤 상태였는지를 설명하고 싶을 때 사용.
+필요할 때만 override 한다.
+override fun describeMismatch(item: Any?, mismatchDescription: Description) {
+    val view = item as? TextView
+    mismatchDescription.appendText("was '${view?.text}'")
+}
+
+생성자
+두 가지 형태가 있다.
+TypeSafeMatcher(Class<?> expectedType)
+→ 직접 검사할 타입을 명시.
+기본 생성자 TypeSafeMatcher()
+→ 리플렉션으로 제네릭 타입(T)을 추론.
+Espresso에서 TypeSafeMatcher<View>처럼 명시적으로 사용하면 보통 기본 생성자를 그대로 쓴다.
+
+Espresso에서의 사용 흐름
+Espresso 내부에서는 onView(matcher) 호출 시, 모든 뷰(View)에 대해 matcher.matches(view)가 호출된다.
+TypeSafeMatcher는 내부에서 instanceof 검사 후, matchesSafely(View)만 호출한다.
+개발자는 안전하게 뷰 타입 캐스팅 없이 로직 작성 가능.
+
+
+Root란
+Root는 androidx.test.espresso.Root 클래스.
+하나의 화면(Window)에 해당하는 최상위 뷰 계층(root view)을 감싸는 객체이다.
+일반적으로 앱에는 여러 개의 Root가 존재할 수 있다.
+(액티비티의 기본 윈도우,다이얼로그(Dialog),팝업(PopupWindow),Toast)
+Espresso는 테스트 중 실제로 여러 Root들을 추적하며, 기본적으로 onView()는 현재 포커스를 가진 Root(즉, Activity 윈도우) 에서만 뷰를 탐색한다.
+하지만 Toast나 Dialog 같은 별도 윈도우는 이 기본 Root에 포함되지 않기 때문에, 이때는 .inRoot(matcher)를 사용해 Root를 지정해야 한다.
+
+
+Toast 검사
+Root는 현재 화면(윈도우) 단위의 컨테이너 정보를 담는 객체이다. Toast는 액티비티의 뷰 계층과는 다른 별도 윈도우로 뜨므로 일반 onView(...)만으로는 잡기 어렵다. 
+TypeSafeMatcher<Root>를 상속해 matchesSafely(root)를 구현하면 해당 Root(윈도우)가 Toast인지 판별할 수 있다. describeTo는 실패 시 출력되는 설명을 제공한다. 
+!root.decorView.hasWindowFocus() 처럼 포커스가 없는(decorView의 hasWindowFocus == false) 윈도우를 Toast로 간주.
+또는 root.windowLayoutParams.get().type == WindowManager.LayoutParams.TYPE_TOAST처럼 윈도우 타입을 검사.
+방법마다 Android 버전/디바이스에서 동작이 달라져 불안정할 수 있다. 실제로 Android 11+에서 toast 검사로 실패하는 케이스가 보고되어 있다.
+TypeSafeMatcher<Root>() : Root 타입만 검사하도록 제한.
+matchesSafely(item: Root) : 실제 판정 로직. item.decorView.hasWindowFocus()가 false이면 Toast로 판단.
+이유: 일반 액티비티 윈도우는 포커스를 갖고 있고, Toast는 일반적으로 포커스를 갖지 않는 별도 윈도우로 올라오기 때문.
+describeTo : 매칭 실패 시 출력되는 설명 문자열. 테스트 실패 메시지 가독성 향상 목적.
+장점: 구현이 간단하고 흔히 통용되는 방식이라 바로 사용 가능.
+단점 / 주의점: 플래키(unstable): 포커스 여부나 윈도우 타입 판단은 Android 버전(특히 Android 11 이상)과 제조사 커스터마이징에 따라 달라질 수 있음. 실제로 일부 환경에서 Toast 검증이 실패하는 보고가 있음, 접근성 계층에서 Toast가 보이지 않는 경우(자동화 도구에서 접근 불가)가 있어 완전히 신뢰할 수 없음
+
+
+예시
+특정 속성이 기본 Matcher에 없는 경우
+예를 들어 글자색, 배경색, 이미지 리소스 같은 시각적 속성은
+withText나 withId로는 판별할 수 없습니다.
+class WithTextColor(private val expectedColor: Int) : TypeSafeMatcher<View>() {
+    override fun describeTo(description: Description) {
+        description.appendText("with text color: $expectedColor")
+    }
+
+    override fun matchesSafely(view: View): Boolean {
+        val textView = view as? TextView ?: return false
+        return textView.currentTextColor == expectedColor
+    }
+}
+onView(withId(R.id.statusLabel))
+    .check(matches(WithTextColor(Color.RED)))
+
+뷰 계층 구조(부모-자식 관계)로 특정 패턴을 찾아야 할 때
+예를 들어 “특정 부모 안에 특정 텍스트를 가진 자식이 존재하는지” 같은 구조적 조건이 필요한 경우.
+fun hasChildWithText(text: String): Matcher<View> {
+    return object : TypeSafeMatcher<View>() {
+        override fun describeTo(description: Description) {
+            description.appendText("has child with text: $text")
+        }
+
+        override fun matchesSafely(view: View): Boolean {
+            if (view !is ViewGroup) return false
+            return (0 until view.childCount).any {
+                val child = view.getChildAt(it)
+                (child as? TextView)?.text == text
+            }
+        }
+    }
+}
+
+RecyclerView, AdapterView 항목 내부 속성을 검증할 때
+RecyclerView나 ListView의 각 항목 내부 뷰의 상태를 확인할 때,
+단순히 onView(withText(...))로는 찾기 어려움.
+이럴 때 “해당 포지션의 아이템이 이런 상태인지”를 검사하는 커스텀 matcher를 사용합니다.
+fun atPosition(position: Int, itemMatcher: Matcher<View>): Matcher<View> {
+    return object : TypeSafeMatcher<View>() {
+        override fun describeTo(description: Description) {
+            description.appendText("has item at position $position: ")
+            itemMatcher.describeTo(description)
+        }
+
+        override fun matchesSafely(view: View): Boolean {
+            val recycler = view as? RecyclerView ?: return false
+            val holder = recycler.findViewHolderForAdapterPosition(position)
+                ?: return false
+            return itemMatcher.matches(holder.itemView)
+        }
+    }
+}
+
+
+ViewMatchers 대안
+의존성 주입으로 Toast 노출을 대체: 테스트 환경에서는 실제 Toast.makeText()를 호출하는 대신 Toaster 인터페이스(테스트용 더미 구현)를 주입해 토스트 호출을 검증하거나 호출 기록을 확인하는 방식이 훨씬 안정적임. 이 방식으로 UI 계층에 의존하지 않고 로직만 검증할 수 있다. (테스트 전용 구현을 주입) 
+가능하면 접근성/ID 기반 대체 UI 사용: 사용자 피드백을 보여줄 때 테스트 용도로는 Snackbar나 커스텀 뷰(레이아웃에 포함된 뷰)를 사용하면 Espresso로 더 안정적으로 검사 가능.
+플래키 방지를 위한 리트라이/타임아웃 처리: Toast가 짧게 뜨므로 검사 시 타이밍 맞추기 어려움. 필요하면 재시도 로직을 추가하되, 너무 긴 대기는 피할 것.
