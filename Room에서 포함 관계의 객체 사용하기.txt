@@ -1,0 +1,227 @@
+@Embedded
+
+@Target(allowedTargets = [AnnotationTarget.FIELD, AnnotationTarget.FUNCTION])
+@Retention(value = AnnotationRetention.BINARY)
+public annotation Embedded
+
+public Embedded(@NonNull String prefix)
+
+@Embedded는 객체의 필드를 테이블에 평탄화(flatten) 하는 용도
+엔티티나 POJO의 필드에 이 애너테이션을 사용하면, 해당 필드 클래스의 하위 필드(즉, 중첩된 필드)를 SQL 쿼리에서 직접 참조할 수 있게 된다.
+컨테이너가 엔티티일 경우, 이 하위 필드들은 엔티티의 데이터베이스 테이블 내 컬럼으로 포함된다.
+Room은 latitude와 longitude를 Address 클래스의 필드처럼 취급하며, SQLite 행을 Address로 매핑할 때 그렇게 처리한다.
+즉, 쿼리 결과가 street, latitude, longitude 컬럼을 반환하면 Room은 올바르게 Address 객체를 구성한다.
+Address 클래스가 @Entity로 선언되어 있으면, 데이터베이스 테이블은 street, latitude, longitude 세 컬럼을 가진다.
+
+하위 객체의 필드 이름과 상위 객체의 필드 이름이 충돌할 경우, 하위 객체 필드에 접두어(prefix)를 지정할 수 있다.
+접두어는 하위 필드에 항상 적용되며, 하위 필드가 @ColumnInfo로 이름이 지정되어 있더라도 접두어가 우선 적용된다.
+
+하위 객체의 필드가 @PrimaryKey로 표시되어 있더라도, 그것은 상위 엔티티의 기본 키로 간주되지 않는다.
+
+@Embedded 필드가 읽힐 때, 해당 필드(및 그 하위 필드)의 모든 컬럼 값이 android.database.Cursor에서 null이라면, Room은 그 필드를 null로 설정한다. 반대로, 하나라도 null이 아닌 값이 있으면 Room은 하위 객체를 생성한다.
+
+만약 TypeConverter가 null 컬럼을 non-null 값으로 변환하도록 정의되어 있더라도, 하위 필드의 모든 컬럼이 null이면 TypeConverter는 호출되지 않고, 해당 @Embedded 필드는 생성되지 않는다. 이 동작을 변경하려면, @Embedded 필드에 androidx.annotation.NonNull 애너테이션을 추가하면 된다.
+
+
+
+@Relation(복합키)
+
+@Target(allowedTargets = [AnnotationTarget.FIELD, AnnotationTarget.FUNCTION])
+@Retention(value = AnnotationRetention.BINARY)
+public annotation Relation
+
+public Relation(
+    @NonNull KClass<@NonNull ?> entity,
+    @NonNull String parentColumn,
+    @NonNull String entityColumn,
+    @NonNull Junction associateBy,
+    @NonNull String[] projection
+)	
+
+POJO 안에서 관계가 있는 엔티티들을 자동으로 가져오기 위해 사용할 수 있는 편의 애너테이션이다. 이 애너테이션이 붙은 POJO가 쿼리 결과로 반환되면, Room은 해당 객체의 모든 관계 데이터도 함께 조회한다.
+@Entity
+data class Song(
+    @PrimaryKey
+    val songId: Int,
+    val albumId: Int,
+    val name: String
+    // 기타 필드
+)
+
+data class AlbumNameAndAllSongs(
+    val id: Int,
+    val name: String,
+    @Relation(parentColumn = "id", entityColumn = "albumId")
+    val songs: List<Song>
+)
+
+@Dao
+interface MusicDao {
+    @Query("SELECT id, name FROM Album")
+    fun loadAlbumAndSongs(): List<AlbumNameAndAllSongs>
+}
+
+1:N(일대다) 또는 N:M(다대다) 관계에서는, @Relation이 붙은 필드의 타입이 java.util.List나 java.util.Set이어야 한다.
+
+기본적으로 Room은 반환 타입에서 엔티티 유형을 추론한다. 만약 다른 객체 타입을 반환하고 싶다면 @Relation의 entity 속성으로 명시할 수 있다.
+
+data class Album(
+    val id: Int
+    // 기타 필드
+)
+
+data class SongNameAndId(
+    val songId: Int,
+    val name: String
+)
+
+data class AlbumAllSongs(
+    @Embedded
+    val album: Album,
+    @Relation(parentColumn = "id", entityColumn = "albumId", entity = Song::class)
+    val songs: List<SongNameAndId>
+)
+
+@Dao
+interface MusicDao {
+    @Query("SELECT * FROM Album")
+    fun loadAlbumAndSongs(): List<AlbumAllSongs>
+}
+
+위 예제에서 SongNameAndId는 일반적인 POJO이지만, 그 안의 모든 필드는 @Relation 애너테이션의 entity로 지정된 Song 엔티티에서 가져온다. SongNameAndId 안에 다른 관계가 정의되어 있더라도, Room은 그것들도 자동으로 함께 가져온다.
+
+자식 엔티티에서 어떤 컬럼만 조회할지 지정하려면 @Relation의 projection 속성을 사용할 수 있다.
+data class AlbumAndAllSongs(
+    @Embedded
+    val album: Album,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "albumId",
+        entity = Song::class,
+        projection = ["name"]
+    )
+    val songNames: List<String>
+)
+만약 관계가 조인 테이블(연결 테이블, junction table)을 통해 정의되어 있다면, associateBy 속성을 사용해 그 테이블을 지정할 수 있다. 이는 N:M(다대다) 관계를 조회할 때 유용하다.
+
+참고로 @Relation 애너테이션은 POJO 클래스에서만 사용할 수 있다. 엔티티 클래스에는 사용할 수 없으며, 이는 엔티티 구조에서 자주 발생하는 문제를 방지하기 위한 설계적 결정이다. 데이터베이스에서 각 객체 모델로 관계를 매핑하는 것은 일반적인 관행이며 이러한 매핑은 서버 측에서 매우 잘 작동합니다. 필드가 액세스될 때 프로그램이 필드를 로드하는 경우에도 서버는 여전히 잘 작동합니다. 그러나 클라이언트 측에서는 이 유형의 지연 로드가 일반적으로 UI 스레드에서 발생하기 때문에 실행 가능하지 않으며 UI 스레드에서 디스크에 관한 정보를 쿼리하면 상당한 성능 문제가 발생합니다. 일반적으로 UI 스레드는 활동의 업데이트된 레이아웃을 계산하고 그리는 데 약 16ms를 소요하므로 쿼리가 5ms밖에 걸리지 않은 경우에도 앱에서 프레임을 그리는 데 여전히 시간이 부족할 가능성이 크며 이에 따라 분명한 시각적 결함이 발생할 수 있습니다. 병렬로 실행 중인 별도의 트랜잭션이 있거나 기기가 다른 디스크 집약적인 작업을 실행 중이면 쿼리가 완료되는 데 훨씬 많은 시간이 걸릴 수 있습니다. 그러나 지연 로드를 사용하지 않으면 앱이 필요한 것보다 더 많은 데이터를 가져오며 이에 따라 메모리 소비 문제가 발생합니다.
+
+Room에서는 데이터를 로드할 때는 엔티티를 상속하는 POJO 클래스를 만들어 이 제한을 우회할 수 있다.
+
+
+
+@Transaction
+
+@Target(allowedTargets = [AnnotationTarget.FUNCTION])
+@Retention(value = AnnotationRetention.BINARY)
+public annotation Transaction
+
+@Transaction은 DAO 클래스의 메서드가 하나의 데이터베이스 트랜잭션으로 실행되도록 표시하는 애너테이션이다.
+추상 DAO 클래스의 비추상 메서드에 사용될 경우, 해당 메서드의 파생 구현은 데이터베이스 트랜잭션 안에서 상위(super) 메서드를 실행한다. 모든 매개변수와 반환 타입은 그대로 유지된다. 메서드 본문에서 예외가 발생하지 않는 한, 트랜잭션은 성공으로 표시된다.
+
+@Dao
+abstract class SongDao {
+    @Insert
+    abstract fun insert(song: Song)
+    @Delete
+    abstract fun delete(song: Song)
+    @Transaction
+    fun insertAndDeleteInTransaction(newSong: Song, oldSong: Song) {
+        // 이 메서드 안의 모든 동작은 하나의 트랜잭션 안에서 실행된다.
+        insert(newSong)
+        delete(oldSong)
+    }
+}
+
+SELECT 문을 가진 Query 메서드에 사용될 때, 생성된 Query 코드는 트랜잭션 안에서 실행된다. 이를 사용하는 주요 이유는 두 가지이다.
+1.결과가 상당히 큰 쿼리의 경우, 트랜잭션 내에서 실행하는 것이 일관된 결과를 받는 데 더 낫다. 그렇지 않으면 쿼리 결과가 단일 android.database.CursorWindow에 맞지 않을 때, 커서 윈도 교체 사이에 데이터베이스가 변경되어 결과가 손상될 수 있다.
+2.쿼리 결과가 @Relation 필드를 가진 POJO일 경우, 이 필드들은 별도의 쿼리로 조회된다. 이들 쿼리 간의 일관된 결과를 보장하려면 하나의 트랜잭션으로 실행해야 한다.
+
+data class AlbumWithSongs : Album (
+    @Relation(parentColumn = "albumId", entityColumn = "songId")
+    val songs: List<Song>
+)
+
+@Dao
+public interface AlbumDao {
+    @Transaction
+    @Query("SELECT * FROM album")
+    fun loadAll(): List<AlbumWithSongs>
+}
+
+쿼리가 비동기적일 경우(예: androidx.lifecycle.LiveData 또는 RxJava Flowable을 반환할 때), 트랜잭션은 메서드가 호출될 때가 아니라 쿼리가 실제로 실행될 때 적절히 처리된다. 이 애너테이션을 @Insert, @Update, @Delete 메서드에 붙이는 것은 아무 영향이 없다. 이러한 메서드는 항상 트랜잭션 안에서 실행되기 때문이다. 마찬가지로, @Query 메서드가 INSERT, UPDATE, DELETE 문을 실행하는 경우에도 자동으로 트랜잭션으로 감싸지므로 이 애너테이션은 효과가 없다.
+
+Room은 한 번에 최대 하나의 트랜잭션만 수행한다. 추가 트랜잭션은 대기열에 들어가며, 먼저 요청된 순서대로(선입선출) 실행된다.
+
+
+
+중첩된 관계
+때로 서로 관련이 있는 세 개 이상의 테이블 집합을 쿼리해야 할 수도 있습니다. 이 경우 테이블 간에 중첩된 관계를 정의합니다.
+주의: 중첩된 관계가 있는 데이터를 쿼리하려면 Room에서 많은 양의 데이터를 조작해야 하며 이는 성능에 영향을 줄 수 있습니다. 그러므로 쿼리에 중첩된 관계를 최소한만 사용하세요.
+
+음악 스트리밍 앱의 예에서 모든 사용자, 각 사용자의 모든 재생목록, 각 사용자의 각 재생목록에 있는 모든 노래를 쿼리하려 한다고 가정해 보겠습니다. 사용자는 재생목록과 일대다 관계가 있으며 재생목록은 노래와 다대다 관계가 있습니다. 다음 코드 예에서는 이러한 항목을 나타내는 클래스뿐만 아니라 재생목록과 노래 간의 다대다 관계에 관한 상호 참조 테이블을 보여줍니다.
+
+@Entity
+data class User(
+    @PrimaryKey val userId: Long,
+    val name: String,
+    val age: Int
+)
+
+@Entity
+data class Playlist(
+    @PrimaryKey val playlistId: Long,
+    val userCreatorId: Long,
+    val playlistName: String
+)
+
+@Entity
+data class Song(
+    @PrimaryKey val songId: Long,
+    val songName: String,
+    val artist: String
+)
+
+@Entity(primaryKeys = ["playlistId", "songId"])
+data class PlaylistSongCrossRef(
+    val playlistId: Long,
+    val songId: Long
+)
+
+먼저 데이터 클래스 및 @Relation 주석을 사용하여 평소처럼 집합 내 두 테이블 간의 관계를 모델링합니다. 다음 예는 Playlist 항목 클래스와 Song 항목 클래스 간의 다대다 관계를 모델링하는 PlaylistWithSongs 클래스를 보여줍니다
+
+data class PlaylistWithSongs(
+    @Embedded val playlist: Playlist,
+    @Relation(
+         parentColumn = "playlistId",
+         entityColumn = "songId",
+         associateBy = Junction(PlaylistSongCrossRef::class)
+    )
+    val songs: List<Song>
+)
+
+이 관계를 나타내는 데이터 클래스를 정의한 후 집합의 다른 테이블과 첫 번째 관계 클래스 간의 관계를 모델링하여 새 관계 내부에 기존 관계를 '중첩'하는 또 다른 데이터 클래스를 만듭니다. 다음 예는 User 항목 클래스와 PlaylistWithSongs 관계 클래스 간의 일대다 관계를 모델링하는 UserWithPlaylistsAndSongs 클래스를 보여줍니다.
+
+data class UserWithPlaylistsAndSongs(
+    @Embedded val user: User
+    @Relation(
+        entity = Playlist::class,
+        parentColumn = "userId",
+        entityColumn = "userCreatorId"
+    )
+    val playlists: List<PlaylistWithSongs>
+)
+
+UserWithPlaylistsAndSongs 클래스는 세 가지의 모든 항목 클래스(User, Playlist, Song) 간의 관계를 간접적으로 모델링합니다. 이는 그림 1에 설명되어 있습니다
+
+집합에 테이블이 더 많이 있다면 나머지 각 테이블 간의 관계를 모델링하는 클래스 및 이전의 모든 테이블 간의 관계를 모델링하는 관계 클래스를 만듭니다. 이렇게 하면 쿼리하려는 모든 테이블 간에 중첩된 관계 체인이 생성됩니다.
+
+마지막으로 DAO 클래스에 메서드를 추가하여 앱에 필요한 쿼리 함수를 노출합니다. 이 메서드를 사용하려면 Room에서 여러 쿼리를 실행해야 하므로 전체 작업이 원자적으로 실행되도록 @Transaction 주석을 추가해야 합니다.
+
+@Transaction
+@Query("SELECT * FROM User")
+fun getUsersWithPlaylistsAndSongs(): List<UserWithPlaylistsAndSongs>
+
+
+https://developer.android.com/reference/androidx/room/Embedded
+https://developer.android.com/training/data-storage/room/relationships/nested?hl=ko
