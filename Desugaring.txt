@@ -1,0 +1,322 @@
+개념
+Desugaring은 컴파일러/빌드 도구가 최신 Java 언어 기능이나 표준 라이브러리 API를 구형 안드로이드 런타임(및 dex 형식)이 이해할 수 있는 형태로 변환(lowering) 하는 과정이다. 즉 개발자는 최신 언어·API를 쓰지만, 빌드 과정이 그 문법·호출을 더 오래된 바이트코드/헬퍼 호출로 바꿔서 더 낮은 Android API 레벨에서도 동작하게 만든다.
+
+Android Gradle 플러그인 3.0.0 이상에서는 모든 Java 7 언어 기능과 플랫폼 버전에 따라 다른 Java 8 언어 기능의 일부를 지원합니다. Android Gradle 플러그인 4.0.0 이상을 사용하여 앱을 빌드할 때 앱의 최소 API 수준 없이도 일부 Java 8 언어 API를 사용
+
+Android Gradle 플러그인은 특정 Java 8 언어 기능과 이러한 기능을 사용하는 서드 파티 라이브러리를 사용하기 위한 내장 지원 기능을 제공합니다. 기본 도구 모음은 클래스 파일을 DEX 코드에 D8/R8 컴파일하는 과정의 일환으로, desugar라는 바이트 코드 변환을 실행하여 새로운 언어 기능을 구현
+
+ 기능과 빌드 속도 간에 균형을 유지하도록 바이트 코드 수준을 선택합니다. 바이트 코드 수준 6은 빌드 속도는 더 빠르고 기능은 더 적은 반면, 바이트 코드 수준 7은 기능과 빌드 속도의 균형을 유지하며, 바이트 코드 8은 빌드 속도는 느리지만 기능은 풍부
+
+
+
+사용 이유
+안드로이드는 다양한 기기와 오래된 런타임을 포함하므로, Java의 최신 문법(예: 람다, 메서드 레퍼런스, 인터페이스의 default/static 메서드)이나 Java 표준 라이브러리의 새 API(java.time 등)를 그대로 실행할 수 없는 경우가 많다. Desugaring은 호환성 문제를 해결해 최신 문법·API를 넓은 범위의 Android 버전에서 사용할 수 있게 해 준다.
+
+
+
+- 언어 기능 desugaring (language-level)
+Java 소스 → javac로 클래스로 컴파일된 뒤, D8/R8 같은 도구가 람다, 메서드 레퍼런스, 리피트 애노테이션, 인터페이스의 default/static 메서드 등 최신 문법을 더 낮은 수준의 바이트코드(또는 보조 메서드/싱글턴 클래스 등)로 변환한다.
+결과적으로 런타임에서 바로 해당 기능을 지원하지 않더라도 동작한다.
+
+- 코어 라이브러리 desugaring (library-level, core-library desugaring)
+java.time, java.util.stream, 일부 Objects, Optional 등 JDK 라이브러리 API를 에뮬레이션/지원하는 구현체를 포함시켜 구형 플랫폼에서도 해당 API를 사용할 수 있게 한다.
+보통 desugar_jdk_libs 같은 라이브러리를 앱에 포함시키며, 빌드 도구가 호출을 적절한 지원 코드로 바꿔준다.
+
+
+
+동작 흐름
+1) 개발자가 Java/Kotlin 코드 작성(예: 람다 사용, java.time.LocalDate 사용).
+2) javac(또는 kotlinc)가 바이트코드(class 파일)를 생성.
+3)Android 빌드 도구(D8/R8)가 class 파일을 처리하면서 desugaring 수행:
+ - 언어 기능은 보조 메서드/클래스로 변환하거나 적절한 바이트코드 패턴으로 치환.
+- 코어 라이브러리 호출은 desugared 라이브러리 구현으로 연결(필요 시 라이브러리 클래스 포함).
+4)결과물은 dex 바이트코드로 변환되어 APK/AAB에 포함된다.
+요약: desugaring은 컴파일 후(또는 dex 변환 시)에 일어나며, D8/R8이 주요 역할을 담당한다.
+
+
+
+주요 도구들
+- D8: dex 변환기이자 desugaring을 수행하는 도구(언어 기능 desugaring).
+- R8: D8 기능을 포함하며 코드 축소(minify), 난독화, 최적화와 함께 desugaring을 수행.
+- desugar_jdk_libs: 코어 라이브러리 desugaring을 위한 구현체(앱에 포함되는 라이브러리).
+
+
+
+Android Gradle 플러그인 3.0.0 이상
+지원되는 Java 8 언어 기능을 사용하려면 다음 단계를 따르세요.
+
+- 3.0.0 이상으로 Android Gradle 플러그인을 업데이트합니다.
+- 소스 코드에서 또는 종속 항목을 통해 Java 8 언어 기능을 사용하는 각 모듈의 경우 다음과 같이 모듈의 build.gradle 또는 build.gradle.kts 파일을 업데이트합니다.
+//build.gradle.kts
+android {
+    ...
+    // Java 8 언어 기능을
+    // 사용하는 모듈에 대해서만 설정
+    // (직접 작성한 코드나 의존 라이브러리 코드 중 어느 쪽이든)
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    // For Kotlin projects
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+//build.gradle
+android {
+    ...
+    // Java 8 언어 기능을
+    // 사용하는 모듈에 대해서만 설정
+    // (직접 작성한 코드나 의존 라이브러리 코드 중 어느 쪽이든)
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    // For Kotlin projects
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+Android Gradle 플러그인 3.0.0 이상을 사용하여 앱을 빌드할 때 플러그인은 일부 Java 8 언어 기능을 지원하지 않습니다. 다음 언어 기능을 모든 API 수준에서 사용할 수 있습니다.
+Java 8 언어 기능	참고
+람다 표현식	Android는 람다 표현식의 직렬화를 지원하지 않습니다.
+메서드 참조	 -
+형식 주석	형식 주석 정보는 런타임이 아닌 컴파일 시간에만 확인할 수 있습니다. 이 플랫폼은 API 수준 24 이하에서 TYPE을 지원하지만 ElementType.TYPE_USE 또는 ElementType.TYPE_PARAMETER를 지원하지는 않습니다.
+기본 및 정적 인터페이스 메서드	 -
+주석 반복	 -
+
+Desugar는 MethodHandle.invoke 또는 MethodHandle.invokeExact를 지원하지 않습니다. 해당 메소드들은 Java 리플렉션(Reflection)의 고급 형태로, java.lang.invoke.MethodHandle 클래스에서 제공하는 메서드 직접 호출용 API.
+소스 코드나 모듈 종속 항목 중 하나에서 이러한 메서드 중 하나를 사용하는 경우 minSdkVersion 26 이상을 지정해야 합니다. 그러지 않으면 다음 오류가 발생합니다.
+Dex: Error converting bytecode to dex:
+Cause: signature-polymorphic method called without --min-sdk-version >= 26
+
+경우에 따라 invoke 또는 invokeExact 메서드가 라이브러리 종속 항목에 포함되어 있을 때도 모듈에서 이러한 메서드를 사용하지 않을 수 있습니다. minSdkVersion 25 이하 버전에서 해당 라이브러리를 계속 사용하려면 코드 축소를 활성화(R8)하여 사용되지 않는 메서드를 제거하세요. 그래도 효과가 없으면 지원되지 않는 메서드를 사용하지 않는 다른 라이브러리를 사용해 봅니다.
+
+Java 8+ 언어는 Android Gradle 플러그인 3.0.0 이상에서 디슈가링 기능을 제공하지만 이전 Android 출시에서 사용하도록 추가 클래스 및 API(예: java.util.stream.*)를 제공하지는 않습니다. 부분 Java API 디슈가링은 Android Gradle 플러그인 4.0.0 이상에서 지원됩니다(다음 섹션 참고).
+
+
+
+Android Gradle 플러그인 4.0.0 이상\
+Android Gradle 플러그인 4.0.0 이상을 사용하여 앱을 빌드하고 있다면 이 플러그인은 앱의 최소 API 수준 없이도 다양한 Java 8 언어 API를 사용할 수 있도록 지원을 확대합니다. Android Gradle 플러그인 7.4.0 이상을 사용하면 디슈가링된 라이브러리 2.0.0 이상에서 여러 Java 11 언어 API를 사용할 수 있습니다.
+
+플러그인 4.0.0 이상에서 Java 언어 API도 디슈가링하도록 디슈가링 엔진을 확장하기 때문에 이전 플랫폼 버전을 위한 이 같은 추가 지원이 가능합니다. 최신 Android 출시에서만 사용할 수 있었던 표준 언어 API(예: java.util.streams)를 이전 Android 버전을 지원하는 앱에 포함할 수 있습니다.
+
+Android Gradle 플러그인 4.0.0 이상을 사용하여 앱을 빌드할 경우 다음 API가 지원됩니다. 
+- 순차적 스트림(java.util.stream)
+- java.time의 하위 집합
+- java.util.function
+- 최근 java.util.{Map,Collection,Comparator}에 추가된 사항
+- 선택사항 (java.util.Optional, java.util.OptionalInt, java.util.OptionalDouble) 및 일부 새 클래스
+- 일부 java.util.concurrent.atomic에 추가된 사항(AtomicInteger, AtomicLong, AtomicReference의 새 메서드)
+- ConcurrentHashMap(Android 5.0 버그 수정 포함)
+Android Gradle 플러그인 7.4.0 이상에서는 java.nio.file 패키지의 하위 집합과 같은 추가 Java 11 API가 지원됩니다.
+
+이러한 언어 API를 지원하기 위해 플러그인에서는 누락된 API의 구현을 포함하는 별도의 DEX 파일을 컴파일하고 이를 앱에 포함합니다. 디슈가링 프로세스를 사용하면 앱 코드를 다시 작성하여 런타임에 이 라이브러리를 대신 사용할 수 있습니다. 별도의 DEX 파일로 컴파일된 소스 코드는 desugar_jdk_libs GitHub 저장소에서 확인할 수 있습니다.
+https://github.com/google/desugar_jdk_libs
+
+모든 Android 플랫폼 버전에서 이러한 언어 API를 지원하려면 다음 단계를 따르세요.
+- 4.0.0 이상으로 Android Gradle 플러그인을 업데이트합니다.
+- 앱 모듈의 build.gradle 또는 build.gradle.kts 파일에 다음을 포함합니다.
+//build.gradle.kts 
+android {
+    defaultConfig {
+        // Required when setting minSdkVersion to 20 or lower
+        multiDexEnabled = true
+    }
+
+    compileOptions {
+        // Flag to enable support for the new language APIs
+
+        // For AGP 4.1+
+        isCoreLibraryDesugaringEnabled = true
+        // For AGP 4.0
+        // coreLibraryDesugaringEnabled = true
+
+        // Sets Java compatibility to Java 8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // For AGP 7.4+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+    // For AGP 7.3
+    // coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.2.3")
+    // For AGP 4.0 to 7.2
+    // coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.9")
+}
+
+//build.gradle
+android {
+    defaultConfig {
+        // Required when setting minSdkVersion to 20 or lower
+        multiDexEnabled true
+    }
+
+    compileOptions {
+        // Flag to enable support for the new language APIs
+        coreLibraryDesugaringEnabled true
+        // Sets Java compatibility to Java 8
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // For AGP 7.4+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    // For AGP 7.3
+    // coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.3'
+    // For AGP 4.0 to 7.2
+    // coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.9'
+}
+
+다음의 경우 라이브러리 모듈의 build.gradle 또는 build.gradle.kts 파일에 위 코드 스니펫을 포함해야 할 수 있습니다.
+- 라이브러리 모듈의 계측 테스트가 이러한 언어 API를 직접 또는 라이브러리 모듈이나 모듈의 종속 항목을 통해 사용하는 경우. 이는 누락된 API를 계측 테스트 APK에 제공하기 위함입니다.
+- 라이브러리 모듈에서 린트를 독립적으로 실행하려는 경우. 이렇게 하면 린트에서 언어 API의 올바른 사용을 인식하여 거짓 경고 보고를 방지하도록 할 수 있습니다.
+또한 API 디슈가링은 축소와 결합할 수 있지만 R8 축소기를 사용할 때만 가능합니다.
+
+
+
+Gradle 버전
+다음 표에는 Java 8+ API 라이브러리의 버전과 각 버전을 지원하는 최소 Android Gradle 플러그인 버전이 나와 있습니다.
+
+버전	최소 Android Gradle 플러그인 버전
+1.1.9	4.0.0
+1.2.3	7.3.0
+2.0.3	7.4.0-alpha10
+
+Java 8+ API 라이브러리 버전에 관한 자세한 내용은 desugar_jdk_libs GitHub 저장소의 CHANGELOG.md 파일을 참고하세요.
+https://github.com/google/desugar_jdk_libs/blob/master/CHANGELOG.md
+
+
+
+장점
+최신 Java 문법·API를 더 낮은 Android 버전에서도 사용 가능.
+코드 가독성·생산성 향상(람다, 스트림, java.time 등 사용 가능).
+코드 개선을 하면서도 폭넓은 기기 호환성 유지.
+
+
+
+단점/주의점
+앱 크기 증가: 코어 라이브러리 지원 코드가 포함되면 dex 크기 증가 가능.
+빌드 복잡도: 일부 desugaring 동작은 AGP/도구 버전과 연동되어 문제를 일으킬 수 있음(버전 호환성 주의).
+성능 고려: 일부 에뮬레이션 구현은 네이티브 API만큼 빠르지 않을 수 있음.
+디버깅 난이도: 변환된 코드로 인해 스택트레이스나 디버깅 시 원본 구조를 이해하기 어려울 수 있음(소스 맵/리플렉션 관련 이슈 등).
+
+
+
+대체 라이브러리
+desugaring 대신(또는 보완용으로) 사용할 수 있는 라이브러리는 기능 영역별로 다음과 같다.
+1.날짜·시간 (java.time 대체)
+ThreeTenABP
+java.time의 안드로이드 백포트.
+desugaring 불가능하거나 D8/R8 호환성 문제 있을 때 여전히 쓸 수 있음.
+단점: desugar_jdk_libs와 중복되면 충돌 위험 있음(둘 중 하나만 사용).
+
+Joda-Time
+ThreeTenABP 이전 세대의 라이브러리.
+API가 java.time과 다르며, 유지보수 거의 종료 상태.
+새 프로젝트에는 권장되지 않지만, legacy 호환용으로 일부 사용됨.
+
+2. 스트림 API (java.util.stream 대체)
+StreamSupport
+JDK 8의 Stream API를 에뮬레이션하는 백포트.
+<https://github.com/streamsupport/streamsupport>
+desugaring을 쓰기 어려운 환경에서 스트림 연산(map, filter 등)을 흉내낼 수 있음.
+
+FunctionalJava, Guava Streams
+함수형 스타일 유틸리티 제공. 완전한 Stream API는 아니지만 유사 기능 구현 가능.
+
+3. Optional, Objects, Function 등 (java.util.function 계열)
+StreamSupport (위와 동일): java.util.function 패키지도 일부 구현 포함.
+
+FunctionalJava, Vavr (이전 이름: Javaslang)
+Option, Try, Either, Lazy 등 함수형 데이터타입 제공.
+JDK 8 이전 환경에서 함수형 코드 스타일 유지 가능.
+
+4. Base64, Collections, 기타 유틸리티
+Apache Commons Codec → java.util.Base64 대체 가능.
+
+Guava → Objects, Preconditions, Joiner, Splitter 등 다양한 유틸 기능 제공.
+
+Apache Commons Lang → StringUtils, ObjectUtils, Pair 등 범용 보조 클래스 제공.
+
+5. Concurrency/Executors/CompletableFuture 등 비동기 관련
+Bolts (by Facebook)
+Task API로 CompletableFuture 유사 기능 제공.
+lightweight Promise 기반 비동기 처리용.
+
+RxJava, Kotlin Coroutines
+언어 차원의 대안. desugaring 불필요.
+RxJava는 Java 환경에서도 동작하므로, core library desugaring 없이 대체 가능.
+
+
+
+Desugaring이 불가능하거나 제약이 생기는 경우
+1. 빌드 도구 버전 제약
+Android Gradle Plugin(AGP) 3.0 미만
+D8/R8을 기본으로 사용하지 않고, 구형 dx 툴 기반이라 desugaring 기능이 없음.
+Java 8 문법을 쓰면 컴파일 에러 발생.
+이 경우 desugaring 대신 직접 백포트 라이브러리(예: ThreeTenABP, StreamSupport)를 써야 함.
+
+D8/R8 비활성화 환경
+특정 CI/CD 환경, 커스텀 빌드 툴, 또는 특수한 SDK 빌드(예: Unity, React Native의 일부 오래된 버전)에서 D8/R8이 비활성화되어 있을 수 있음.
+이런 환경에서는 desugaring 단계 자체가 수행되지 않음.
+
+2. core library desugaring 비활성화 또는 불가능
+compileOptions.coreLibraryDesugaringEnabled가 false인 경우.
+core library desugaring이 D8에만 의존하므로,
+R8만 단독 실행하거나, AAR/JAR이 독립적으로 배포되어 최종 앱 빌드 시 D8에서 다시 병합되지 않을 경우,
+→ desugaring이 적용되지 않는다.
+
+예시:
+라이브러리 모듈(AAR)을 빌드할 때 core library desugaring 적용 안 됨 → 최종 앱 모듈에서만 적용됨.
+결과적으로 “라이브러리에서는 java.time을 쓰면 안 됨” 같은 제약이 생김.
+
+3. 빌드 대상이 안드로이드가 아닌 경우
+JVM용 라이브러리(JAR) 빌드 시 D8이 관여하지 않음 → desugaring 없음.
+예: 멀티플랫폼 프로젝트에서 JVM 타깃 빌드 시 desugaring 미적용.
+
+또 다른 예로, Java 라이브러리를 만들어 Maven Central에 배포할 때 → desugaring은 앱 빌드 과정에서만 작동하므로 라이브러리 빌드 시에는 사용 불가.
+
+4. 멀티모듈·멀티바이너리 환경에서의 비일관성
+앱 모듈과 라이브러리 모듈의 Java 버전 호환성 설정이 다를 때
+예: 앱은 Java 8 + desugaring, 라이브러리는 Java 11 문법 사용.
+R8이 일부 기능을 이해하지 못해 빌드 실패.
+
+라이브러리 A에서 java.time 사용, 라이브러리 B에서는 desugar_jdk_libs 미포함 → 런타임 충돌 또는 NoClassDefFoundError.
+
+5. 커스텀 빌드 툴체인 또는 특정 빌드 환경
+예: Buck, Bazel, Gradle의 커스텀 플러그인을 사용하는 환경에서 D8/R8 연동이 완전하지 않으면 desugaring이 누락될 수 있음.
+일부 빌드 서버(특히 구형 Jenkins/CI 컨테이너)는 JDK 8 이상 문법을 지원하지 않는 javac 버전 사용 → desugaring 이전에 컴파일 실패.
+
+6. 특정 플랫폼 제약
+Android Wear OS 1.x, TV, 또는 일부 벤더 커스텀 런타임
+Dalvik 또는 제한된 ART 버전으로 동작 → desugaring된 코드의 일부 invoke 방식(invoke-static-interface 등)을 지원하지 않는 경우 있음.
+결과적으로 런타임 크래시 발생.
+
+Instant App, Dynamic Feature Module
+dex 분리 로딩 과정에서 desugared 클래스가 모듈 간 분리되어 런타임에 찾지 못하는 이슈 발생 가능.
+
+7. R8/Proguard 최적화 충돌
+R8이 desugar로 변환된 synthetic 클래스나 메서드를 최적화 과정에서 잘못 제거하거나 리네임할 경우 런타임 오류 발생.
+
+특정 버전(특히 AGP 4.0~4.2 구간)에서 core library desugaring과 R8 규칙이 충돌하는 버그가 있었음.
+
+
+
+실무 팁
+AGP, D8/R8, desugar_jdk_libs 버전 호환성을 문서로 확인하고 유지보수한다.
+필요하지 않은 코어 라이브러리 desugaring은 비활성화해서 앱 크기를 줄인다.
+릴리즈 빌드에서는 R8를 통해 불필요 코드 제거 후 크기와 퍼포먼스를 재측정한다.
+문제 발생 시 빌드 로그에 desugar 관련 경고 메시지, R8 출력, 그리고 proguard/r8 규칙을 점검한다.
+디버깅을 쉽게 하려면 빌드에서 소스 맵(또는 매핑 파일)을 확보해 둔다.
+
+
+
+디슈가링을 통해 사용할 수 있는 자바 8+ API: https://developer.android.com/studio/write/java8-support-table?hl=ko
+ 디슈가링을 통해 사용할 수 있는 Java 11+ API:
+https://developer.android.com/studio/write/java11-default-support-table?hl=ko
