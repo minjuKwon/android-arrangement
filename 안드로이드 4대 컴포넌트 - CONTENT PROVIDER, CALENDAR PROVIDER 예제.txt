@@ -1,3 +1,5 @@
+사실 Calendar provider를 비롯하여 기본 content provider를 직접 사용하는 경우는 많이 없습니다. 대부분 개인 정보에 접근하게 되기에 관련 제약과 권한이 필요해집니다. 게다가 구글 캘린더같이 활용할 수 있는 API도 있기 때문에 대체 방안을 사용하기도 하죠. Room 같은 내부 DB로 데이터를 구성하고 별도의 UI를 제공하기도 합니다. Intent를 제공할 수도 있지만 매우 한정적인 연산만 할 수 있습니다. 그럼에도 content provider에 대한 이해를 위해 기본 provider에 대해 학습하고 예제를 진행할 것입니다. 다음 포스팅에 다른 기본 content provider인 contacts provider에 대해 알아보고 마무리할 예정입니다.
+
 Calendar provider 간단한 예제를 진행하겠습니다. Provider는 비동기로 실행되어야 합니다. Calendar provider 사용에 집중하기 위해 간단히 thread에서 진행할 겁니다. 로컬 calendar의 여러 데이터 모델를 읽거나 쓸 겁니다.
 
 1. Manifest
